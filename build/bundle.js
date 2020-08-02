@@ -20558,7 +20558,7 @@
         return TileWMS;
     }(TileImage));
 
-    var vertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
+    var vertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord * vec2(1.0, -1.0);\r\n}";
 
     var fragmentShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D u_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(u_image, o_texCoord).bgra;\r\n}";
 
@@ -27192,37 +27192,10 @@
       layers: [testMapLayer],
       view: testMapView
     });
-    var webgl = new WebGLObject("canvas_map", vertexShader, fragmentShader); // webgl.renderImage(imageData);
-
+    var webgl = new WebGLObject("canvas_map", vertexShader, fragmentShader);
     testMap.on("postrender", function () {
       var canvas = document.querySelector("#tile_map canvas");
       webgl.renderImage(canvas);
-    }); // import * as twgl from 'twgl.js';
-    // // import vertexShader from './shaders/vertex.shader';
-    // // import fragmentShader from './shaders/fragment.shader';
-    // const gl = twgl.getContext(document.getElementById("canvas_map"));
-    // const programInfo = twgl.createProgramInfo(gl, [vertexShader, fragmentShader]);
-    // var tex = twgl.createTexture(gl, {
-    //     src: 'https://farm6.staticflickr.com/5695/21506311038_9557089086_m_d.jpg',
-    // }, (err, tex, img) => {
-    //     startRendering(img);
-    // });
-    // export const startRendering = (img) => {
-    //     requestAnimationFrame(render);
-    //     function render() {
-    //         const quadVertices = twgl.primitives.createXYQuadBufferInfo(gl);
-    //         console.log(quadVertices);
-    //         const uniforms = {
-    //             u_image: tex,
-    //         }
-    //         twgl.resizeCanvasToDisplaySize(gl.canvas);
-    //         console.log(gl.canvas.width, gl.canvas.height)
-    //         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    //         gl.useProgram(programInfo.program);
-    //         twgl.setBuffersAndAttributes(gl, programInfo, quadVertices);
-    //         twgl.setUniforms(programInfo, uniforms);
-    //         twgl.drawBufferInfo(gl, quadVertices, gl.TRIANGLES);
-    //     }
-    // }
+    });
 
 })));
