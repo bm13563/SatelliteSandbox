@@ -5,6 +5,7 @@ import { nodeResolve } from '@rollup/plugin-node-resolve';
 import css from "rollup-plugin-css-only";
 import {terser} from 'rollup-plugin-terser';
 import json from '@rollup/plugin-json';
+import { string } from "rollup-plugin-string";
 
 
 export default [{
@@ -25,6 +26,9 @@ export default [{
         json(),
         css({
             output: "build/bundle.css"
+        }),
+        string({
+            include: "**/*.shader"
         }),
     ],
     onwarn: function(warning, superOnWarn) {

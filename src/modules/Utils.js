@@ -18,3 +18,10 @@ export const imageDataToCanvas = (selector, data) => {
     canvas.height = canvas.getBoundingClientRect().height;
     context.putImageData(data, 0, 0);
 }
+
+export const canvasToImage = (selector) => {
+    const image = new Image();
+    const canvas = document.querySelector(selector);
+    img.src = canvas.toDataURL("image/png");
+    return img;
+}
