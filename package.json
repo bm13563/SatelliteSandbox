@@ -28,7 +28,8 @@
   },
   "dependencies": {
     "@rollup/plugin-json": "^4.1.0",
-    "leaflet": "^1.6.0",
+    "ol": "^6.4.2",
+    "proj4": "^2.6.2",
     "rollup-plugin-css-only": "^2.1.0",
     "rollup-plugin-terser": "^6.1.0"
   }
