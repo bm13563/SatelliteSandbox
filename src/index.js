@@ -49,20 +49,70 @@ const testMapLayer2 = new TileLayer({
 var webgl = new WebGLCanvas("canvas_map", vertexShader, finalVertex, finalFragment);
 var testLayerObject = new LayerObject(testMapLayer1, testMapView);
 testLayerObject.addShader(fragmentShader);
-testLayerObject.addShader(fragmentShader);
+// testLayerObject.addShader(fragmentShader);
 webgl.activateLayer(testLayerObject);
+
+// testLayerObject.olMap.on("postrender", () => {
+//     webgl.runAttachedPrograms([{
+//         uniforms: {
+//             u_multiplier: [0.5, 0.3, 1, 1],
+//         },
+//     },{
+//         uniforms: {
+//             u_multiplier: [1, 1, 0.9, 1],
+//         },
+//     },
+//     ])
+// })
+
+
+
+var red = document.getElementById("red-range").value / 100;
+var green = document.getElementById("green-range").value / 100;
+var blue = document.getElementById("blue-range").value / 100;
+document.getElementById("red-value").innerHTML = red;
+document.getElementById("green-value").innerHTML = green;
+document.getElementById("blue-value").innerHTML = blue;
 
 testLayerObject.olMap.on("postrender", () => {
     webgl.runAttachedPrograms([{
         uniforms: {
-            u_multiplier: [0.5, 0.3, 1, 1],
-        },
-    },{
-        uniforms: {
-            u_multiplier: [1, 1, 0.9, 1],
+            u_multiplier: [red, green, blue, 1],
         },
     },
     ])
 })
 
+document.getElementById("red-range").oninput = function() {
+    red = this.value / 100;
+    document.getElementById("red-value").innerHTML = red;
+    webgl.runAttachedPrograms([{
+        uniforms: {
+            u_multiplier: [red, green, blue, 1],
+        },
+    },
+    ])
+}
+
+document.getElementById("green-range").oninput = function() {
+    green = this.value / 100;
+    document.getElementById("green-value").innerHTML = green;
+    webgl.runAttachedPrograms([{
+        uniforms: {
+            u_multiplier: [red, green, blue, 1],
+        },
+    },
+    ])
+}
+
+document.getElementById("blue-range").oninput = function() {
+    blue = this.value / 100;
+    document.getElementById("blue-value").innerHTML = blue;
+    webgl.runAttachedPrograms([{
+        uniforms: {
+            u_multiplier: [red, green, blue, 1],
+        },
+    },
+    ])
+}
 
