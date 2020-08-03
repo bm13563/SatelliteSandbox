@@ -4,9 +4,13 @@ import {Map, View} from 'ol';
 import TileLayer from 'ol/layer/Tile';
 import TileWMS from 'ol/source/TileWMS';
 import * as util from './modules/utils.js'
+import {LayerObject} from './modules/layer.js';
 import vertexShader from './shaders/vertex.shader';
 import fragmentShader from './shaders/fragment.shader';
-import {WebGLObject} from './modules/webgl.js';
+import finalVertex from './shaders/finalVertex.shader';
+import finalFragment from './shaders/finalFragment.shader';
+import {WebGLCanvas} from './modules/webgl.js';
+
 
 const testMapView = new View({
     center: [-7337.954715, 6709336.594760],
@@ -26,7 +30,7 @@ const testWMS = new TileWMS({
     crossOrigin: "anonymous",
 });
 
-const testMapLayer = new TileLayer({
+const testMapLayer1 = new TileLayer({
     source: testWMS,
     visible: true,
     title: "Sentinel testing",
@@ -34,15 +38,31 @@ const testMapLayer = new TileLayer({
     minZoom: 6,
 });
 
-const testMap = new Map({
-  target: "tile_map",
-  layers: [testMapLayer],
-  view: testMapView,
+const testMapLayer2 = new TileLayer({
+    source: testWMS,
+    visible: true,
+    title: "Sentinel testing",
+    opacity: 1,
+    minZoom: 6,
 });
 
-var webgl = new WebGLObject("canvas_map", vertexShader, fragmentShader);
+var webgl = new WebGLCanvas("canvas_map", vertexShader, finalVertex, finalFragment);
+var testLayerObject = new LayerObject(testMapLayer1, testMapView);
+testLayerObject.addShader(fragmentShader);
+testLayerObject.addShader(fragmentShader);
+webgl.activateLayer(testLayerObject);
 
-testMap.on("postrender", () => {
-    const canvas = document.querySelector("#tile_map canvas");
-    webgl.renderImage(canvas);
+testLayerObject.olMap.on("postrender", () => {
+    webgl.runAttachedPrograms([{
+        uniforms: {
+            u_multiplier: [0.5, 0.3, 1, 1],
+        },
+    },{
+        uniforms: {
+            u_multiplier: [1, 1, 0.9, 1],
+        },
+    },
+    ])
 })
+
+

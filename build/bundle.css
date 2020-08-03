@@ -1,6 +1,6 @@
 #page_container { width: 600px; height: 500px; position:relative; }
-#page_container #tile_map { width: 600px; height: 500px; z-index: 10; }
-#page_container #tile_map canvas { z-index: 10; opacity:0; }
+#page_container #tile_container { width: 600px; height: 500px; z-index: 10; }
+#page_container #tile_container .layer_object canvas { z-index: 10; opacity:0; }
 #page_container #canvas_container { width: 600px; height: 500px;  top:0px; z-index:0; position:absolute; }
 #page_container #canvas_container #canvas_map { width: 600px; height: 500px; }
 .ol-box {

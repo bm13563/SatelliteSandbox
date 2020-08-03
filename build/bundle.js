@@ -20558,10 +20558,6 @@
         return TileWMS;
     }(TileImage));
 
-    var vertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord * vec2(1.0, -1.0);\r\n}";
-
-    var fragmentShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D u_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(u_image, o_texCoord).bgra;\r\n}";
-
     function _classCallCheck(instance, Constructor) {
       if (!(instance instanceof Constructor)) {
         throw new TypeError("Cannot call a class as a function");
@@ -21074,6 +21070,10 @@
 
     function isBuffer(gl, t) {
       return typeof WebGLBuffer !== 'undefined' && t instanceof WebGLBuffer;
+    }
+
+    function isRenderbuffer(gl, t) {
+      return typeof WebGLRenderbuffer !== 'undefined' && t instanceof WebGLRenderbuffer;
     }
 
     function isShader(gl, t) {
@@ -26909,6 +26909,255 @@
      * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
      * DEALINGS IN THE SOFTWARE.
      */
+
+    const FRAMEBUFFER                    = 0x8d40;
+    const RENDERBUFFER                   = 0x8d41;
+    const TEXTURE_2D$2                     = 0x0de1;
+
+    const UNSIGNED_BYTE$3                  = 0x1401;
+
+    /* PixelFormat */
+    const DEPTH_COMPONENT$1                = 0x1902;
+    const RGBA$1                           = 0x1908;
+
+    /* Framebuffer Object. */
+    const RGBA4$1                          = 0x8056;
+    const RGB5_A1$1                        = 0x8057;
+    const RGB565$1                         = 0x8D62;
+    const DEPTH_COMPONENT16$1              = 0x81A5;
+    const STENCIL_INDEX                  = 0x1901;
+    const STENCIL_INDEX8                 = 0x8D48;
+    const DEPTH_STENCIL$1                  = 0x84F9;
+    const COLOR_ATTACHMENT0              = 0x8CE0;
+    const DEPTH_ATTACHMENT               = 0x8D00;
+    const STENCIL_ATTACHMENT             = 0x8D20;
+    const DEPTH_STENCIL_ATTACHMENT       = 0x821A;
+    const CLAMP_TO_EDGE$1                  = 0x812F;
+    const LINEAR$1                         = 0x2601;
+
+    /**
+     * The options for a framebuffer attachment.
+     *
+     * Note: For a `format` that is a texture include all the texture
+     * options from {@link module:twgl.TextureOptions} for example
+     * `min`, `mag`, `clamp`, etc... Note that unlike {@link module:twgl.TextureOptions}
+     * `auto` defaults to `false` for attachment textures but `min` and `mag` default
+     * to `gl.LINEAR` and `wrap` defaults to `CLAMP_TO_EDGE`
+     *
+     * @typedef {Object} AttachmentOptions
+     * @property {number} [attach] The attachment point. Defaults
+     *   to `gl.COLOR_ATTACHMENT0 + ndx` unless type is a depth or stencil type
+     *   then it's gl.DEPTH_ATTACHMENT or `gl.DEPTH_STENCIL_ATTACHMENT` depending
+     *   on the format or attachment type.
+     * @property {number} [format] The format. If one of `gl.RGBA4`,
+     *   `gl.RGB565`, `gl.RGB5_A1`, `gl.DEPTH_COMPONENT16`,
+     *   `gl.STENCIL_INDEX8` or `gl.DEPTH_STENCIL` then will create a
+     *   renderbuffer. Otherwise will create a texture. Default = `gl.RGBA`
+     * @property {number} [type] The type. Used for texture. Default = `gl.UNSIGNED_BYTE`.
+     * @property {number} [target] The texture target for `gl.framebufferTexture2D`.
+     *   Defaults to `gl.TEXTURE_2D`. Set to appropriate face for cube maps.
+     * @property {number} [level] level for `gl.framebufferTexture2D`. Defaults to 0.
+     * @property {number} [layer] layer for `gl.framebufferTextureLayer`. Defaults to undefined.
+     *   If set then `gl.framebufferTextureLayer` is called, if not then `gl.framebufferTexture2D`
+     * @property {WebGLObject} [attachment] An existing renderbuffer or texture.
+     *    If provided will attach this Object. This allows you to share
+     *    attachments across framebuffers.
+     * @memberOf module:twgl
+     * @mixes module:twgl.TextureOptions
+     */
+
+    const defaultAttachments = [
+      { format: RGBA$1, type: UNSIGNED_BYTE$3, min: LINEAR$1, wrap: CLAMP_TO_EDGE$1, },
+      { format: DEPTH_STENCIL$1, },
+    ];
+
+    const attachmentsByFormat = {};
+    attachmentsByFormat[DEPTH_STENCIL$1] = DEPTH_STENCIL_ATTACHMENT;
+    attachmentsByFormat[STENCIL_INDEX] = STENCIL_ATTACHMENT;
+    attachmentsByFormat[STENCIL_INDEX8] = STENCIL_ATTACHMENT;
+    attachmentsByFormat[DEPTH_COMPONENT$1] = DEPTH_ATTACHMENT;
+    attachmentsByFormat[DEPTH_COMPONENT16$1] = DEPTH_ATTACHMENT;
+
+    function getAttachmentPointForFormat(format) {
+      return attachmentsByFormat[format];
+    }
+
+    const renderbufferFormats = {};
+    renderbufferFormats[RGBA4$1] = true;
+    renderbufferFormats[RGB5_A1$1] = true;
+    renderbufferFormats[RGB565$1] = true;
+    renderbufferFormats[DEPTH_STENCIL$1] = true;
+    renderbufferFormats[DEPTH_COMPONENT16$1] = true;
+    renderbufferFormats[STENCIL_INDEX] = true;
+    renderbufferFormats[STENCIL_INDEX8] = true;
+
+    function isRenderbufferFormat(format) {
+      return renderbufferFormats[format];
+    }
+
+    /**
+     * @typedef {Object} FramebufferInfo
+     * @property {WebGLFramebuffer} framebuffer The WebGLFramebuffer for this framebufferInfo
+     * @property {WebGLObject[]} attachments The created attachments in the same order as passed in to {@link module:twgl.createFramebufferInfo}.
+     * @property {number} width The width of the framebuffer and its attachments
+     * @property {number} height The width of the framebuffer and its attachments
+     * @memberOf module:twgl
+     */
+
+    /**
+     * Creates a framebuffer and attachments.
+     *
+     * This returns a {@link module:twgl.FramebufferInfo} because it needs to return the attachments as well as the framebuffer.
+     *
+     * The simplest usage
+     *
+     *     // create an RGBA/UNSIGNED_BYTE texture and DEPTH_STENCIL renderbuffer
+     *     const fbi = twgl.createFramebufferInfo(gl);
+     *
+     * More complex usage
+     *
+     *     // create an RGB565 renderbuffer and a STENCIL_INDEX8 renderbuffer
+     *     const attachments = [
+     *       { format: RGB565, mag: NEAREST },
+     *       { format: STENCIL_INDEX8 },
+     *     ]
+     *     const fbi = twgl.createFramebufferInfo(gl, attachments);
+     *
+     * Passing in a specific size
+     *
+     *     const width = 256;
+     *     const height = 256;
+     *     const fbi = twgl.createFramebufferInfo(gl, attachments, width, height);
+     *
+     * **Note!!** It is up to you to check if the framebuffer is renderable by calling `gl.checkFramebufferStatus`.
+     * [WebGL1 only guarantees 3 combinations of attachments work](https://www.khronos.org/registry/webgl/specs/latest/1.0/#6.6).
+     *
+     * @param {WebGLRenderingContext} gl the WebGLRenderingContext
+     * @param {module:twgl.AttachmentOptions[]} [attachments] which attachments to create. If not provided the default is a framebuffer with an
+     *    `RGBA`, `UNSIGNED_BYTE` texture `COLOR_ATTACHMENT0` and a `DEPTH_STENCIL` renderbuffer `DEPTH_STENCIL_ATTACHMENT`.
+     * @param {number} [width] the width for the attachments. Default = size of drawingBuffer
+     * @param {number} [height] the height for the attachments. Default = size of drawingBuffer
+     * @return {module:twgl.FramebufferInfo} the framebuffer and attachments.
+     * @memberOf module:twgl/framebuffers
+     */
+    function createFramebufferInfo(gl, attachments, width, height) {
+      const target = FRAMEBUFFER;
+      const fb = gl.createFramebuffer();
+      gl.bindFramebuffer(target, fb);
+      width  = width  || gl.drawingBufferWidth;
+      height = height || gl.drawingBufferHeight;
+      attachments = attachments || defaultAttachments;
+      let colorAttachmentCount = 0;
+      const framebufferInfo = {
+        framebuffer: fb,
+        attachments: [],
+        width: width,
+        height: height,
+      };
+      attachments.forEach(function(attachmentOptions) {
+        let attachment = attachmentOptions.attachment;
+        const format = attachmentOptions.format;
+        let attachmentPoint = getAttachmentPointForFormat(format);
+        if (!attachmentPoint) {
+          attachmentPoint = COLOR_ATTACHMENT0 + colorAttachmentCount++;
+        }
+        if (!attachment) {
+          if (isRenderbufferFormat(format)) {
+            attachment = gl.createRenderbuffer();
+            gl.bindRenderbuffer(RENDERBUFFER, attachment);
+            gl.renderbufferStorage(RENDERBUFFER, format, width, height);
+          } else {
+            const textureOptions = Object.assign({}, attachmentOptions);
+            textureOptions.width = width;
+            textureOptions.height = height;
+            if (textureOptions.auto === undefined) {
+              textureOptions.auto = false;
+              textureOptions.min = textureOptions.min || textureOptions.minMag || LINEAR$1;
+              textureOptions.mag = textureOptions.mag || textureOptions.minMag || LINEAR$1;
+              textureOptions.wrapS = textureOptions.wrapS || textureOptions.wrap || CLAMP_TO_EDGE$1;
+              textureOptions.wrapT = textureOptions.wrapT || textureOptions.wrap || CLAMP_TO_EDGE$1;
+            }
+            attachment = createTexture(gl, textureOptions);
+          }
+        }
+        if (isRenderbuffer(gl, attachment)) {
+          gl.framebufferRenderbuffer(target, attachmentPoint, RENDERBUFFER, attachment);
+        } else if (isTexture(gl, attachment)) {
+          if (attachmentOptions.layer !== undefined) {
+            gl.framebufferTextureLayer(
+              target,
+              attachmentPoint,
+              attachment,
+              attachmentOptions.level || 0,
+              attachmentOptions.layer);
+          } else {
+            gl.framebufferTexture2D(
+                target,
+                attachmentPoint,
+                attachmentOptions.target || TEXTURE_2D$2,
+                attachment,
+                attachmentOptions.level || 0);
+          }
+        } else {
+          throw new Error('unknown attachment type');
+        }
+        framebufferInfo.attachments.push(attachment);
+      });
+      return framebufferInfo;
+    }
+
+    /**
+     * Binds a framebuffer
+     *
+     * This function pretty much solely exists because I spent hours
+     * trying to figure out why something I wrote wasn't working only
+     * to realize I forget to set the viewport dimensions.
+     * My hope is this function will fix that.
+     *
+     * It is effectively the same as
+     *
+     *     gl.bindFramebuffer(gl.FRAMEBUFFER, someFramebufferInfo.framebuffer);
+     *     gl.viewport(0, 0, someFramebufferInfo.width, someFramebufferInfo.height);
+     *
+     * @param {WebGLRenderingContext} gl the WebGLRenderingContext
+     * @param {module:twgl.FramebufferInfo|null} [framebufferInfo] a framebufferInfo as returned from {@link module:twgl.createFramebufferInfo}.
+     *   If falsy will bind the canvas.
+     * @param {number} [target] The target. If not passed `gl.FRAMEBUFFER` will be used.
+     * @memberOf module:twgl/framebuffers
+     */
+
+    function bindFramebufferInfo(gl, framebufferInfo, target) {
+      target = target || FRAMEBUFFER;
+      if (framebufferInfo) {
+        gl.bindFramebuffer(target, framebufferInfo.framebuffer);
+        gl.viewport(0, 0, framebufferInfo.width, framebufferInfo.height);
+      } else {
+        gl.bindFramebuffer(target, null);
+        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+      }
+    }
+
+    /*
+     * Copyright 2019 Gregg Tavares
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a
+     * copy of this software and associated documentation files (the "Software"),
+     * to deal in the Software without restriction, including without limitation
+     * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+     * and/or sell copies of the Software, and to permit persons to whom the
+     * Software is furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice shall be included in
+     * all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+     * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+     * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+     * DEALINGS IN THE SOFTWARE.
+     */
     const defaults$2$1 = {
       addExtensionsToContext: true,
     };
@@ -27119,49 +27368,223 @@
       return false;
     }
 
-    var WebGLObject = function WebGLObject(canvas, _vertexShader, _fragmentShader) {
+    // canvas for opengl to read from. this class creates a "layer" with it's own canvas from
+    // an openlayers layer. layers will be synced as long as the same view is used
+
+    var LayerObject = function LayerObject(olLayer, olView) {
       var _this = this;
 
-      _classCallCheck(this, WebGLObject);
+      _classCallCheck(this, LayerObject);
 
-      this.compileShaders = function (vertexShader, fragmentShader) {
-        var gl = _this.gl;
-        _this.programInfo = createProgramInfo(gl, [vertexShader, fragmentShader]);
+      this._createCanvasElement = function () {
+        var container = document.getElementById("tile_container");
+        var boundingRect = container.getBoundingClientRect();
+        var div = document.createElement("div");
+        div.classList.add("layer_object");
+        div.setAttribute("id", _this.containerId);
+        div.width = boundingRect.width;
+        div.height = boundingRect.height;
+        div.style.width = "".concat(div.width, "px");
+        div.style.height = "".concat(div.height, "px");
+        div.style.position = "absolute";
+        div.style.top = "0px";
+        div.style.zIndex = "".concat(parseInt(_this.olLayer.ol_uid));
+        container.appendChild(div);
+        _this.container = div;
+        _this.activeShaders = [];
       };
 
-      this.renderImage = function (source) {
+      this._createMap = function () {
+        var map = new Map({
+          target: _this.container,
+          layers: [_this.olLayer],
+          view: _this.olView
+        });
+        _this.olMap = map;
+      };
+
+      this.addShader = function (shader) {
+        _this.activeShaders.push(shader);
+      };
+
+      this.addShaders = function (shaders) {
+        for (var x = 0; x < _this.shaders.length; x++) {
+          _this.activeShaders.push(shaders[x]);
+        }
+      };
+
+      this.removeShader = function (shader) {
+        _this.activeShaders.filter(function (item) {
+          return item !== shader;
+        });
+      };
+
+      this.removeShaders = function () {
+        _this.activeShaders = [];
+      };
+
+      this.olLayer = olLayer;
+      this.olView = olView;
+      this.containerId = Date.now() + Math.floor(Math.random() * 1000000);
+      this.container;
+
+      this._createCanvasElement();
+
+      this.olMap;
+
+      this._createMap();
+
+      this.shaders = {};
+      this.activeShader;
+    };
+
+    var vertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
+
+    var fragmentShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform vec4 u_multiplier;\r\nuniform sampler2D u_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(u_image, o_texCoord) * u_multiplier;\r\n}";
+
+    var finalVertex = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
+
+    var finalFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D f_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(f_image, o_texCoord);\r\n}";
+
+    var WebGLCanvas = function WebGLCanvas(canvas, vertexShader, finalvertex, finalFragment) {
+      var _this = this;
+
+      _classCallCheck(this, WebGLCanvas);
+
+      this.compileShaders = function (fragmentShader) {
         var gl = _this.gl;
-        var tex = createTexture(gl, {
+
+        _this.programs.push(createProgramInfo(gl, [_this.vertexShader, fragmentShader]));
+      };
+
+      this._createFramebuffers = function () {
+        var gl = _this.gl;
+        var framebuffers = [];
+
+        for (var x = 0; x < 2; x++) {
+          var fbo = createFramebufferInfo(gl, [{
+            width: 600,
+            height: 500,
+            target: gl.TEXTURE_2D,
+            format: gl.RGBA,
+            min: gl.NEAREST,
+            max: gl.NEAREST,
+            wrap: gl.CLAMP_TO_EDGE
+          }], 600, 500);
+          framebuffers.push(fbo);
+        }
+
+        return framebuffers;
+      };
+
+      this.activateLayer = function (layer) {
+        if (_this.activeLayers.includes(layer)) {
+          return;
+        }
+
+        _this.activeLayers.push(layer);
+
+        for (var x = 0; x < layer.activeShaders.length; x++) {
+          _this.compileShaders(layer.activeShaders[x]);
+        }
+      };
+
+      this.activateLayers = function (layers) {
+        for (var x = 0; x < layers.length; x++) {
+          var layer = layers[x];
+
+          if (_this.activeLayers.includes(layer)) {
+            return;
+          }
+
+          _this.activeLayers.push(layer);
+
+          for (var y = 0; y < layer.activeShaders.length; y++) {
+            _this.compileShaders(layer.activeShaders[y]);
+          }
+        }
+      };
+
+      this.runAttachedPrograms = function (args) {
+        var sources = _this.activeLayers.length;
+        var passes = _this.programs.length;
+
+        if (sources === 1) {
+          _this._runSingleSource(args, passes);
+        } else {
+          _this._runMultipleSources(args, passes, sources);
+        }
+      };
+
+      this._runSingleSource = function (args, passes) {
+        var source = _this.activeLayers[0].container.querySelector("canvas");
+
+        var textureID = createTexture(_this.gl, {
           src: source
         });
 
-        _this.startRendering(source, tex);
+        var framebuffers = _this._createFramebuffers();
+
+        for (var x = 0; x < passes; x++) {
+          var passProgram = _this.programs[x];
+
+          _this.gl.useProgram(passProgram.program);
+
+          var currentFramebuffer = framebuffers[x % 2];
+
+          _this.startRendering(textureID, args[x].uniforms, passProgram, currentFramebuffer);
+
+          var textureID = currentFramebuffer.attachments[0];
+        }
+
+        _this._runFinalProgram(textureID);
       };
 
-      this.startRendering = function (img, tex) {
+      this._runMultipleSources = function () {
+      };
+
+      this._runFinalProgram = function (textureID) {
+        _this.gl.bindFramebuffer(_this.gl.FRAMEBUFFER, null);
+
+        _this.gl.useProgram(_this.finalProgram.program);
+
+        _this.startRendering(textureID, {}, _this.finalProgram);
+      };
+
+      this.startRendering = function (tex, inputUniform, programInfo, currentFramebuffer) {
         var gl = _this.gl;
-        var programInfo = _this.programInfo;
+
+        if (programInfo === _this.finalProgram) {
+          var textureUniform = {
+            'f_image': tex
+          };
+        } else {
+          var textureUniform = {
+            'u_image': tex
+          };
+        }
+
         requestAnimationFrame(render);
 
         function render() {
-          var quadVertices = primitives.createXYQuadBufferInfo(gl);
-          var uniforms = {
-            u_image: tex
-          };
           resizeCanvasToDisplaySize(gl.canvas);
           gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-          gl.useProgram(programInfo.program);
+          var quadVertices = primitives.createXYQuadBufferInfo(gl);
           setBuffersAndAttributes(gl, programInfo, quadVertices);
-          setUniforms(programInfo, uniforms);
+          gl.useProgram(programInfo.program);
+          setUniforms(programInfo, inputUniform);
+          setUniforms(programInfo, textureUniform);
+          bindFramebufferInfo(gl, currentFramebuffer);
           drawBufferInfo(gl, quadVertices, gl.TRIANGLES);
         }
       };
 
       this.gl = getContext(document.getElementById(canvas));
-      this.programInfo;
-      this.compileShaders(_vertexShader, _fragmentShader);
-      this.texture;
-      this.create;
+      this.vertexShader = vertexShader;
+      this.finalProgram = createProgramInfo(this.gl, [finalvertex, finalFragment]);
+      this.activeLayers = [];
+      this.targetCanvases = [];
+      this.programs = [];
     };
 
     var testMapView = new View({
@@ -27180,22 +27603,35 @@
       attribution: "test",
       crossOrigin: "anonymous"
     });
-    var testMapLayer = new TileLayer({
+    var testMapLayer1 = new TileLayer({
       source: testWMS,
       visible: true,
       title: "Sentinel testing",
       opacity: 1,
       minZoom: 6
     });
-    var testMap = new Map({
-      target: "tile_map",
-      layers: [testMapLayer],
-      view: testMapView
+    var testMapLayer2 = new TileLayer({
+      source: testWMS,
+      visible: true,
+      title: "Sentinel testing",
+      opacity: 1,
+      minZoom: 6
     });
-    var webgl = new WebGLObject("canvas_map", vertexShader, fragmentShader);
-    testMap.on("postrender", function () {
-      var canvas = document.querySelector("#tile_map canvas");
-      webgl.renderImage(canvas);
+    var webgl = new WebGLCanvas("canvas_map", vertexShader, finalVertex, finalFragment);
+    var testLayerObject = new LayerObject(testMapLayer1, testMapView);
+    testLayerObject.addShader(fragmentShader);
+    testLayerObject.addShader(fragmentShader);
+    webgl.activateLayer(testLayerObject);
+    testLayerObject.olMap.on("postrender", function () {
+      webgl.runAttachedPrograms([{
+        uniforms: {
+          u_multiplier: [0.5, 0.3, 1, 1]
+        }
+      }, {
+        uniforms: {
+          u_multiplier: [1, 1, 0.9, 1]
+        }
+      }]);
     });
 
 })));
