@@ -1,16 +1,17 @@
 import "../node_modules/ol/ol.css";
 import "./styles/page.css";
+
 import {Map, View} from 'ol';
 import TileLayer from 'ol/layer/Tile';
 import TileWMS from 'ol/source/TileWMS';
-import * as util from './modules/utils.js'
+
 import {LayerObject} from './modules/layer.js';
-import vertexShader from './shaders/vertex.shader';
-import fragmentShader from './shaders/fragment.shader';
-import finalVertex from './shaders/finalVertex.shader';
-import finalFragment from './shaders/finalFragment.shader';
 import {WebGLCanvas} from './modules/webgl.js';
-import { PseudoLayer } from "./modules/pseudolayer";
+import * as util from './modules/utils.js'
+
+import standardVertex from './shaders/src/standardVertex.shader';
+import changeRGB from './shaders/processing/changeRGB.shader';
+import averageLayers from './shaders/processing/averageLayers.shader';
 
 
 const testMapView = new View({
@@ -31,6 +32,19 @@ const testWMS = new TileWMS({
     crossOrigin: "anonymous",
 });
 
+const testWMS2 = new TileWMS({
+    url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
+    params: {
+        'LAYERS': "TRUE_COLOR", 
+        'TILED': true, 
+        'FORMAT': 'image/png',
+        'showLogo': false,
+        'CRS': "EPSG:3857",
+    },
+    attribution: "test",
+    crossOrigin: "anonymous",
+});
+
 const testMapLayer1 = new TileLayer({
     source: testWMS,
     visible: true,
@@ -40,28 +54,44 @@ const testMapLayer1 = new TileLayer({
 });
 
 const testMapLayer2 = new TileLayer({
-    source: testWMS,
+    source: testWMS2,
     visible: true,
     title: "Sentinel testing",
     opacity: 1,
     minZoom: 6,
 });
 
-var webgl = new WebGLCanvas("canvas_map", vertexShader);
+var webgl = new WebGLCanvas("canvas_map", standardVertex);
 var testLayerObject = new LayerObject(testMapLayer1, testMapView);
+var testLayerObject2 = new LayerObject(testMapLayer2, testMapView);
+
 var testPseudoLayer = webgl.generatePseudoLayer({
-    layers: {0: testLayerObject},
-    shaders: {0: fragmentShader, 1: fragmentShader},
-    uniforms: {0: {
-        u_multiplier: [0, 1, 1, 1]
-    }, 1: {
-        u_multiplier: [1, 1, 0, 1]
-    }}
+    inputs: {
+        0: {
+            al1_image: testLayerObject,
+            al2_image: testLayerObject2,
+        }, 
+        1: {
+            crgb_image: false,
+        }
+    },
+    shaders: {0: averageLayers, 1: changeRGB},
+    variables: {
+        0: {}, 
+        1: {
+            crgb_multiplier: [1.0, 0.0, 0.0, 1.0],
+        },
+    },
 })
 
-testLayerObject.olMap.on("postrender", () => {
+testPseudoLayer.onRender(() => {
     webgl.renderPseudoLayer(testPseudoLayer);
 });
+
+// testLayerObject.olMap.on("postrender", (e) => {
+//     console.log(e)
+//     webgl.renderPseudoLayer(testPseudoLayer);
+// });
 
 // testLayerObject.addShader(fragmentShader);
 // // testLayerObject.addShader(fragmentShader);

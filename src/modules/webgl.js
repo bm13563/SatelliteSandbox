@@ -19,70 +19,55 @@ export class WebGLCanvas{
         const gl = this.gl;
         const framebuffers = [];
         for (let x = 0; x < 2; x++) {
-            const fbo = twgl.createFramebufferInfo(gl, [{
-                width: 600,
-                height: 500,
-                target: gl.TEXTURE_2D,
-                format: gl.RGBA,
-                min: gl.NEAREST,
-                max: gl.NEAREST,
-                wrap: gl.CLAMP_TO_EDGE
-            }], 600, 500);
+            const fbo = twgl.createFramebufferInfo(gl);
             framebuffers.push(fbo);
         }
         return framebuffers;
     }
 
-    renderPseudoLayer = (pseudolayer) => {       
-        if (Object.keys(pseudolayer.layers).length === 1) {
-            this._runSingleSource(pseudolayer);
-        } else {
-            this._runMultipleSources(pseudolayer);
-        }
-    }
-
-    _runSingleSource = (pseudolayer) => {
-        const source = pseudolayer.layers[0].container.querySelector("canvas");
-        var textureID = twgl.createTexture(this.gl, {
+    _generateTexture = (source) => {
+        return twgl.createTexture(this.gl, {
             src: source,
         });
+    }
+
+    renderPseudoLayer = (pseudolayer) => {       
         const framebuffers = this._createFramebuffers();
         for (let x = 0; x < Object.keys(pseudolayer.shaders).length; x++) {
+            const inputs = {}
+            for (const key of Object.keys(pseudolayer.inputs[x])) {
+                if (pseudolayer.inputs[x][key]) {
+                    var textureId = this._generateTexture(pseudolayer.inputs[x][key].container.querySelector("canvas"));
+                    inputs[key] = textureId;
+                } else {
+                    inputs[key] = framebufferTexture;
+                }
+            }
             const passProgram = pseudolayer.shaders[x];
-            this.gl.useProgram(passProgram.program);
             const currentFramebuffer = framebuffers[x % 2];
             this._startRendering(
-                textureID, 
-                pseudolayer.uniforms[x],
+                inputs, 
+                pseudolayer.variables[x],
                 passProgram, 
                 currentFramebuffer
             );
-            var textureID = currentFramebuffer.attachments[0];
+            var framebufferTexture = currentFramebuffer.attachments[0];
         };
-        this._runFinalProgram(textureID);
+        this._runFinalProgram(framebufferTexture);
     }
 
-    _runMultipleSources = () => {
-        var ben = 1;
-    }
-
-    _runFinalProgram = (textureID) => {
+    _runFinalProgram = (framebufferTexture) => {
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
         this.gl.useProgram(this.finalProgram.program);
         this._startRendering(
-            textureID, 
+            {f_image: framebufferTexture}, 
             {}, 
             this.finalProgram,
         );
     }
 
-    _startRendering = (tex, inputUniform, programInfo, currentFramebuffer) => {
+    _startRendering = (inputs, variables, programInfo, currentFramebuffer) => {
         const gl = this.gl;
-        if (programInfo === this.finalProgram) {
-            var textureUniform = { 'f_image': tex }
-        } else {
-            var textureUniform = { 'u_image': tex }
-        }
         requestAnimationFrame(render);
         function render() {
             twgl.resizeCanvasToDisplaySize(gl.canvas);
@@ -92,22 +77,22 @@ export class WebGLCanvas{
             twgl.setBuffersAndAttributes(gl, programInfo, quadVertices);
 
             gl.useProgram(programInfo.program);
-            twgl.setUniforms(programInfo, inputUniform);
-            twgl.setUniforms(programInfo, textureUniform);
+            twgl.setUniforms(programInfo, inputs);
+            twgl.setUniforms(programInfo, variables);
             twgl.bindFramebufferInfo(gl, currentFramebuffer);
             twgl.drawBufferInfo(gl, quadVertices, gl.TRIANGLES);
         }
     }
 
     generatePseudoLayer = (args) => {
-        const _layers = args.layers;
-        const _shaders = args.shaders;
-        const _uniforms = args.uniforms;
-        const _compiledShaders = {};
-        for (const key of Object.keys(_shaders)) {
-            var compiledShader = this._compileShaders(_shaders[key]);
-            _compiledShaders[key] = compiledShader;
+        const inputs = args.inputs;
+        const shaders = args.shaders;
+        const variables = args.variables;
+        const compiledShaders = {};
+        for (const key of Object.keys(shaders)) {
+            var compiledShader = this._compileShaders(shaders[key]);
+            compiledShaders[key] = compiledShader;
         }
-        return new PseudoLayer(_layers, _compiledShaders, _uniforms);
+        return new PseudoLayer(inputs, compiledShaders, variables);
     }
 }

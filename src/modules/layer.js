@@ -1,7 +1,7 @@
 import {Map, View} from 'ol';
 import * as twgl from 'twgl.js';
 
-// "layers" are different to in native openlayers. each "layer" needs to have it's own
+// "layers" are different to those in native openlayers. each "layer" needs to have it's own
 // canvas for opengl to read from. this class creates a "layer" with it's own canvas from
 // an openlayers layer. layers will be synced as long as the same view is used
 export class LayerObject{
@@ -43,24 +43,6 @@ export class LayerObject{
         });
         map.getView().setZoom(16);
         this.olMap = map;
-    }
-
-    addShader = (shader) => {
-        this.activeShaders.push(shader);
-    }
-
-    addShaders = (shaders) => {
-        for (let x = 0; x < this.shaders.length; x++) {
-            this.activeShaders.push(shaders[x]);
-        }
-    }
-
-    removeShader = (shader) => {
-        this.activeShaders.filter(item => item !== shader)
-    }
-
-    removeShaders = () => {
-        this.activeShaders = [];
     }
 
 }

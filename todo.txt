@@ -1,5 +1,5 @@
-1. Pass shaders as an object with an index, where the index is the order in which to run the shaders
-2. Pass uniforms and "layers" as objects with a corresponding index
+1. Pass shaders as an object with an index, where the index is the order in which to run the shaders DONE
+2. Pass uniforms and "layers" as objects with a corresponding index DONE
 3. Build "Pseudolayers" -> objects that can be input into the webgl object and render without further manipulation
-   These will be a way of storing "layers" that can easily be generated on the fly as and when needed
+   These will be a way of storing "layers" that can easily be generated on the fly as and when needed DONE
 4. Finish and test _runMultipleSources method of webgl object
