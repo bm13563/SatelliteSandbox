@@ -27400,6 +27400,7 @@
           layers: [_this.olLayer],
           view: _this.olView
         });
+        map.getView().setZoom(16);
         _this.olMap = map;
       };
 
@@ -27442,19 +27443,22 @@
 
     var fragmentShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform vec4 u_multiplier;\r\nuniform sampler2D u_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(u_image, o_texCoord) * u_multiplier;\r\n}";
 
-    var finalVertex = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
+    var PseudoLayer = function PseudoLayer(layers, shaders, uniforms) {
+      _classCallCheck(this, PseudoLayer);
 
-    var finalFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D f_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(f_image, o_texCoord);\r\n}";
+      this.layers = layers;
+      this.shaders = shaders;
+      this.uniforms = uniforms;
+    };
 
-    var WebGLCanvas = function WebGLCanvas(canvas, vertexShader, finalvertex, finalFragment) {
+    var WebGLCanvas = function WebGLCanvas(canvas, vertexShader) {
       var _this = this;
 
       _classCallCheck(this, WebGLCanvas);
 
-      this.compileShaders = function (fragmentShader) {
+      this._compileShaders = function (fragmentShader) {
         var gl = _this.gl;
-
-        _this.programs.push(createProgramInfo(gl, [_this.vertexShader, fragmentShader]));
+        return createProgramInfo(gl, [_this.vertexShader, fragmentShader]);
       };
 
       this._createFramebuffers = function () {
@@ -27477,62 +27481,30 @@
         return framebuffers;
       };
 
-      this.activateLayer = function (layer) {
-        if (_this.activeLayers.includes(layer)) {
-          return;
-        }
-
-        _this.activeLayers.push(layer);
-
-        for (var x = 0; x < layer.activeShaders.length; x++) {
-          _this.compileShaders(layer.activeShaders[x]);
-        }
-      };
-
-      this.activateLayers = function (layers) {
-        for (var x = 0; x < layers.length; x++) {
-          var layer = layers[x];
-
-          if (_this.activeLayers.includes(layer)) {
-            return;
-          }
-
-          _this.activeLayers.push(layer);
-
-          for (var y = 0; y < layer.activeShaders.length; y++) {
-            _this.compileShaders(layer.activeShaders[y]);
-          }
-        }
-      };
-
-      this.runAttachedPrograms = function (args) {
-        var sources = _this.activeLayers.length;
-        var passes = _this.programs.length;
-
-        if (sources === 1) {
-          _this._runSingleSource(args, passes);
+      this.renderPseudoLayer = function (pseudolayer) {
+        if (Object.keys(pseudolayer.layers).length === 1) {
+          _this._runSingleSource(pseudolayer);
         } else {
-          _this._runMultipleSources(args, passes, sources);
+          _this._runMultipleSources(pseudolayer);
         }
       };
 
-      this._runSingleSource = function (args, passes) {
-        var source = _this.activeLayers[0].container.querySelector("canvas");
-
+      this._runSingleSource = function (pseudolayer) {
+        var source = pseudolayer.layers[0].container.querySelector("canvas");
         var textureID = createTexture(_this.gl, {
           src: source
         });
 
         var framebuffers = _this._createFramebuffers();
 
-        for (var x = 0; x < passes; x++) {
-          var passProgram = _this.programs[x];
+        for (var x = 0; x < Object.keys(pseudolayer.shaders).length; x++) {
+          var passProgram = pseudolayer.shaders[x];
 
           _this.gl.useProgram(passProgram.program);
 
           var currentFramebuffer = framebuffers[x % 2];
 
-          _this.startRendering(textureID, args[x].uniforms, passProgram, currentFramebuffer);
+          _this._startRendering(textureID, pseudolayer.uniforms[x], passProgram, currentFramebuffer);
 
           var textureID = currentFramebuffer.attachments[0];
         }
@@ -27548,10 +27520,10 @@
 
         _this.gl.useProgram(_this.finalProgram.program);
 
-        _this.startRendering(textureID, {}, _this.finalProgram);
+        _this._startRendering(textureID, {}, _this.finalProgram);
       };
 
-      this.startRendering = function (tex, inputUniform, programInfo, currentFramebuffer) {
+      this._startRendering = function (tex, inputUniform, programInfo, currentFramebuffer) {
         var gl = _this.gl;
 
         if (programInfo === _this.finalProgram) {
@@ -27579,12 +27551,28 @@
         }
       };
 
+      this.generatePseudoLayer = function (args) {
+        var _layers = args.layers;
+        var _shaders = args.shaders;
+        var _uniforms = args.uniforms;
+        var _compiledShaders = {};
+
+        for (var _i = 0, _Object$keys = Object.keys(_shaders); _i < _Object$keys.length; _i++) {
+          var key = _Object$keys[_i];
+
+          var compiledShader = _this._compileShaders(_shaders[key]);
+
+          _compiledShaders[key] = compiledShader;
+        }
+
+        return new PseudoLayer(_layers, _compiledShaders, _uniforms);
+      };
+
       this.gl = getContext(document.getElementById(canvas));
       this.vertexShader = vertexShader;
-      this.finalProgram = createProgramInfo(this.gl, [finalvertex, finalFragment]);
-      this.activeLayers = [];
-      this.targetCanvases = [];
-      this.programs = [];
+      var finalVertex = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
+      var finalFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D f_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(f_image, o_texCoord);\r\n}";
+      this.finalProgram = createProgramInfo(this.gl, [finalVertex, finalFragment]);
     };
 
     var testMapView = new View({
@@ -27592,7 +27580,7 @@
       zoom: 7
     });
     var testWMS = new TileWMS({
-      url: "https://services.sentinel-hub.com/ogc/wms/061d4336-8ed1-44a5-811e-65eea5ee06c4",
+      url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
       params: {
         'LAYERS': "NDVI",
         'TILED': true,
@@ -27617,65 +27605,81 @@
       opacity: 1,
       minZoom: 6
     });
-    var webgl = new WebGLCanvas("canvas_map", vertexShader, finalVertex, finalFragment);
+    var webgl = new WebGLCanvas("canvas_map", vertexShader);
     var testLayerObject = new LayerObject(testMapLayer1, testMapView);
-    testLayerObject.addShader(fragmentShader); // testLayerObject.addShader(fragmentShader);
-
-    webgl.activateLayer(testLayerObject); // testLayerObject.olMap.on("postrender", () => {
+    var testPseudoLayer = webgl.generatePseudoLayer({
+      layers: {
+        0: testLayerObject
+      },
+      shaders: {
+        0: fragmentShader,
+        1: fragmentShader
+      },
+      uniforms: {
+        0: {
+          u_multiplier: [0, 1, 1, 1]
+        },
+        1: {
+          u_multiplier: [1, 1, 0, 1]
+        }
+      }
+    });
+    testLayerObject.olMap.on("postrender", function () {
+      webgl.renderPseudoLayer(testPseudoLayer);
+    }); // testLayerObject.addShader(fragmentShader);
+    // // testLayerObject.addShader(fragmentShader);
+    // webgl.activateLayer(testLayerObject);
+    // testLayerObject.olMap.on("postrender", () => {
     //     webgl.runAttachedPrograms([{
     //         uniforms: {
     //             u_multiplier: [0.5, 0.3, 1, 1],
     //         },
-    //     },{
+    //     },
+    //     ])
+    // })
+    // var red = document.getElementById("red-range").value / 100;
+    // var green = document.getElementById("green-range").value / 100;
+    // var blue = document.getElementById("blue-range").value / 100;
+    // document.getElementById("red-value").innerHTML = red;
+    // document.getElementById("green-value").innerHTML = green;
+    // document.getElementById("blue-value").innerHTML = blue;
+    // testLayerObject.olMap.on("postrender", () => {
+    //     webgl.runAttachedPrograms([{
     //         uniforms: {
-    //             u_multiplier: [1, 1, 0.9, 1],
+    //             u_multiplier: [red, green, blue, 1],
     //         },
     //     },
     //     ])
     // })
-
-    var red = document.getElementById("red-range").value / 100;
-    var green = document.getElementById("green-range").value / 100;
-    var blue = document.getElementById("blue-range").value / 100;
-    document.getElementById("red-value").innerHTML = red;
-    document.getElementById("green-value").innerHTML = green;
-    document.getElementById("blue-value").innerHTML = blue;
-    testLayerObject.olMap.on("postrender", function () {
-      webgl.runAttachedPrograms([{
-        uniforms: {
-          u_multiplier: [red, green, blue, 1]
-        }
-      }]);
-    });
-
-    document.getElementById("red-range").oninput = function () {
-      red = this.value / 100;
-      document.getElementById("red-value").innerHTML = red;
-      webgl.runAttachedPrograms([{
-        uniforms: {
-          u_multiplier: [red, green, blue, 1]
-        }
-      }]);
-    };
-
-    document.getElementById("green-range").oninput = function () {
-      green = this.value / 100;
-      document.getElementById("green-value").innerHTML = green;
-      webgl.runAttachedPrograms([{
-        uniforms: {
-          u_multiplier: [red, green, blue, 1]
-        }
-      }]);
-    };
-
-    document.getElementById("blue-range").oninput = function () {
-      blue = this.value / 100;
-      document.getElementById("blue-value").innerHTML = blue;
-      webgl.runAttachedPrograms([{
-        uniforms: {
-          u_multiplier: [red, green, blue, 1]
-        }
-      }]);
-    };
+    // document.getElementById("red-range").oninput = function() {
+    //     red = this.value / 100;
+    //     document.getElementById("red-value").innerHTML = red;
+    //     webgl.runAttachedPrograms([{
+    //         uniforms: {
+    //             u_multiplier: [red, green, blue, 1],
+    //         },
+    //     },
+    //     ])
+    // }
+    // document.getElementById("green-range").oninput = function() {
+    //     green = this.value / 100;
+    //     document.getElementById("green-value").innerHTML = green;
+    //     webgl.runAttachedPrograms([{
+    //         uniforms: {
+    //             u_multiplier: [red, green, blue, 1],
+    //         },
+    //     },
+    //     ])
+    // }
+    // document.getElementById("blue-range").oninput = function() {
+    //     blue = this.value / 100;
+    //     document.getElementById("blue-value").innerHTML = blue;
+    //     webgl.runAttachedPrograms([{
+    //         uniforms: {
+    //             u_multiplier: [red, green, blue, 1],
+    //         },
+    //     },
+    //     ])
+    // }
 
 })));

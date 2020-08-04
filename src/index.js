@@ -10,6 +10,7 @@ import fragmentShader from './shaders/fragment.shader';
 import finalVertex from './shaders/finalVertex.shader';
 import finalFragment from './shaders/finalFragment.shader';
 import {WebGLCanvas} from './modules/webgl.js';
+import { PseudoLayer } from "./modules/pseudolayer";
 
 
 const testMapView = new View({
@@ -18,7 +19,7 @@ const testMapView = new View({
 })
 
 const testWMS = new TileWMS({
-    url: "https://services.sentinel-hub.com/ogc/wms/061d4336-8ed1-44a5-811e-65eea5ee06c4",
+    url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
     params: {
         'LAYERS': "NDVI", 
         'TILED': true, 
@@ -46,20 +47,30 @@ const testMapLayer2 = new TileLayer({
     minZoom: 6,
 });
 
-var webgl = new WebGLCanvas("canvas_map", vertexShader, finalVertex, finalFragment);
+var webgl = new WebGLCanvas("canvas_map", vertexShader);
 var testLayerObject = new LayerObject(testMapLayer1, testMapView);
-testLayerObject.addShader(fragmentShader);
+var testPseudoLayer = webgl.generatePseudoLayer({
+    layers: {0: testLayerObject},
+    shaders: {0: fragmentShader, 1: fragmentShader},
+    uniforms: {0: {
+        u_multiplier: [0, 1, 1, 1]
+    }, 1: {
+        u_multiplier: [1, 1, 0, 1]
+    }}
+})
+
+testLayerObject.olMap.on("postrender", () => {
+    webgl.renderPseudoLayer(testPseudoLayer);
+});
+
 // testLayerObject.addShader(fragmentShader);
-webgl.activateLayer(testLayerObject);
+// // testLayerObject.addShader(fragmentShader);
+// webgl.activateLayer(testLayerObject);
 
 // testLayerObject.olMap.on("postrender", () => {
 //     webgl.runAttachedPrograms([{
 //         uniforms: {
 //             u_multiplier: [0.5, 0.3, 1, 1],
-//         },
-//     },{
-//         uniforms: {
-//             u_multiplier: [1, 1, 0.9, 1],
 //         },
 //     },
 //     ])
@@ -67,52 +78,52 @@ webgl.activateLayer(testLayerObject);
 
 
 
-var red = document.getElementById("red-range").value / 100;
-var green = document.getElementById("green-range").value / 100;
-var blue = document.getElementById("blue-range").value / 100;
-document.getElementById("red-value").innerHTML = red;
-document.getElementById("green-value").innerHTML = green;
-document.getElementById("blue-value").innerHTML = blue;
+// var red = document.getElementById("red-range").value / 100;
+// var green = document.getElementById("green-range").value / 100;
+// var blue = document.getElementById("blue-range").value / 100;
+// document.getElementById("red-value").innerHTML = red;
+// document.getElementById("green-value").innerHTML = green;
+// document.getElementById("blue-value").innerHTML = blue;
 
-testLayerObject.olMap.on("postrender", () => {
-    webgl.runAttachedPrograms([{
-        uniforms: {
-            u_multiplier: [red, green, blue, 1],
-        },
-    },
-    ])
-})
+// testLayerObject.olMap.on("postrender", () => {
+//     webgl.runAttachedPrograms([{
+//         uniforms: {
+//             u_multiplier: [red, green, blue, 1],
+//         },
+//     },
+//     ])
+// })
 
-document.getElementById("red-range").oninput = function() {
-    red = this.value / 100;
-    document.getElementById("red-value").innerHTML = red;
-    webgl.runAttachedPrograms([{
-        uniforms: {
-            u_multiplier: [red, green, blue, 1],
-        },
-    },
-    ])
-}
+// document.getElementById("red-range").oninput = function() {
+//     red = this.value / 100;
+//     document.getElementById("red-value").innerHTML = red;
+//     webgl.runAttachedPrograms([{
+//         uniforms: {
+//             u_multiplier: [red, green, blue, 1],
+//         },
+//     },
+//     ])
+// }
 
-document.getElementById("green-range").oninput = function() {
-    green = this.value / 100;
-    document.getElementById("green-value").innerHTML = green;
-    webgl.runAttachedPrograms([{
-        uniforms: {
-            u_multiplier: [red, green, blue, 1],
-        },
-    },
-    ])
-}
+// document.getElementById("green-range").oninput = function() {
+//     green = this.value / 100;
+//     document.getElementById("green-value").innerHTML = green;
+//     webgl.runAttachedPrograms([{
+//         uniforms: {
+//             u_multiplier: [red, green, blue, 1],
+//         },
+//     },
+//     ])
+// }
 
-document.getElementById("blue-range").oninput = function() {
-    blue = this.value / 100;
-    document.getElementById("blue-value").innerHTML = blue;
-    webgl.runAttachedPrograms([{
-        uniforms: {
-            u_multiplier: [red, green, blue, 1],
-        },
-    },
-    ])
-}
+// document.getElementById("blue-range").oninput = function() {
+//     blue = this.value / 100;
+//     document.getElementById("blue-value").innerHTML = blue;
+//     webgl.runAttachedPrograms([{
+//         uniforms: {
+//             u_multiplier: [red, green, blue, 1],
+//         },
+//     },
+//     ])
+// }
 

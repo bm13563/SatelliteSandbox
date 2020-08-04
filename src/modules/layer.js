@@ -41,6 +41,7 @@ export class LayerObject{
             layers: [this.olLayer],
             view: this.olView,
         });
+        map.getView().setZoom(16);
         this.olMap = map;
     }
 

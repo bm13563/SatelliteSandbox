@@ -1,18 +1,18 @@
 import * as twgl from 'twgl.js';
+import { PseudoLayer } from './pseudolayer.js';
 
 export class WebGLCanvas{
-    constructor(canvas, vertexShader, finalvertex, finalFragment) {
+    constructor(canvas, vertexShader) {
         this.gl = twgl.getContext(document.getElementById(canvas));
         this.vertexShader = vertexShader;
-        this.finalProgram = twgl.createProgramInfo(this.gl, [finalvertex, finalFragment])
-        this.activeLayers = [];
-        this.targetCanvases = [];
-        this.programs = [];
+        var finalVertex = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
+        var finalFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D f_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(f_image, o_texCoord);\r\n}";
+        this.finalProgram = twgl.createProgramInfo(this.gl, [finalVertex, finalFragment])
     }
 
-    compileShaders = (fragmentShader) => {
+    _compileShaders = (fragmentShader) => {
         const gl = this.gl;
-        this.programs.push(twgl.createProgramInfo(gl, [this.vertexShader, fragmentShader]));
+        return twgl.createProgramInfo(gl, [this.vertexShader, fragmentShader]);
     }
 
     _createFramebuffers = () => {
@@ -33,52 +33,27 @@ export class WebGLCanvas{
         return framebuffers;
     }
 
-    activateLayer = (layer) => {
-        if (this.activeLayers.includes(layer)) {
-            return;
-        }
-        this.activeLayers.push(layer);
-        for (let x = 0; x < layer.activeShaders.length; x++) {
-            this.compileShaders(layer.activeShaders[x]);
-        }
-    }
-
-    activateLayers = (layers) => {
-        for (let x = 0; x < layers.length; x++) {
-            const layer = layers[x];
-            if (this.activeLayers.includes(layer)) {
-                return;
-            }
-            this.activeLayers.push(layer);
-            for (let y = 0; y < layer.activeShaders.length; y++) {
-                this.compileShaders(layer.activeShaders[y]);
-            }
-        }
-    }
-
-    runAttachedPrograms = (args) => {
-        const sources = this.activeLayers.length;
-        const passes = this.programs.length;
-        if (sources === 1) {
-            this._runSingleSource(args, passes);
+    renderPseudoLayer = (pseudolayer) => {       
+        if (Object.keys(pseudolayer.layers).length === 1) {
+            this._runSingleSource(pseudolayer);
         } else {
-            this._runMultipleSources(args, passes, sources);
+            this._runMultipleSources(pseudolayer);
         }
     }
 
-    _runSingleSource = (args, passes) => {
-        const source = this.activeLayers[0].container.querySelector("canvas");
+    _runSingleSource = (pseudolayer) => {
+        const source = pseudolayer.layers[0].container.querySelector("canvas");
         var textureID = twgl.createTexture(this.gl, {
             src: source,
         });
         const framebuffers = this._createFramebuffers();
-        for (let x = 0; x < passes; x++) {
-            const passProgram = this.programs[x];
+        for (let x = 0; x < Object.keys(pseudolayer.shaders).length; x++) {
+            const passProgram = pseudolayer.shaders[x];
             this.gl.useProgram(passProgram.program);
             const currentFramebuffer = framebuffers[x % 2];
-            this.startRendering(
+            this._startRendering(
                 textureID, 
-                args[x].uniforms,
+                pseudolayer.uniforms[x],
                 passProgram, 
                 currentFramebuffer
             );
@@ -94,14 +69,14 @@ export class WebGLCanvas{
     _runFinalProgram = (textureID) => {
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
         this.gl.useProgram(this.finalProgram.program);
-        this.startRendering(
+        this._startRendering(
             textureID, 
             {}, 
             this.finalProgram,
         );
     }
 
-    startRendering = (tex, inputUniform, programInfo, currentFramebuffer) => {
+    _startRendering = (tex, inputUniform, programInfo, currentFramebuffer) => {
         const gl = this.gl;
         if (programInfo === this.finalProgram) {
             var textureUniform = { 'f_image': tex }
@@ -122,5 +97,17 @@ export class WebGLCanvas{
             twgl.bindFramebufferInfo(gl, currentFramebuffer);
             twgl.drawBufferInfo(gl, quadVertices, gl.TRIANGLES);
         }
+    }
+
+    generatePseudoLayer = (args) => {
+        const _layers = args.layers;
+        const _shaders = args.shaders;
+        const _uniforms = args.uniforms;
+        const _compiledShaders = {};
+        for (const key of Object.keys(_shaders)) {
+            var compiledShader = this._compileShaders(_shaders[key]);
+            _compiledShaders[key] = compiledShader;
+        }
+        return new PseudoLayer(_layers, _compiledShaders, _uniforms);
     }
 }
