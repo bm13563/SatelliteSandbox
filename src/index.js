@@ -35,7 +35,7 @@ const testWMS = new TileWMS({
 const testWMS2 = new TileWMS({
     url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
     params: {
-        'LAYERS': "TRUE_COLOR", 
+        'LAYERS': "NDVI", 
         'TILED': true, 
         'FORMAT': 'image/png',
         'showLogo': false,
@@ -63,25 +63,17 @@ const testMapLayer2 = new TileLayer({
 
 var webgl = new WebGLCanvas("canvas_map", standardVertex);
 var testLayerObject = new LayerObject(testMapLayer1, testMapView);
-var testLayerObject2 = new LayerObject(testMapLayer2, testMapView);
+// var testLayerObject2 = new LayerObject(testMapLayer2, testMapView);
 
 var testPseudoLayer = webgl.generatePseudoLayer({
     inputs: {
-        0: {
-            al1_image: testLayerObject,
-            al2_image: testLayerObject2,
-        }, 
-        1: {
-            crgb_image: false,
-        }
+        0: {crgb_image: testLayerObject}, 
     },
-    shaders: {0: averageLayers, 1: changeRGB},
+    shaders: {0: changeRGB},
     variables: {
-        0: {}, 
-        1: {
-            crgb_multiplier: [1.0, 0.0, 0.0, 1.0],
-        },
+        0: {crgb_multiplier: [1.0, 1.0, 1.0, 1.0]}, 
     },
+    dynamics: {}
 })
 
 testPseudoLayer.onRender(() => {

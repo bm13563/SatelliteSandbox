@@ -27547,17 +27547,40 @@
         var inputs = args.inputs;
         var shaders = args.shaders;
         var variables = args.variables;
+        var dynamics = args.dynamics;
         var compiledShaders = {};
 
         for (var _i2 = 0, _Object$keys2 = Object.keys(shaders); _i2 < _Object$keys2.length; _i2++) {
           var key = _Object$keys2[_i2];
+          var thisShader = shaders[key];
 
-          var compiledShader = _this._compileShaders(shaders[key]);
+          if (key in dynamics) {
+            var theseDynamics = dynamics[key];
+
+            var dynamicShader = _this._addDynamicsToShader(thisShader, theseDynamics);
+          } else {
+            var dynamicShader = thisShader;
+          }
+
+          var compiledShader = _this._compileShaders(dynamicShader);
 
           compiledShaders[key] = compiledShader;
         }
 
         return new PseudoLayer(inputs, compiledShaders, variables);
+      };
+
+      this._addDynamicsToShader = function (shader, dynamics) {
+        if (dynamics === {}) {
+          return shader;
+        } else {
+          for (var _i3 = 0, _Object$keys3 = Object.keys(dynamics); _i3 < _Object$keys3.length; _i3++) {
+            var key = _Object$keys3[_i3];
+            shader = shader.replace(key, dynamics[key].toString());
+          }
+        }
+
+        return shader;
       };
 
       this.gl = getContext(document.getElementById(canvas));
@@ -27570,8 +27593,6 @@
     var standardVertex = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
 
     var changeRGB = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform vec4 crgb_multiplier;\r\nuniform sampler2D crgb_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(crgb_image, o_texCoord) * crgb_multiplier;\r\n}";
-
-    var averageLayers = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D al1_image;\r\nuniform sampler2D al2_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 al1_texture = texture(al1_image, o_texCoord);\r\n    vec4 al2_texture = texture(al2_image, o_texCoord);\r\n    vec4 sum_texture = al1_texture + al2_texture;\r\n    o_colour = sum_texture / vec4(2.0, 2.0, 2.0, 1.0);\r\n}";
 
     var testMapView = new View({
       center: [-7337.954715, 6709336.594760],
@@ -27592,7 +27613,7 @@
     var testWMS2 = new TileWMS({
       url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
       params: {
-        'LAYERS': "TRUE_COLOR",
+        'LAYERS': "NDVI",
         'TILED': true,
         'FORMAT': 'image/png',
         'showLogo': false,
@@ -27616,28 +27637,23 @@
       minZoom: 6
     });
     var webgl = new WebGLCanvas("canvas_map", standardVertex);
-    var testLayerObject = new LayerObject(testMapLayer1, testMapView);
-    var testLayerObject2 = new LayerObject(testMapLayer2, testMapView);
+    var testLayerObject = new LayerObject(testMapLayer1, testMapView); // var testLayerObject2 = new LayerObject(testMapLayer2, testMapView);
+
     var testPseudoLayer = webgl.generatePseudoLayer({
       inputs: {
         0: {
-          al1_image: testLayerObject,
-          al2_image: testLayerObject2
-        },
-        1: {
-          crgb_image: false
+          crgb_image: testLayerObject
         }
       },
       shaders: {
-        0: averageLayers,
-        1: changeRGB
+        0: changeRGB
       },
       variables: {
-        0: {},
-        1: {
-          crgb_multiplier: [1.0, 0.0, 0.0, 1.0]
+        0: {
+          crgb_multiplier: [1.0, 1.0, 1.0, 1.0]
         }
-      }
+      },
+      dynamics: {}
     });
     testPseudoLayer.onRender(function () {
       webgl.renderPseudoLayer(testPseudoLayer);

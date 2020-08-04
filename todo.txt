@@ -2,4 +2,7 @@
 2. Pass uniforms and "layers" as objects with a corresponding index DONE
 3. Build "Pseudolayers" -> objects that can be input into the webgl object and render without further manipulation
    These will be a way of storing "layers" that can easily be generated on the fly as and when needed DONE
-4. Finish and test _runMultipleSources method of webgl object
+4. Finish and test _runMultipleSources method of webgl object DONE
+5. implement passing textures as arrays
+6. kerneling - edge detection etc
+7. build argument formatters

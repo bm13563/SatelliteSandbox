@@ -88,11 +88,30 @@ export class WebGLCanvas{
         const inputs = args.inputs;
         const shaders = args.shaders;
         const variables = args.variables;
+        const dynamics = args.dynamics;
         const compiledShaders = {};
         for (const key of Object.keys(shaders)) {
-            var compiledShader = this._compileShaders(shaders[key]);
+            const thisShader = shaders[key];
+            if (key in dynamics) {
+                const theseDynamics = dynamics[key];
+                var dynamicShader = this._addDynamicsToShader(thisShader, theseDynamics);
+            } else {
+                var dynamicShader = thisShader;
+            }
+            var compiledShader = this._compileShaders(dynamicShader);
             compiledShaders[key] = compiledShader;
         }
         return new PseudoLayer(inputs, compiledShaders, variables);
+    }
+
+    _addDynamicsToShader = (shader, dynamics) => {
+        if (dynamics === {}) {
+            return shader;
+        } else {
+            for (const key of Object.keys(dynamics)) {
+                shader = shader.replace(key, dynamics[key].toString());
+            }
+        }
+        return shader;
     }
 }
