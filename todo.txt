@@ -6,5 +6,6 @@
 5. only allow one shader to be run at a time for any pseudolayer DONE
 6. allow an "input" to a pseudolayer to be another pseudolayer DONE
 7. comment code
-8. try kerneling
+8. try kerneling DONE
 9. build argument formatters
+10. implement fps control semi-done

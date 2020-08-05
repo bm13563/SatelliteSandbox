@@ -8,7 +8,8 @@ export class PseudoLayer{
         this.maps = [];
         this._getMaps(this);
         this.maps.sort((x, y) => {return x.mapId - y.mapId});
-        this.maps = this.maps.map(({ map }) => map)
+        this.maps = this.maps.map(({ map }) => map);
+        this.fpsTracker = 0;
     }
 
     _getMaps = (thisLayer) => {
@@ -26,13 +27,12 @@ export class PseudoLayer{
     // addPass = () {
     // }
 
-    onRender = (callback) => {
+    onRender = (divisor, callback) => {
         this.maps[this.maps.length-1].on("postrender", (e) => {
-            callback();
+            if (this.fpsTracker % divisor == 0) {
+                callback();
+            }
+            this.fpsTracker++;
         });
-    }
-
-    stack = (pseudolayer) => {
-
     }
 }

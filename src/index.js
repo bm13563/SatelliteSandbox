@@ -9,9 +9,9 @@ import {LayerObject} from './modules/layer.js';
 import {WebGLCanvas} from './modules/webgl.js';
 import * as util from './modules/utils.js'
 
-import standardVertex from './shaders/src/standardVertex.shader';
 import changeRGB from './shaders/processing/changeRGB.shader';
 import averageLayers from './shaders/processing/averageLayers.shader';
+import apply3x3Kernel from './shaders/processing/apply3x3Kernel.shader';
 
 
 const testMapView = new View({
@@ -63,117 +63,40 @@ const testMapLayer2 = new TileLayer({
 });
 
 var webgl = new WebGLCanvas("canvas_map");
-var testLayerObject = new LayerObject(testMapLayer1, testMapView);
-var testLayerObject2 = new LayerObject(testMapLayer2, testMapView);
-const p1 = webgl.generatePseudoLayer(testLayerObject);
-const p2 = webgl.generatePseudoLayer(testLayerObject2)
-
-
-// var testLayerObject2 = new LayerObject(testMapLayer2, testMapView);
+var l1 = new LayerObject(testMapLayer1, testMapView);
+const p1 = webgl.generatePseudoLayer(l1);
 
 const pp1 = webgl.processPseudoLayer({
     inputs: {
-        crgb_image: p1,
+        crgb_image: p1, 
     },
     shader: changeRGB,
     variables: {
-        crgb_multiplier: [2.5, 2.5, 2.5, 2.5],
+        crgb_multiplier: [2.5, 2.5, 2.5, 1.0],
     },
-    dynamics: {},
-});
+    dynamics: {}
+})
 
 const pp2 = webgl.processPseudoLayer({
     inputs: {
-        crgb_image: testLayerObject2,
+        a3k_image: pp1,
     },
-    shader: changeRGB,
+    shader: apply3x3Kernel,
     variables: {
-        crgb_multiplier: [1.0, 1.0, 0.0, 1.0],
+        a3k_textureWidth: webgl.width,
+        a3k_textureHeight: webgl.height,
+        a3k_kernel: [
+            -1, -1, -1,
+            -1,  8, -1,
+            -1, -1, -1
+         ],
+        a3k_kernelWeight: 1,
     },
-    dynamics: {},
-});
+    dynamics: {}
+})
 
-const pp3 = webgl.processPseudoLayer({
-    inputs: {
-        al1_image: pp1,
-        al2_image: pp2,
-    },
-    shader: averageLayers,
-    variables: {},
-    dynamics: {},
-});
+pp2.onRender(5, () => {
+    webgl.renderPseudoLayer(pp2);
+})
 
-
-pp3.onRender(() => {
-    webgl.renderPseudoLayer(pp3);
-});
-
-// testLayerObject.olMap.on("postrender", (e) => {
-//     console.log(e)
-//     webgl.renderPseudoLayer(testPseudoLayer);
-// });
-
-// testLayerObject.addShader(fragmentShader);
-// // testLayerObject.addShader(fragmentShader);
-// webgl.activateLayer(testLayerObject);
-
-// testLayerObject.olMap.on("postrender", () => {
-//     webgl.runAttachedPrograms([{
-//         uniforms: {
-//             u_multiplier: [0.5, 0.3, 1, 1],
-//         },
-//     },
-//     ])
-// })
-
-
-
-// var red = document.getElementById("red-range").value / 100;
-// var green = document.getElementById("green-range").value / 100;
-// var blue = document.getElementById("blue-range").value / 100;
-// document.getElementById("red-value").innerHTML = red;
-// document.getElementById("green-value").innerHTML = green;
-// document.getElementById("blue-value").innerHTML = blue;
-
-// testLayerObject.olMap.on("postrender", () => {
-//     webgl.runAttachedPrograms([{
-//         uniforms: {
-//             u_multiplier: [red, green, blue, 1],
-//         },
-//     },
-//     ])
-// })
-
-// document.getElementById("red-range").oninput = function() {
-//     red = this.value / 100;
-//     document.getElementById("red-value").innerHTML = red;
-//     webgl.runAttachedPrograms([{
-//         uniforms: {
-//             u_multiplier: [red, green, blue, 1],
-//         },
-//     },
-//     ])
-// }
-
-// document.getElementById("green-range").oninput = function() {
-//     green = this.value / 100;
-//     document.getElementById("green-value").innerHTML = green;
-//     webgl.runAttachedPrograms([{
-//         uniforms: {
-//             u_multiplier: [red, green, blue, 1],
-//         },
-//     },
-//     ])
-// }
-
-// document.getElementById("blue-range").oninput = function() {
-//     blue = this.value / 100;
-//     document.getElementById("blue-value").innerHTML = blue;
-//     webgl.runAttachedPrograms([{
-//         uniforms: {
-//             u_multiplier: [red, green, blue, 1],
-//         },
-//     },
-//     ])
-// }
 

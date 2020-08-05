@@ -27444,13 +27444,15 @@
         }
       };
 
-      this.onRender = function (callback) {
+      this.onRender = function (divisor, callback) {
         _this.maps[_this.maps.length - 1].on("postrender", function (e) {
-          callback();
+          if (_this.fpsTracker % divisor == 0) {
+            callback();
+          }
+
+          _this.fpsTracker++;
         });
       };
-
-      this.stack = function (pseudolayer) {};
 
       this.type = 'pseudolayer';
       this.id = Date.now() + Math.floor(Math.random() * 1000000);
@@ -27468,6 +27470,7 @@
         var map = _ref.map;
         return map;
       });
+      this.fpsTracker = 0;
     };
 
     // contains hard-coded "final shaders" to render an unaltered image from a framebuffer, always used for the final shader pass
@@ -27616,6 +27619,8 @@
       };
 
       this.gl = getContext(document.getElementById(canvas));
+      this.width = this.gl.canvas.width;
+      this.height = this.gl.canvas.height;
       var baseVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
       var vFlipVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
       var baseFragmentShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D f_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(f_image, o_texCoord);\r\n}";
@@ -27628,7 +27633,7 @@
 
     var changeRGB = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform vec4 crgb_multiplier;\r\nuniform sampler2D crgb_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(crgb_image, o_texCoord) * crgb_multiplier;\r\n}";
 
-    var averageLayers = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D al1_image;\r\nuniform sampler2D al2_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 al1_texture = texture(al1_image, o_texCoord);\r\n    vec4 al2_texture = texture(al2_image, o_texCoord);\r\n    vec4 sum_texture = al1_texture + al2_texture;\r\n    o_colour = sum_texture / vec4(2.0, 2.0, 2.0, 1.0);\r\n}";
+    var apply3x3Kernel = "#version 300 es\r\nprecision mediump float;\r\n\r\nuniform sampler2D a3k_image;\r\nuniform float a3k_textureWidth;\r\nuniform float a3k_textureHeight;\r\nuniform float a3k_kernel[9];\r\nuniform float a3k_kernelWeight;\r\n\r\nin vec2 o_texCoord;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   vec2 onePixel = vec2(1.0 / a3k_textureWidth, 1.0 / a3k_textureHeight);\r\n   vec4 colorSum =\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1, -1)) * a3k_kernel[0] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0, -1)) * a3k_kernel[1] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1, -1)) * a3k_kernel[2] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  0)) * a3k_kernel[3] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  0)) * a3k_kernel[4] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  0)) * a3k_kernel[5] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  1)) * a3k_kernel[6] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  1)) * a3k_kernel[7] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  1)) * a3k_kernel[8] ;\r\n   o_colour = vec4((colorSum / a3k_kernelWeight).rgb, 1);\r\n}";
 
     var testMapView = new View({
       center: [-7337.954715, 6709336.594760],
@@ -27674,100 +27679,33 @@
       minZoom: 6
     });
     var webgl = new WebGLCanvas("canvas_map");
-    var testLayerObject = new LayerObject(testMapLayer1, testMapView);
-    var testLayerObject2 = new LayerObject(testMapLayer2, testMapView);
-    var p1 = webgl.generatePseudoLayer(testLayerObject);
-    var p2 = webgl.generatePseudoLayer(testLayerObject2); // var testLayerObject2 = new LayerObject(testMapLayer2, testMapView);
-
+    var l1 = new LayerObject(testMapLayer1, testMapView);
+    var p1 = webgl.generatePseudoLayer(l1);
     var pp1 = webgl.processPseudoLayer({
       inputs: {
         crgb_image: p1
       },
       shader: changeRGB,
       variables: {
-        crgb_multiplier: [2.5, 2.5, 2.5, 2.5]
+        crgb_multiplier: [2.5, 2.5, 2.5, 1.0]
       },
       dynamics: {}
     });
     var pp2 = webgl.processPseudoLayer({
       inputs: {
-        crgb_image: testLayerObject2
+        a3k_image: pp1
       },
-      shader: changeRGB,
+      shader: apply3x3Kernel,
       variables: {
-        crgb_multiplier: [1.0, 1.0, 0.0, 1.0]
+        a3k_textureWidth: webgl.width,
+        a3k_textureHeight: webgl.height,
+        a3k_kernel: [-1, -1, -1, -1, 8, -1, -1, -1, -1],
+        a3k_kernelWeight: 1
       },
       dynamics: {}
     });
-    var pp3 = webgl.processPseudoLayer({
-      inputs: {
-        al1_image: pp1,
-        al2_image: pp2
-      },
-      shader: averageLayers,
-      variables: {},
-      dynamics: {}
+    pp2.onRender(5, function () {
+      webgl.renderPseudoLayer(pp2);
     });
-    pp3.onRender(function () {
-      webgl.renderPseudoLayer(pp3);
-    }); // testLayerObject.olMap.on("postrender", (e) => {
-    //     console.log(e)
-    //     webgl.renderPseudoLayer(testPseudoLayer);
-    // });
-    // testLayerObject.addShader(fragmentShader);
-    // // testLayerObject.addShader(fragmentShader);
-    // webgl.activateLayer(testLayerObject);
-    // testLayerObject.olMap.on("postrender", () => {
-    //     webgl.runAttachedPrograms([{
-    //         uniforms: {
-    //             u_multiplier: [0.5, 0.3, 1, 1],
-    //         },
-    //     },
-    //     ])
-    // })
-    // var red = document.getElementById("red-range").value / 100;
-    // var green = document.getElementById("green-range").value / 100;
-    // var blue = document.getElementById("blue-range").value / 100;
-    // document.getElementById("red-value").innerHTML = red;
-    // document.getElementById("green-value").innerHTML = green;
-    // document.getElementById("blue-value").innerHTML = blue;
-    // testLayerObject.olMap.on("postrender", () => {
-    //     webgl.runAttachedPrograms([{
-    //         uniforms: {
-    //             u_multiplier: [red, green, blue, 1],
-    //         },
-    //     },
-    //     ])
-    // })
-    // document.getElementById("red-range").oninput = function() {
-    //     red = this.value / 100;
-    //     document.getElementById("red-value").innerHTML = red;
-    //     webgl.runAttachedPrograms([{
-    //         uniforms: {
-    //             u_multiplier: [red, green, blue, 1],
-    //         },
-    //     },
-    //     ])
-    // }
-    // document.getElementById("green-range").oninput = function() {
-    //     green = this.value / 100;
-    //     document.getElementById("green-value").innerHTML = green;
-    //     webgl.runAttachedPrograms([{
-    //         uniforms: {
-    //             u_multiplier: [red, green, blue, 1],
-    //         },
-    //     },
-    //     ])
-    // }
-    // document.getElementById("blue-range").oninput = function() {
-    //     blue = this.value / 100;
-    //     document.getElementById("blue-value").innerHTML = blue;
-    //     webgl.runAttachedPrograms([{
-    //         uniforms: {
-    //             u_multiplier: [red, green, blue, 1],
-    //         },
-    //     },
-    //     ])
-    // }
 
 })));
