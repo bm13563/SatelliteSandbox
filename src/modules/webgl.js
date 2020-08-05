@@ -1,68 +1,105 @@
 import * as twgl from 'twgl.js';
 import { PseudoLayer } from './pseudolayer.js';
 
+// a class representing the canvas to which webgl should render to
+// contains hard-coded "final shaders" to render an unaltered image from a framebuffer, always used for the final shader pass
+// a framebuffer is always used -> even if a single shader is being applied, still goes through a framebuffer, then through final shaders
+// framebuffer tracker is essentially a global variable, used for reconstructing and using pseudolayers in further processing
 export class WebGLCanvas{
-    constructor(canvas, vertexShader) {
+    constructor(canvas) {
         this.gl = twgl.getContext(document.getElementById(canvas));
-        this.vertexShader = vertexShader;
-        var finalVertex = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
-        var finalFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D f_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(f_image, o_texCoord);\r\n}";
-        this.finalProgram = twgl.createProgramInfo(this.gl, [finalVertex, finalFragment])
+        var baseVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
+        var vFlipVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
+        var baseFragmentShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D f_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(f_image, o_texCoord);\r\n}";
+        this.baseVertexShader = baseVertexShader;
+        this.baseProgram = twgl.createProgramInfo(this.gl, [baseVertexShader, baseFragmentShader]);
+        this.vFlipProgram = twgl.createProgramInfo(this.gl, [vFlipVertexShader, baseFragmentShader]);
+        this.framebufferTracker = {};
     }
 
+    // compiles webgl shaders from string
     _compileShaders = (fragmentShader) => {
         const gl = this.gl;
-        return twgl.createProgramInfo(gl, [this.vertexShader, fragmentShader]);
+        return twgl.createProgramInfo(gl, [this.baseVertexShader, fragmentShader]);
     }
 
-    _createFramebuffers = () => {
+    // creates a specified number of framebuffers
+    _createFramebuffers = (number) => {
         const gl = this.gl;
         const framebuffers = [];
-        for (let x = 0; x < 2; x++) {
+        for (let x = 0; x < number; x++) {
             const fbo = twgl.createFramebufferInfo(gl);
             framebuffers.push(fbo);
         }
         return framebuffers;
     }
 
+    // generates a texture from an image
     _generateTexture = (source) => {
         return twgl.createTexture(this.gl, {
             src: source,
         });
     }
 
-    renderPseudoLayer = (pseudolayer) => {       
-        const framebuffers = this._createFramebuffers();
-        for (let x = 0; x < Object.keys(pseudolayer.shaders).length; x++) {
-            const inputs = {}
-            for (const key of Object.keys(pseudolayer.inputs[x])) {
-                if (pseudolayer.inputs[x][key]) {
-                    var textureId = this._generateTexture(pseudolayer.inputs[x][key].container.querySelector("canvas"));
-                    inputs[key] = textureId;
-                } else {
-                    inputs[key] = framebufferTexture;
-                }
-            }
-            const passProgram = pseudolayer.shaders[x];
-            const currentFramebuffer = framebuffers[x % 2];
-            this._startRendering(
-                inputs, 
-                pseudolayer.variables[x],
-                passProgram, 
-                currentFramebuffer
-            );
-            var framebufferTexture = currentFramebuffer.attachments[0];
-        };
-        this._runFinalProgram(framebufferTexture);
+    // renders a pseudo layer with the attached shader applied. reconstructs any child pseudolayers first, stores framebuffers for these
+    // children in the framebuffertracker, then uses the framebuffers to apply any processing
+    renderPseudoLayer = (pseudolayer) => {
+        console.log("===")
+        this._recurseThroughChildLayers(pseudolayer, pseudolayer);
+        const framebufferTexture = this._generatePseudoLayer(pseudolayer);
+        this._runvFlipProgram(framebufferTexture);
+        this.framebufferTracker = {};
     }
 
-    _runFinalProgram = (framebufferTexture) => {
+    // recurses through the child layers of a pseudolayer to reconstruct the pseudolayer.
+    _recurseThroughChildLayers = (thisLayer, originalLayer) => {
+        for (const key of Object.keys(thisLayer.inputs)) {
+            const nextLayer = thisLayer.inputs[key];
+            if (nextLayer.type === "layer") {
+                const framebufferTexture = this._generatePseudoLayer(thisLayer);
+                this.framebufferTracker[thisLayer.id] = framebufferTexture;
+            } else {
+                this._recurseThroughChildLayers(nextLayer, originalLayer);
+                if (!(thisLayer.id === originalLayer.id)) {
+                    const framebufferTexture = this._generatePseudoLayer(thisLayer);
+                    this.framebufferTracker[thisLayer.id] = framebufferTexture;
+                }
+            }
+        }
+    }
+
+    // generates a framebuffer that represents a pseudolayer
+    _generatePseudoLayer = (pseudolayer) => {
+        const framebuffer = this._createFramebuffers(1)[0];
+        const renderInputs = {};
+        const inputs = pseudolayer.inputs;
+        const renderVariables = pseudolayer.variables;
+        const renderShader = pseudolayer.shader;
+        for (const key of Object.keys(inputs)) {
+            if (inputs[key].type === "layer") {
+                const textureId = this._generateTexture(inputs[key].container.querySelector("canvas"));
+                renderInputs[key] = textureId;
+            } else {
+                renderInputs[key] = this.framebufferTracker[inputs[key].id];
+            }
+        }
+        this._startRendering(
+            renderInputs, 
+            renderVariables,
+            renderShader, 
+            framebuffer
+        );
+        var framebufferTexture = framebuffer.attachments[0];
+        return framebufferTexture;
+    }
+
+    _runvFlipProgram = (framebufferTexture) => {
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
-        this.gl.useProgram(this.finalProgram.program);
+        this.gl.useProgram(this.vFlipProgram.program);
         this._startRendering(
             {f_image: framebufferTexture}, 
             {}, 
-            this.finalProgram,
+            this.vFlipProgram,
         );
     }
 
@@ -84,24 +121,19 @@ export class WebGLCanvas{
         }
     }
 
-    generatePseudoLayer = (args) => {
-        const inputs = args.inputs;
-        const shaders = args.shaders;
-        const variables = args.variables;
-        const dynamics = args.dynamics;
-        const compiledShaders = {};
-        for (const key of Object.keys(shaders)) {
-            const thisShader = shaders[key];
-            if (key in dynamics) {
-                const theseDynamics = dynamics[key];
-                var dynamicShader = this._addDynamicsToShader(thisShader, theseDynamics);
-            } else {
-                var dynamicShader = thisShader;
-            }
-            var compiledShader = this._compileShaders(dynamicShader);
-            compiledShaders[key] = compiledShader;
-        }
-        return new PseudoLayer(inputs, compiledShaders, variables);
+    generatePseudoLayer = (layer) => {
+        return new PseudoLayer(
+            {f_image: layer},
+            this.baseProgram,
+            {},
+        )
+    }
+
+    // edited to only allow one shader program to be passed at a time
+    processPseudoLayer = (args) => {
+        const dynamicShader = this._addDynamicsToShader(args.shader, args.dynamics);
+        const compiledShader = this._compileShaders(dynamicShader);
+        return new PseudoLayer(args.inputs, compiledShader, args.variables);
     }
 
     _addDynamicsToShader = (shader, dynamics) => {

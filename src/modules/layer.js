@@ -6,8 +6,10 @@ import * as twgl from 'twgl.js';
 // an openlayers layer. layers will be synced as long as the same view is used
 export class LayerObject{
     constructor(olLayer, olView) {
+        this.type = 'layer';
         this.olLayer = olLayer;
         this.olView = olView;
+        this.mapOrderId = parseInt(this.olLayer.ol_uid);
         this.containerId = Date.now() + (Math.floor(Math.random() * 1000000));
         this.container;
         this._createCanvasElement();

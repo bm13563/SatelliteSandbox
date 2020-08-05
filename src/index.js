@@ -22,11 +22,12 @@ const testMapView = new View({
 const testWMS = new TileWMS({
     url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
     params: {
-        'LAYERS': "NDVI", 
+        'LAYERS': "TRUE_COLOR", 
         'TILED': true, 
         'FORMAT': 'image/png',
         'showLogo': false,
         'CRS': "EPSG:3857",
+        'TIME': "2018-03-29/2018-05-29",
     },
     attribution: "test",
     crossOrigin: "anonymous",
@@ -61,23 +62,50 @@ const testMapLayer2 = new TileLayer({
     minZoom: 6,
 });
 
-var webgl = new WebGLCanvas("canvas_map", standardVertex);
+var webgl = new WebGLCanvas("canvas_map");
 var testLayerObject = new LayerObject(testMapLayer1, testMapView);
+var testLayerObject2 = new LayerObject(testMapLayer2, testMapView);
+const p1 = webgl.generatePseudoLayer(testLayerObject);
+const p2 = webgl.generatePseudoLayer(testLayerObject2)
+
+
 // var testLayerObject2 = new LayerObject(testMapLayer2, testMapView);
 
-var testPseudoLayer = webgl.generatePseudoLayer({
+const pp1 = webgl.processPseudoLayer({
     inputs: {
-        0: {crgb_image: testLayerObject}, 
+        crgb_image: p1,
     },
-    shaders: {0: changeRGB},
+    shader: changeRGB,
     variables: {
-        0: {crgb_multiplier: [1.0, 1.0, 1.0, 1.0]}, 
+        crgb_multiplier: [2.5, 2.5, 2.5, 2.5],
     },
-    dynamics: {}
-})
+    dynamics: {},
+});
 
-testPseudoLayer.onRender(() => {
-    webgl.renderPseudoLayer(testPseudoLayer);
+const pp2 = webgl.processPseudoLayer({
+    inputs: {
+        crgb_image: testLayerObject2,
+    },
+    shader: changeRGB,
+    variables: {
+        crgb_multiplier: [1.0, 1.0, 0.0, 1.0],
+    },
+    dynamics: {},
+});
+
+const pp3 = webgl.processPseudoLayer({
+    inputs: {
+        al1_image: pp1,
+        al2_image: pp2,
+    },
+    shader: averageLayers,
+    variables: {},
+    dynamics: {},
+});
+
+
+pp3.onRender(() => {
+    webgl.renderPseudoLayer(pp3);
 });
 
 // testLayerObject.olMap.on("postrender", (e) => {

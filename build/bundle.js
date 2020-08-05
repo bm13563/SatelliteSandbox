@@ -27404,8 +27404,10 @@
         _this.olMap = map;
       };
 
+      this.type = 'layer';
       this.olLayer = olLayer;
       this.olView = olView;
+      this.mapOrderId = parseInt(this.olLayer.ol_uid);
       this.containerId = Date.now() + Math.floor(Math.random() * 1000000);
       this.container;
 
@@ -27419,32 +27421,27 @@
       this.activeShader;
     };
 
-    var PseudoLayer = function PseudoLayer(inputs, shaders, variables) {
+    var PseudoLayer = function PseudoLayer(inputs, shader, variables) {
       var _this = this;
 
       _classCallCheck(this, PseudoLayer);
 
-      this._getMaps = function () {
-        var maps = [];
+      this._getMaps = function (thisLayer) {
+        for (var _i = 0, _Object$keys = Object.keys(thisLayer.inputs); _i < _Object$keys.length; _i++) {
+          var key = _Object$keys[_i];
 
-        for (var _i = 0, _Object$keys = Object.keys(_this.inputs); _i < _Object$keys.length; _i++) {
-          var outerKey = _Object$keys[_i];
+          if (thisLayer.inputs[key].type === "pseudolayer") {
+            _this._getMaps(thisLayer.inputs[key]);
+          } else {
+            var map = thisLayer.inputs[key].olMap;
+            var mapId = thisLayer.inputs[key].mapOrderId;
 
-          for (var _i2 = 0, _Object$keys2 = Object.keys(_this.inputs[outerKey]); _i2 < _Object$keys2.length; _i2++) {
-            var innerKey = _Object$keys2[_i2];
-            var map = _this.inputs[outerKey][innerKey].olMap;
-
-            if (map) {
-              maps.push(map);
-            }
+            _this.maps.push({
+              mapId: mapId,
+              map: map
+            });
           }
         }
-
-        return maps;
-      };
-
-      this.updateVariableValue = function (index, variable, value) {
-        _this.variables[index][variable] = value;
       };
 
       this.onRender = function (callback) {
@@ -27453,27 +27450,45 @@
         });
       };
 
+      this.stack = function (pseudolayer) {};
+
+      this.type = 'pseudolayer';
+      this.id = Date.now() + Math.floor(Math.random() * 1000000);
       this.inputs = inputs;
-      this.shaders = shaders;
+      this.shader = shader;
       this.variables = variables;
-      this.maps = this._getMaps();
+      this.maps = [];
+
+      this._getMaps(this);
+
+      this.maps.sort(function (x, y) {
+        return x.mapId - y.mapId;
+      });
+      this.maps = this.maps.map(function (_ref) {
+        var map = _ref.map;
+        return map;
+      });
     };
 
-    var WebGLCanvas = function WebGLCanvas(canvas, vertexShader) {
+    // contains hard-coded "final shaders" to render an unaltered image from a framebuffer, always used for the final shader pass
+    // a framebuffer is always used -> even if a single shader is being applied, still goes through a framebuffer, then through final shaders
+    // framebuffer tracker is essentially a global variable, used for reconstructing and using pseudolayers in further processing
+
+    var WebGLCanvas = function WebGLCanvas(canvas) {
       var _this = this;
 
       _classCallCheck(this, WebGLCanvas);
 
       this._compileShaders = function (fragmentShader) {
         var gl = _this.gl;
-        return createProgramInfo(gl, [_this.vertexShader, fragmentShader]);
+        return createProgramInfo(gl, [_this.baseVertexShader, fragmentShader]);
       };
 
-      this._createFramebuffers = function () {
+      this._createFramebuffers = function (number) {
         var gl = _this.gl;
         var framebuffers = [];
 
-        for (var x = 0; x < 2; x++) {
+        for (var x = 0; x < number; x++) {
           var fbo = createFramebufferInfo(gl);
           framebuffers.push(fbo);
         }
@@ -27488,42 +27503,72 @@
       };
 
       this.renderPseudoLayer = function (pseudolayer) {
-        var framebuffers = _this._createFramebuffers();
+        console.log("===");
 
-        for (var x = 0; x < Object.keys(pseudolayer.shaders).length; x++) {
-          var inputs = {};
+        _this._recurseThroughChildLayers(pseudolayer, pseudolayer);
 
-          for (var _i = 0, _Object$keys = Object.keys(pseudolayer.inputs[x]); _i < _Object$keys.length; _i++) {
-            var key = _Object$keys[_i];
+        var framebufferTexture = _this._generatePseudoLayer(pseudolayer);
 
-            if (pseudolayer.inputs[x][key]) {
-              var textureId = _this._generateTexture(pseudolayer.inputs[x][key].container.querySelector("canvas"));
+        _this._runvFlipProgram(framebufferTexture);
 
-              inputs[key] = textureId;
-            } else {
-              inputs[key] = framebufferTexture;
-            }
-          }
-
-          var passProgram = pseudolayer.shaders[x];
-          var currentFramebuffer = framebuffers[x % 2];
-
-          _this._startRendering(inputs, pseudolayer.variables[x], passProgram, currentFramebuffer);
-
-          var framebufferTexture = currentFramebuffer.attachments[0];
-        }
-
-        _this._runFinalProgram(framebufferTexture);
+        _this.framebufferTracker = {};
       };
 
-      this._runFinalProgram = function (framebufferTexture) {
+      this._recurseThroughChildLayers = function (thisLayer, originalLayer) {
+        for (var _i = 0, _Object$keys = Object.keys(thisLayer.inputs); _i < _Object$keys.length; _i++) {
+          var key = _Object$keys[_i];
+          var nextLayer = thisLayer.inputs[key];
+
+          if (nextLayer.type === "layer") {
+            var framebufferTexture = _this._generatePseudoLayer(thisLayer);
+
+            _this.framebufferTracker[thisLayer.id] = framebufferTexture;
+          } else {
+            _this._recurseThroughChildLayers(nextLayer, originalLayer);
+
+            if (!(thisLayer.id === originalLayer.id)) {
+              var _framebufferTexture = _this._generatePseudoLayer(thisLayer);
+
+              _this.framebufferTracker[thisLayer.id] = _framebufferTexture;
+            }
+          }
+        }
+      };
+
+      this._generatePseudoLayer = function (pseudolayer) {
+        var framebuffer = _this._createFramebuffers(1)[0];
+
+        var renderInputs = {};
+        var inputs = pseudolayer.inputs;
+        var renderVariables = pseudolayer.variables;
+        var renderShader = pseudolayer.shader;
+
+        for (var _i2 = 0, _Object$keys2 = Object.keys(inputs); _i2 < _Object$keys2.length; _i2++) {
+          var key = _Object$keys2[_i2];
+
+          if (inputs[key].type === "layer") {
+            var textureId = _this._generateTexture(inputs[key].container.querySelector("canvas"));
+
+            renderInputs[key] = textureId;
+          } else {
+            renderInputs[key] = _this.framebufferTracker[inputs[key].id];
+          }
+        }
+
+        _this._startRendering(renderInputs, renderVariables, renderShader, framebuffer);
+
+        var framebufferTexture = framebuffer.attachments[0];
+        return framebufferTexture;
+      };
+
+      this._runvFlipProgram = function (framebufferTexture) {
         _this.gl.bindFramebuffer(_this.gl.FRAMEBUFFER, null);
 
-        _this.gl.useProgram(_this.finalProgram.program);
+        _this.gl.useProgram(_this.vFlipProgram.program);
 
         _this._startRendering({
           f_image: framebufferTexture
-        }, {}, _this.finalProgram);
+        }, {}, _this.vFlipProgram);
       };
 
       this._startRendering = function (inputs, variables, programInfo, currentFramebuffer) {
@@ -27543,31 +27588,18 @@
         }
       };
 
-      this.generatePseudoLayer = function (args) {
-        var inputs = args.inputs;
-        var shaders = args.shaders;
-        var variables = args.variables;
-        var dynamics = args.dynamics;
-        var compiledShaders = {};
+      this.generatePseudoLayer = function (layer) {
+        return new PseudoLayer({
+          f_image: layer
+        }, _this.baseProgram, {});
+      };
 
-        for (var _i2 = 0, _Object$keys2 = Object.keys(shaders); _i2 < _Object$keys2.length; _i2++) {
-          var key = _Object$keys2[_i2];
-          var thisShader = shaders[key];
+      this.processPseudoLayer = function (args) {
+        var dynamicShader = _this._addDynamicsToShader(args.shader, args.dynamics);
 
-          if (key in dynamics) {
-            var theseDynamics = dynamics[key];
+        var compiledShader = _this._compileShaders(dynamicShader);
 
-            var dynamicShader = _this._addDynamicsToShader(thisShader, theseDynamics);
-          } else {
-            var dynamicShader = thisShader;
-          }
-
-          var compiledShader = _this._compileShaders(dynamicShader);
-
-          compiledShaders[key] = compiledShader;
-        }
-
-        return new PseudoLayer(inputs, compiledShaders, variables);
+        return new PseudoLayer(args.inputs, compiledShader, args.variables);
       };
 
       this._addDynamicsToShader = function (shader, dynamics) {
@@ -27584,15 +27616,19 @@
       };
 
       this.gl = getContext(document.getElementById(canvas));
-      this.vertexShader = vertexShader;
-      var finalVertex = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
-      var finalFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D f_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(f_image, o_texCoord);\r\n}";
-      this.finalProgram = createProgramInfo(this.gl, [finalVertex, finalFragment]);
-    };
-
-    var standardVertex = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
+      var baseVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
+      var vFlipVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
+      var baseFragmentShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D f_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(f_image, o_texCoord);\r\n}";
+      this.baseVertexShader = baseVertexShader;
+      this.baseProgram = createProgramInfo(this.gl, [baseVertexShader, baseFragmentShader]);
+      this.vFlipProgram = createProgramInfo(this.gl, [vFlipVertexShader, baseFragmentShader]);
+      this.framebufferTracker = {};
+    } // compiles webgl shaders from string
+    ;
 
     var changeRGB = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform vec4 crgb_multiplier;\r\nuniform sampler2D crgb_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(crgb_image, o_texCoord) * crgb_multiplier;\r\n}";
+
+    var averageLayers = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D al1_image;\r\nuniform sampler2D al2_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 al1_texture = texture(al1_image, o_texCoord);\r\n    vec4 al2_texture = texture(al2_image, o_texCoord);\r\n    vec4 sum_texture = al1_texture + al2_texture;\r\n    o_colour = sum_texture / vec4(2.0, 2.0, 2.0, 1.0);\r\n}";
 
     var testMapView = new View({
       center: [-7337.954715, 6709336.594760],
@@ -27601,11 +27637,12 @@
     var testWMS = new TileWMS({
       url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
       params: {
-        'LAYERS': "NDVI",
+        'LAYERS': "TRUE_COLOR",
         'TILED': true,
         'FORMAT': 'image/png',
         'showLogo': false,
-        'CRS': "EPSG:3857"
+        'CRS': "EPSG:3857",
+        'TIME': "2018-03-29/2018-05-29"
       },
       attribution: "test",
       crossOrigin: "anonymous"
@@ -27636,27 +27673,43 @@
       opacity: 1,
       minZoom: 6
     });
-    var webgl = new WebGLCanvas("canvas_map", standardVertex);
-    var testLayerObject = new LayerObject(testMapLayer1, testMapView); // var testLayerObject2 = new LayerObject(testMapLayer2, testMapView);
+    var webgl = new WebGLCanvas("canvas_map");
+    var testLayerObject = new LayerObject(testMapLayer1, testMapView);
+    var testLayerObject2 = new LayerObject(testMapLayer2, testMapView);
+    var p1 = webgl.generatePseudoLayer(testLayerObject);
+    var p2 = webgl.generatePseudoLayer(testLayerObject2); // var testLayerObject2 = new LayerObject(testMapLayer2, testMapView);
 
-    var testPseudoLayer = webgl.generatePseudoLayer({
+    var pp1 = webgl.processPseudoLayer({
       inputs: {
-        0: {
-          crgb_image: testLayerObject
-        }
+        crgb_image: p1
       },
-      shaders: {
-        0: changeRGB
-      },
+      shader: changeRGB,
       variables: {
-        0: {
-          crgb_multiplier: [1.0, 1.0, 1.0, 1.0]
-        }
+        crgb_multiplier: [2.5, 2.5, 2.5, 2.5]
       },
       dynamics: {}
     });
-    testPseudoLayer.onRender(function () {
-      webgl.renderPseudoLayer(testPseudoLayer);
+    var pp2 = webgl.processPseudoLayer({
+      inputs: {
+        crgb_image: testLayerObject2
+      },
+      shader: changeRGB,
+      variables: {
+        crgb_multiplier: [1.0, 1.0, 0.0, 1.0]
+      },
+      dynamics: {}
+    });
+    var pp3 = webgl.processPseudoLayer({
+      inputs: {
+        al1_image: pp1,
+        al2_image: pp2
+      },
+      shader: averageLayers,
+      variables: {},
+      dynamics: {}
+    });
+    pp3.onRender(function () {
+      webgl.renderPseudoLayer(pp3);
     }); // testLayerObject.olMap.on("postrender", (e) => {
     //     console.log(e)
     //     webgl.renderPseudoLayer(testPseudoLayer);

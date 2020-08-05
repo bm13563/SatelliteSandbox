@@ -3,6 +3,8 @@
 3. Build "Pseudolayers" -> objects that can be input into the webgl object and render without further manipulation
    These will be a way of storing "layers" that can easily be generated on the fly as and when needed DONE
 4. Finish and test _runMultipleSources method of webgl object DONE
-5. implement passing textures as arrays
-6. kerneling - edge detection etc
-7. build argument formatters
+5. only allow one shader to be run at a time for any pseudolayer DONE
+6. allow an "input" to a pseudolayer to be another pseudolayer DONE
+7. comment code
+8. try kerneling
+9. build argument formatters
