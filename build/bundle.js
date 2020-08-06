@@ -27236,11 +27236,119 @@
     } // compiles webgl shaders from string
     ;
 
+    var UiLayer = function UiLayer(pseudolayer, layerNumber) {
+      _classCallCheck(this, UiLayer);
+
+      this.id = pseudolayer.id;
+      this.pseudolayer = pseudolayer;
+      var html = "<div class=\"layer\" id=\"".concat(this.id, "\" data-id=\"").concat(this.id, "\">\n                        <input class=\"show_layer\" type=\"checkbox\" data-id=\"").concat(this.id, "\" checked></input>\n                        <span class=\"layer_text\" data-id=\"").concat(this.id, "\">Test layer ").concat(layerNumber, "</span>\n                     </div>");
+      this.html = document.createElement("div");
+      this.html.innerHTML = html;
+      this.visible = true;
+    };
+    var Ui = function Ui(webgl) {
+      var _this = this;
+
+      _classCallCheck(this, Ui);
+
+      this.addLayer = function (pseudolayer) {
+        var layerNumber = _this.layerOrder.length + 1;
+        var uiLayer = new UiLayer(pseudolayer, layerNumber);
+        document.getElementById("layers_holder").appendChild(uiLayer.html);
+        _this.uiLayers[uiLayer.id] = uiLayer;
+
+        _this.layerOrder.push(uiLayer.id);
+
+        _this._determineLayerToRender();
+      };
+
+      this._determineLayerToRender = function () {
+        var pseudolayer = false;
+
+        for (var x = 0; x < _this.layerOrder.length; x++) {
+          var uiLayer = _this.uiLayers[_this.layerOrder[x]];
+
+          if (uiLayer.visible === true) {
+            pseudolayer = uiLayer.pseudolayer;
+            break;
+          }
+        }
+
+        if (pseudolayer) {
+          _this.webgl.renderPseudoLayer(pseudolayer, 5);
+        } else {
+          _this.webgl.stopRendering();
+        }
+      };
+
+      this.checkLayerVisibility = function (checkbox) {
+        if (checkbox.classList.contains("hidden_layer")) {
+          checkbox.classList.remove("hidden_layer");
+
+          _this.showLayer(checkbox.dataset.id);
+        } else {
+          checkbox.classList.add("hidden_layer");
+
+          _this.hideLayer(checkbox.dataset.id);
+        }
+      };
+
+      this.showLayer = function (uiId) {
+        _this.uiLayers[uiId].visible = true;
+
+        _this._determineLayerToRender();
+      };
+
+      this.hideLayer = function (uiId) {
+        _this.uiLayers[uiId].visible = false;
+
+        _this._determineLayerToRender();
+      };
+
+      this.selectLayer = function (layer, className) {
+        if (layer.classList.contains(className)) {
+          layer.classList.remove(className);
+          return;
+        }
+        var elements = document.getElementsByClassName(className);
+
+        for (var x = 0; x < elements.length; x++) {
+          elements[x].classList.remove(className);
+        }
+
+        var div = document.getElementById(layer.dataset.id);
+        div.classList.add(className);
+      };
+
+      this.findSelectedLayer = function () {
+        var selectedItems = document.getElementsByClassName("selected");
+
+        for (var x = 0; x < selectedItems.length; x++) {
+          if (selectedItems[x].classList.contains("layer")) {
+            return selectedItems[x].dataset.id;
+          }
+        }
+      };
+
+      this.removeLayer = function () {
+        var toDelete = _this.findSelectedLayer();
+
+        delete _this.uiLayers[toDelete];
+        _this.layerOrder = _this.layerOrder.filter(function (item) {
+          return item !== parseInt(toDelete);
+        });
+        document.getElementById(toDelete).remove();
+
+        _this._determineLayerToRender();
+      };
+
+      this.webgl = webgl;
+      this.uiLayers = {}; // ordered array
+
+      this.layerOrder = [];
+    };
+
     var rgbaManipulation = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform vec4 rgbam_multiplier;\r\nuniform sampler2D rgbam_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(rgbam_image, o_texCoord) * rgbam_multiplier;\r\n}";
-
-    var rgbPercentageFiltering = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform float rgbfp_filter;\r\nuniform vec4 rgbfp_removed;\r\nuniform sampler2D rgbfp_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 raw_colour = texture(rgbfp_image, o_texCoord);\r\n    float sum_colours = raw_colour.r + raw_colour.g + raw_colour.b;\r\n    float threshold_colour = raw_colour.{rgbfpd1_colour} / sum_colours;\r\n    if(raw_colour.{rgbfpd1_colour} {rgbfpd2_keep} threshold_colour){\r\n        raw_colour.{rgbfpd1_colour} = raw_colour.{rgbfpd1_colour};\r\n    } else {\r\n        raw_colour = rgbfp_removed;\r\n    }\r\n    o_colour = raw_colour;\r\n}";
-
-    var apply3x3Kernel = "#version 300 es\r\nprecision mediump float;\r\n\r\nuniform sampler2D a3k_image;\r\nuniform float a3k_textureWidth;\r\nuniform float a3k_textureHeight;\r\nuniform float a3k_kernel[9];\r\nuniform float a3k_kernelWeight;\r\n\r\nin vec2 o_texCoord;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   vec2 onePixel = vec2(1.0 / a3k_textureWidth, 1.0 / a3k_textureHeight);\r\n   vec4 colorSum =\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1, -1)) * a3k_kernel[0] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0, -1)) * a3k_kernel[1] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1, -1)) * a3k_kernel[2] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  0)) * a3k_kernel[3] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  0)) * a3k_kernel[4] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  0)) * a3k_kernel[5] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  1)) * a3k_kernel[6] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  1)) * a3k_kernel[7] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  1)) * a3k_kernel[8] ;\r\n   o_colour = vec4((colorSum / a3k_kernelWeight).rgb, 1);\r\n}";
 
     var testMapView = new View({
       center: [-19529.660727, 6643944.717062],
@@ -27268,8 +27376,10 @@
       minZoom: 6
     });
     var webgl = new WebGLCanvas("canvas_map");
+    var ui = new Ui(webgl);
     var l1 = new LayerObject(testMapLayer1, testMapView);
     var p1 = webgl.generatePseudoLayer(l1);
+    ui.addLayer(p1);
     var pp1 = webgl.processPseudoLayer({
       inputs: {
         rgbam_image: p1
@@ -27280,42 +27390,77 @@
       },
       dynamics: {}
     });
-    var pp2 = webgl.processPseudoLayer({
-      inputs: {
-        rgbfp_image: pp1
-      },
-      shader: rgbPercentageFiltering,
-      variables: {
-        rgbfp_filter: 0.75,
-        rgbfp_removed: [0.0, 0.0, 0.0, 1.0]
-      },
-      dynamics: {
-        rgbfpd1_colour: "g",
-        rgbfpd2_keep: ">"
+    ui.addLayer(pp1); // UI EVENTS
+    // layer visibility
+
+    document.addEventListener('click', function (e) {
+      var checkbox = e.target;
+
+      if (checkbox && checkbox.classList.contains('show_layer')) {
+        ui.checkLayerVisibility(checkbox);
       }
-    });
-    var pp3 = webgl.processPseudoLayer({
-      inputs: {
-        a3k_image: pp2
-      },
-      shader: apply3x3Kernel,
-      variables: {
-        a3k_textureWidth: webgl.width,
-        a3k_textureHeight: webgl.height,
-        a3k_kernel: [-1, -1, -1, -1, 8, -1, -1, -1, -1],
-        a3k_kernelWeight: 1
-      },
-      dynamics: {}
-    });
-    webgl.renderPseudoLayer(pp3, 5);
-    var thisLayer = pp3;
-    var otherLayer = pp1;
-    var intermediateLayer;
-    l1.olMap.on('click', function () {
-      webgl.renderPseudoLayer(otherLayer, 5);
-      intermediateLayer = thisLayer;
-      thisLayer = otherLayer;
-      otherLayer = intermediateLayer;
-    });
+    }); // select layer
+
+    document.addEventListener('click', function (e) {
+      var layerDiv = e.target;
+
+      if (layerDiv && layerDiv.classList.contains('layer') || layerDiv.classList.contains('layer_text')) {
+        ui.selectLayer(layerDiv, 'selected');
+      }
+    }); //remove layer
+
+    document.addEventListener('click', function (e) {
+      var deleteButton = e.target;
+
+      if (deleteButton && deleteButton.id === "delete_layer") {
+        ui.removeLayer(deleteButton);
+      }
+    }); // webgl.renderPseudoLayer(p1, 5);
+    // const pp1 = webgl.processPseudoLayer({
+    //     inputs: {
+    //         rgbam_image: p1, 
+    //     },
+    //     shader: rgbaManipulation,
+    //     variables: {
+    //         rgbam_multiplier: [0.0, 1.0, 1.0, 1.0],
+    //     },
+    //     dynamics: {}
+    // })
+    // const pp2 = webgl.processPseudoLayer({
+    //     inputs: {
+    //         rgbfp_image: pp1,
+    //     },
+    //     shader: rgbPercentageFiltering,
+    //     variables: {
+    //         rgbfp_filter: 0.75,
+    //         rgbfp_removed: [0.0, 0.0, 0.0, 1.0]
+    //     },
+    //     dynamics: {
+    //         rgbfpd1_colour: "g",
+    //         rgbfpd2_keep: ">",
+    //     }
+    // })
+    // const pp3 = webgl.processPseudoLayer({
+    //     inputs: {
+    //         a3k_image: pp2,
+    //     },
+    //     shader: apply3x3Kernel,
+    //     variables: {
+    //         a3k_textureWidth: webgl.width,
+    //         a3k_textureHeight: webgl.height,
+    //         a3k_kernel: [
+    //             -1, -1, -1,
+    //             -1,  8, -1,
+    //             -1, -1, -1
+    //          ],
+    //         a3k_kernelWeight: 1,
+    //     },
+    //     dynamics: {}
+    // })
+    // webgl.renderPseudoLayer(pp3, 5);
+    // var thisLayer = pp3;
+    // var otherLayer = pp1;
+    // var intermediateLayer;
+    // l1.olMap.on('click', () => {webgl.renderPseudoLayer(otherLayer, 5); intermediateLayer = thisLayer; thisLayer = otherLayer; otherLayer = intermediateLayer;})
 
 })));

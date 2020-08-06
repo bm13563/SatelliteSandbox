@@ -1,5 +1,8 @@
-#page_container { width: 900px; height: 700px; position:relative; }
+html * { font-family: Arial, sans-serif; }
+#top_bar_container { width:900px; height: 50px; margin-left:200px; background-color: lightblue; }
+#layer_container { float:left; width:200px; height: 750px; margin-top:-50px; background-color:lightgreen; }
+#page_container { position:relative; width: 900px; height: 700px; margin-left:200px;}
 #page_container #tile_container { width: 900px; height: 700px; z-index: 10; }
 #page_container #tile_container .layer_object canvas { z-index: 10; opacity:0; }
-#page_container #canvas_container { width: 900px; height: 700px;  top:0px; z-index:0; position:absolute; }
+#page_container #canvas_container { position:absolute; width: 900px; height: 700px;  top:0px; z-index:0;  }
 #page_container #canvas_container #canvas_map { width: 900px; height: 700px; }
