@@ -52,13 +52,18 @@ export class WebGLCanvas{
     // children in the framebuffertracker, then uses the framebuffers to apply any processing
     _renderPseudoLayer = (pseudolayer) => {
         this.shaderPasses = 0;
+        // get all child pseudolayers
         this._recurseThroughChildLayers(pseudolayer, pseudolayer);
+        // render the target pseudolayer
         const framebufferTexture = this._generatePseudoLayer(pseudolayer);
+        // flip the output of the current operation
         this._runvFlipProgram(framebufferTexture);
         this.framebufferTracker = {};
     }
 
     // recurses through the child layers of a pseudolayer to reconstruct all input pseudolayers
+    // target pseudolayer needs to be passed, to ensure that the function doesn't try to build
+    // the target pseudolayer before the child pseudolayers are completed
     _recurseThroughChildLayers = (thisLayer, originalLayer) => {
         for (const key of Object.keys(thisLayer.inputs)) {
             const nextLayer = thisLayer.inputs[key];
@@ -149,7 +154,8 @@ export class WebGLCanvas{
             return shader;
         } else {
             for (const key of Object.keys(dynamics)) {
-                shader = shader.replace(key, dynamics[key].toString());
+                const regex = new RegExp(key, "g");
+                shader = shader.replace(regex, dynamics[key].toString());
             }
         }
         return shader;

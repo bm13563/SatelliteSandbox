@@ -27509,11 +27509,13 @@
       };
 
       this._renderPseudoLayer = function (pseudolayer) {
-        _this.shaderPasses = 0;
+        _this.shaderPasses = 0; // get all child pseudolayers
 
-        _this._recurseThroughChildLayers(pseudolayer, pseudolayer);
+        _this._recurseThroughChildLayers(pseudolayer, pseudolayer); // render the target pseudolayer
 
-        var framebufferTexture = _this._generatePseudoLayer(pseudolayer);
+
+        var framebufferTexture = _this._generatePseudoLayer(pseudolayer); // flip the output of the current operation
+
 
         _this._runvFlipProgram(framebufferTexture);
 
@@ -27615,7 +27617,8 @@
         } else {
           for (var _i3 = 0, _Object$keys3 = Object.keys(dynamics); _i3 < _Object$keys3.length; _i3++) {
             var key = _Object$keys3[_i3];
-            shader = shader.replace(key, dynamics[key].toString());
+            var regex = new RegExp(key, "g");
+            shader = shader.replace(regex, dynamics[key].toString());
           }
         }
 
@@ -27679,9 +27682,9 @@
     } // compiles webgl shaders from string
     ;
 
-    var changeRGB = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform vec4 crgb_multiplier;\r\nuniform sampler2D crgb_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(crgb_image, o_texCoord) * crgb_multiplier;\r\n}";
+    var rgbaManipulation = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform vec4 rgbam_multiplier;\r\nuniform sampler2D rgbam_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(rgbam_image, o_texCoord) * rgbam_multiplier;\r\n}";
 
-    var averageLayers = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D al1_image;\r\nuniform sampler2D al2_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 al1_texture = texture(al1_image, o_texCoord);\r\n    vec4 al2_texture = texture(al2_image, o_texCoord);\r\n    vec4 sum_texture = al1_texture + al2_texture;\r\n    o_colour = sum_texture / vec4(2.0, 2.0, 2.0, 1.0);\r\n}";
+    var rgbFiltering = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform float rgbf_filter;\r\nuniform vec4 rgbf_removed;\r\nuniform sampler2D rgbf_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 raw_colour = texture(rgbf_image, o_texCoord);\r\n\r\n    if(raw_colour.rgbfd1_colour rgbfd2_keep rgbf_filter){\r\n        raw_colour.rgbfd1_colour = raw_colour.rgbfd1_colour;\r\n    } else {\r\n        raw_colour = rgbf_removed;\r\n    }\r\n\r\n    o_colour = raw_colour;\r\n}";
 
     var apply3x3Kernel = "#version 300 es\r\nprecision mediump float;\r\n\r\nuniform sampler2D a3k_image;\r\nuniform float a3k_textureWidth;\r\nuniform float a3k_textureHeight;\r\nuniform float a3k_kernel[9];\r\nuniform float a3k_kernelWeight;\r\n\r\nin vec2 o_texCoord;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   vec2 onePixel = vec2(1.0 / a3k_textureWidth, 1.0 / a3k_textureHeight);\r\n   vec4 colorSum =\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1, -1)) * a3k_kernel[0] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0, -1)) * a3k_kernel[1] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1, -1)) * a3k_kernel[2] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  0)) * a3k_kernel[3] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  0)) * a3k_kernel[4] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  0)) * a3k_kernel[5] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  1)) * a3k_kernel[6] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  1)) * a3k_kernel[7] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  1)) * a3k_kernel[8] ;\r\n   o_colour = vec4((colorSum / a3k_kernelWeight).rgb, 1);\r\n}";
 
@@ -27730,14 +27733,16 @@
     });
     var webgl = new WebGLCanvas("canvas_map");
     var l1 = new LayerObject(testMapLayer1, testMapView);
+    var l2 = new LayerObject(testMapLayer2, testMapView);
     var p1 = webgl.generatePseudoLayer(l1);
+    var p2 = webgl.generatePseudoLayer(l1);
     var pp1 = webgl.processPseudoLayer({
       inputs: {
-        crgb_image: p1
+        rgbam_image: p1
       },
-      shader: changeRGB,
+      shader: rgbaManipulation,
       variables: {
-        crgb_multiplier: [2.5, 2.5, 2.5, 1.0]
+        rgbam_multiplier: [2.5, 2.5, 2.5, 1.0]
       },
       dynamics: {}
     });
@@ -27756,29 +27761,27 @@
     });
     var pp3 = webgl.processPseudoLayer({
       inputs: {
-        a3k_image: pp2
+        rgbf_image: pp1
       },
-      shader: apply3x3Kernel,
+      shader: rgbFiltering,
       variables: {
-        a3k_textureWidth: webgl.width,
-        a3k_textureHeight: webgl.height,
-        a3k_kernel: [-1, -1, -1, -1, 8, -1, -1, -1, -1],
-        a3k_kernelWeight: 0.5
+        rgbf_filter: 0.9,
+        rgbf_removed: [0.0, 0.0, 0.0, 1.0]
       },
-      dynamics: {}
+      dynamics: {
+        rgbfd1_colour: "b",
+        rgbfd2_keep: ">"
+      }
     });
-    var pp4 = webgl.processPseudoLayer({
-      inputs: {
-        al1_image: pp2,
-        al2_image: pp3
-      },
-      shader: averageLayers,
-      variables: {},
-      dynamics: {}
-    });
-    webgl.renderPseudoLayer(pp4, 5);
-    l1.olMap.on('click', function () {
-      webgl.renderPseudoLayer(pp1, 5);
+    webgl.renderPseudoLayer(pp3, 5);
+    var thisLayer = pp3;
+    var otherLayer = p2;
+    var intermediateLayer;
+    l2.olMap.on('click', function () {
+      webgl.renderPseudoLayer(otherLayer, 5);
+      intermediateLayer = thisLayer;
+      thisLayer = otherLayer;
+      otherLayer = intermediateLayer;
     });
 
 })));

@@ -9,7 +9,8 @@ import {LayerObject} from './modules/layer.js';
 import {WebGLCanvas} from './modules/webgl.js';
 import * as util from './modules/utils.js'
 
-import changeRGB from './shaders/processing/changeRGB.shader';
+import rgbaManipulation from './shaders/processing/rgbaManipulation.shader';
+import rgbFiltering from './shaders/processing/rgbFiltering.shader';
 import averageLayers from './shaders/processing/averageLayers.shader';
 import apply3x3Kernel from './shaders/processing/apply3x3Kernel.shader';
 
@@ -64,15 +65,17 @@ const testMapLayer2 = new TileLayer({
 
 var webgl = new WebGLCanvas("canvas_map");
 var l1 = new LayerObject(testMapLayer1, testMapView);
+var l2 = new LayerObject(testMapLayer2, testMapView);
 const p1 = webgl.generatePseudoLayer(l1);
+const p2 = webgl.generatePseudoLayer(l1);
 
 const pp1 = webgl.processPseudoLayer({
     inputs: {
-        crgb_image: p1, 
+        rgbam_image: p1, 
     },
-    shader: changeRGB,
+    shader: rgbaManipulation,
     variables: {
-        crgb_multiplier: [2.5, 2.5, 2.5, 1.0],
+        rgbam_multiplier: [2.5, 2.5, 2.5, 1.0],
     },
     dynamics: {}
 })
@@ -97,32 +100,22 @@ const pp2 = webgl.processPseudoLayer({
 
 const pp3 = webgl.processPseudoLayer({
     inputs: {
-        a3k_image: pp2,
+        rgbf_image: pp1,
     },
-    shader: apply3x3Kernel,
+    shader: rgbFiltering,
     variables: {
-        a3k_textureWidth: webgl.width,
-        a3k_textureHeight: webgl.height,
-        a3k_kernel: [
-            -1, -1, -1,
-            -1,  8, -1,
-            -1, -1, -1
-         ],
-        a3k_kernelWeight: 0.5,
+        rgbf_filter: 0.9,
+        rgbf_removed: [0.0, 0.0, 0.0, 1.0]
     },
-    dynamics: {}
+    dynamics: {
+        rgbfd1_colour: "b",
+        rgbfd2_keep: ">",
+    }
 })
 
-const pp4 = webgl.processPseudoLayer({
-    inputs: {
-        al1_image: pp2,
-        al2_image: pp3,
-    },
-    shader: averageLayers,
-    variables: {},
-    dynamics: {},
-})
+webgl.renderPseudoLayer(pp3, 5);
 
-webgl.renderPseudoLayer(pp4, 5);
-
-l1.olMap.on('click', () => {webgl.renderPseudoLayer(pp1, 5); })
+var thisLayer = pp3;
+var otherLayer = p2;
+var intermediateLayer;
+l2.olMap.on('click', () => {webgl.renderPseudoLayer(otherLayer, 5); intermediateLayer = thisLayer; thisLayer = otherLayer; otherLayer = intermediateLayer;})

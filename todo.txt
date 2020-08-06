@@ -9,4 +9,6 @@
 8. try kerneling DONE
 9. build argument formatters
 10. implement FPS throttling DONE
-11. ensure that only the maps that are currently used for pseudolayers are rendered to save requests
+11. ensure that only the maps that are currently used for pseudolayers are rendered to save requests DONE
+12. work out how to pass arrays of textures
+13. environment variables -> including current map with control (due to z-index ordering)
