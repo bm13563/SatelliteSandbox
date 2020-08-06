@@ -1,0 +1,7 @@
+#top_bar_container .dropdown { float: left; height: 50px; width: 225px; display:table-cell; line-height: 50px; text-align: center; cursor: pointer; }
+#top_bar_container .dropdown:hover > .dropdown_menu { visibility: visible; }
+#top_bar_container .dropdown .dropdown_menu { visibility: hidden; position: relative; background-color: lightgray; z-index: 100; }
+#top_bar_container .dropdown .dropdown_menu .dropdown_menu_option:hover { background-color:gray; }
+.processing_gui { position:absolute; width: 200px; height: 200px; left: 550px; top: 300px; background-color: lightcoral; z-index: 105; visibility: hidden; }
+
+

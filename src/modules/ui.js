@@ -4,7 +4,7 @@ export class UiLayer{
         this.pseudolayer = pseudolayer;
         const html = `<div class="layer" id="${this.id}" data-id="${this.id}">
                         <button class="delete_layer" data-id="${this.id}">&#10060</button>
-                        <span class="layer_text" data-id="${this.id}">Test layer ${layerNumber}</span>
+                        <span id="Test layer ${layerNumber}" class="layer_text" data-id="${this.id}">Test layer ${layerNumber}</span>
                      </div>`
         this.html = document.createElement("div");
         this.html.innerHTML = html;
@@ -76,4 +76,6 @@ export class Ui {
         document.getElementById(toDelete).remove();
         this._determineLayerToRender();
     }
+
+    
 }

@@ -6,6 +6,13 @@ html * { font-family: Arial, sans-serif; }
 #page_container #tile_container .layer_object canvas { z-index: 10; opacity:0; }
 #page_container #canvas_container { position:absolute; width: 900px; height: 700px;  top:0px; z-index:0;  }
 #page_container #canvas_container #canvas_map { width: 900px; height: 700px; }
+#top_bar_container .dropdown { float: left; height: 50px; width: 225px; display:table-cell; line-height: 50px; text-align: center; cursor: pointer; }
+#top_bar_container .dropdown:hover > .dropdown_menu { visibility: visible; }
+#top_bar_container .dropdown .dropdown_menu { visibility: hidden; position: relative; background-color: lightgray; z-index: 100; }
+#top_bar_container .dropdown .dropdown_menu .dropdown_menu_option:hover { background-color:gray; }
+.processing_gui { position:absolute; width: 200px; height: 200px; left: 550px; top: 300px; background-color: lightcoral; z-index: 105; visibility: hidden; }
+
+
 #layer_container #layer_title { margin: 13.5px;  text-align: center; font-size: 20px; }
 #layer_container #layers_holder { height: 700px; background-color: lightseagreen; overflow-y: hidden; }
 #layer_container #layers_holder .layer { height:20px; padding-bottom: 5px; margin:5px; background-color: lightgray; text-align: left; font-size: 16px; overflow: hidden; cursor:pointer; }
