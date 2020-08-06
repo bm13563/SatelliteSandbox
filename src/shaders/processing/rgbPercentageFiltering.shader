@@ -12,12 +12,11 @@ out vec4 o_colour;
 void main() {
     vec4 raw_colour = texture(rgbfp_image, o_texCoord);
     float sum_colours = raw_colour.r + raw_colour.g + raw_colour.b;
-    float threshold_colour = sum_colours / 3.0;
+    float threshold_colour = raw_colour.{rgbfpd1_colour} / sum_colours;
     if(raw_colour.{rgbfpd1_colour} {rgbfpd2_keep} threshold_colour){
         raw_colour.{rgbfpd1_colour} = raw_colour.{rgbfpd1_colour};
     } else {
         raw_colour = rgbfp_removed;
     }
-
     o_colour = raw_colour;
 }

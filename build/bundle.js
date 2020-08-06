@@ -1629,45 +1629,6 @@
         return extent;
     }
     /**
-     * @param {Array<number>} xs Xs.
-     * @param {Array<number>} ys Ys.
-     * @param {Extent=} opt_extent Destination extent.
-     * @private
-     * @return {Extent} Extent.
-     */
-    function _boundingExtentXYs(xs, ys, opt_extent) {
-        var minX = Math.min.apply(null, xs);
-        var minY = Math.min.apply(null, ys);
-        var maxX = Math.max.apply(null, xs);
-        var maxY = Math.max.apply(null, ys);
-        return createOrUpdate(minX, minY, maxX, maxY, opt_extent);
-    }
-    /**
-     * Return extent increased by the provided value.
-     * @param {Extent} extent Extent.
-     * @param {number} value The amount by which the extent should be buffered.
-     * @param {Extent=} opt_extent Extent.
-     * @return {Extent} Extent.
-     * @api
-     */
-    function buffer(extent, value, opt_extent) {
-        if (opt_extent) {
-            opt_extent[0] = extent[0] - value;
-            opt_extent[1] = extent[1] - value;
-            opt_extent[2] = extent[2] + value;
-            opt_extent[3] = extent[3] + value;
-            return opt_extent;
-        }
-        else {
-            return [
-                extent[0] - value,
-                extent[1] - value,
-                extent[2] + value,
-                extent[3] + value,
-            ];
-        }
-    }
-    /**
      * Creates a clone of an extent.
      *
      * @param {Extent} extent Extent to clone.
@@ -2250,47 +2211,6 @@
             }
         }
         return intersects;
-    }
-    /**
-     * Apply a transform function to the extent.
-     * @param {Extent} extent Extent.
-     * @param {import("./proj.js").TransformFunction} transformFn Transform function.
-     * Called with `[minX, minY, maxX, maxY]` extent coordinates.
-     * @param {Extent=} opt_extent Destination extent.
-     * @param {number=} opt_stops Number of stops per side used for the transform.
-     * By default only the corners are used.
-     * @return {Extent} Extent.
-     * @api
-     */
-    function applyTransform(extent, transformFn, opt_extent, opt_stops) {
-        var coordinates = [];
-        if (opt_stops > 1) {
-            var width = extent[2] - extent[0];
-            var height = extent[3] - extent[1];
-            for (var i = 0; i < opt_stops; ++i) {
-                coordinates.push(extent[0] + (width * i) / opt_stops, extent[1], extent[2], extent[1] + (height * i) / opt_stops, extent[2] - (width * i) / opt_stops, extent[3], extent[0], extent[3] - (height * i) / opt_stops);
-            }
-        }
-        else {
-            coordinates = [
-                extent[0],
-                extent[1],
-                extent[2],
-                extent[1],
-                extent[2],
-                extent[3],
-                extent[0],
-                extent[3],
-            ];
-        }
-        transformFn(coordinates, coordinates, 2);
-        var xs = [];
-        var ys = [];
-        for (var i = 0, l = coordinates.length; i < l; i += 2) {
-            xs.push(coordinates[i]);
-            ys.push(coordinates[i + 1]);
-        }
-        return _boundingExtentXYs(xs, ys, opt_extent);
     }
 
     /**
@@ -3043,31 +2963,6 @@
     }
 
     /**
-     * @module ol/string
-     */
-    /**
-     * Adapted from https://github.com/omichelsen/compare-versions/blob/master/index.js
-     * @param {string|number} v1 First version
-     * @param {string|number} v2 Second version
-     * @returns {number} Value
-     */
-    function compareVersions(v1, v2) {
-        var s1 = ('' + v1).split('.');
-        var s2 = ('' + v2).split('.');
-        for (var i = 0; i < Math.max(s1.length, s2.length); i++) {
-            var n1 = parseInt(s1[i] || '0', 10);
-            var n2 = parseInt(s2[i] || '0', 10);
-            if (n1 > n2) {
-                return 1;
-            }
-            if (n2 > n1) {
-                return -1;
-            }
-        }
-        return 0;
-    }
-
-    /**
      * @module ol/coordinate
      */
     /**
@@ -3469,22 +3364,6 @@
     function transform(coordinate, source, destination) {
         var transformFunc = getTransform(source, destination);
         return transformFunc(coordinate, undefined, coordinate.length);
-    }
-    /**
-     * Transforms an extent from source projection to destination projection.  This
-     * returns a new extent (and does not modify the original).
-     *
-     * @param {import("./extent.js").Extent} extent The extent to transform.
-     * @param {ProjectionLike} source Source projection-like.
-     * @param {ProjectionLike} destination Destination projection-like.
-     * @param {number=} opt_stops Number of stops per side used for the transform.
-     * By default only the corners are used.
-     * @return {import("./extent.js").Extent} The transformed extent.
-     * @api
-     */
-    function transformExtent(extent, source, destination, opt_stops) {
-        var transformFunc = getTransform(source, destination);
-        return applyTransform(extent, transformFunc, undefined, opt_stops);
     }
     /**
      * @type {?Projection}
@@ -5799,26 +5678,6 @@
     /**
      * @module ol/size
      */
-    /**
-     * An array of numbers representing a size: `[width, height]`.
-     * @typedef {Array<number>} Size
-     * @api
-     */
-    /**
-     * Returns a buffered size.
-     * @param {Size} size Size.
-     * @param {number} num The amount by which to buffer.
-     * @param {Size=} opt_size Optional reusable size array.
-     * @return {Size} The buffered size.
-     */
-    function buffer$1(size, num, opt_size) {
-        if (opt_size === undefined) {
-            opt_size = [0, 0];
-        }
-        opt_size[0] = size[0] + 2 * num;
-        opt_size[1] = size[1] + 2 * num;
-        return opt_size;
-    }
     /**
      * Determines if a size has a positive area.
      * @param {Size} size The size to test.
@@ -17492,11 +17351,6 @@
      * @module ol/source/common
      */
     /**
-     * Default WMS version.
-     * @type {string}
-     */
-    var DEFAULT_WMS_VERSION = '1.3.0';
-    /**
      * Context options to disable image smoothing.
      * @type {Object}
      */
@@ -18994,6 +18848,34 @@
         });
     }
     /**
+     * @typedef {Object} XYZOptions
+     * @property {import("./extent.js").Extent} [extent] Extent for the tile grid. The origin for an XYZ tile grid is the
+     * top-left corner of the extent. If `maxResolution` is not provided the zero level of the grid is defined by the resolution
+     * at which one tile fits in the provided extent. If not provided, the extent of the EPSG:3857 projection is used.
+     * @property {number} [maxResolution] Resolution at level zero.
+     * @property {number} [maxZoom] Maximum zoom. The default is `42`. This determines the number of levels
+     * in the grid set. For example, a `maxZoom` of 21 means there are 22 levels in the grid set.
+     * @property {number} [minZoom=0] Minimum zoom.
+     * @property {number|import("./size.js").Size} [tileSize=[256, 256]] Tile size in pixels.
+     */
+    /**
+     * Creates a tile grid with a standard XYZ tiling scheme.
+     * @param {XYZOptions=} opt_options Tile grid options.
+     * @return {!TileGrid} Tile grid instance.
+     * @api
+     */
+    function createXYZ(opt_options) {
+        var xyzOptions = opt_options || {};
+        var extent = xyzOptions.extent || get$2('EPSG:3857').getExtent();
+        var gridOptions = {
+            extent: extent,
+            minZoom: xyzOptions.minZoom,
+            tileSize: xyzOptions.tileSize,
+            resolutions: resolutionsFromExtent(extent, xyzOptions.maxZoom, xyzOptions.tileSize, xyzOptions.maxResolution),
+        };
+        return new TileGrid(gridOptions);
+    }
+    /**
      * Create a resolutions array from an extent.  A zoom factor of 2 is assumed.
      * @param {import("./extent.js").Extent} extent Extent.
      * @param {number=} opt_maxZoom Maximum zoom level (default is
@@ -20110,66 +19992,7 @@
     }
 
     /**
-     * @module ol/source/WMSServerType
-     */
-    /**
-     * Available server types: `'carmentaserver'`, `'geoserver'`, `'mapserver'`,
-     *     `'qgis'`. These are servers that have vendor parameters beyond the WMS
-     *     specification that OpenLayers can make use of.
-     * @enum {string}
-     */
-    var WMSServerType = {
-        /**
-         * HiDPI support for [Carmenta Server](https://www.carmenta.com/en/products/carmenta-server)
-         * @api
-         */
-        CARMENTA_SERVER: 'carmentaserver',
-        /**
-         * HiDPI support for [GeoServer](https://geoserver.org/)
-         * @api
-         */
-        GEOSERVER: 'geoserver',
-        /**
-         * HiDPI support for [MapServer](https://mapserver.org/)
-         * @api
-         */
-        MAPSERVER: 'mapserver',
-        /**
-         * HiDPI support for [QGIS](https://qgis.org/)
-         * @api
-         */
-        QGIS: 'qgis',
-    };
-
-    /**
-     * @module ol/uri
-     */
-    /**
-     * Appends query parameters to a URI.
-     *
-     * @param {string} uri The original URI, which may already have query data.
-     * @param {!Object} params An object where keys are URI-encoded parameter keys,
-     *     and the values are arbitrary types or arrays.
-     * @return {string} The new URI.
-     */
-    function appendParams(uri, params) {
-        var keyParams = [];
-        // Skip any null or undefined parameter values
-        Object.keys(params).forEach(function (k) {
-            if (params[k] !== null && params[k] !== undefined) {
-                keyParams.push(k + '=' + encodeURIComponent(params[k]));
-            }
-        });
-        var qs = keyParams.join('&');
-        // remove any trailing ? or &
-        uri = uri.replace(/[?&]$/, '');
-        // append ? or & depending on whether uri has existing parameters
-        uri = uri.indexOf('?') === -1 ? uri + '?' : uri + '&';
-        return uri + qs;
-    }
-
-    /**
-     * @module ol/source/TileWMS
+     * @module ol/source/XYZ
      */
     var __extends$V = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
@@ -20187,375 +20010,105 @@
     /**
      * @typedef {Object} Options
      * @property {import("./Source.js").AttributionLike} [attributions] Attributions.
+     * @property {boolean} [attributionsCollapsible=true] Attributions are collapsible.
      * @property {number} [cacheSize] Initial tile cache size. Will auto-grow to hold at least the number of tiles in the viewport.
      * @property {null|string} [crossOrigin] The `crossOrigin` attribute for loaded images.  Note that
      * you must provide a `crossOrigin` value if you want to access pixel data with the Canvas renderer.
      * See https://developer.mozilla.org/en-US/docs/Web/HTML/CORS_enabled_image for more detail.
      * @property {boolean} [imageSmoothing=true] Enable image smoothing.
-     * @property {Object<string,*>} params WMS request parameters.
-     * At least a `LAYERS` param is required. `STYLES` is
-     * `''` by default. `VERSION` is `1.3.0` by default. `WIDTH`, `HEIGHT`, `BBOX`
-     * and `CRS` (`SRS` for WMS version < 1.3.0) will be set dynamically.
-     * @property {number} [gutter=0]
-     * The size in pixels of the gutter around image tiles to ignore. By setting
-     * this property to a non-zero value, images will be requested that are wider
-     * and taller than the tile size by a value of `2 x gutter`.
-     * Using a non-zero value allows artifacts of rendering at tile edges to be
-     * ignored. If you control the WMS service it is recommended to address
-     * "artifacts at tile edges" issues by properly configuring the WMS service. For
-     * example, MapServer has a `tile_map_edge_buffer` configuration parameter for
-     * this. See http://mapserver.org/output/tile_mode.html.
-     * @property {boolean} [hidpi=true] Use the `ol/Map#pixelRatio` value when requesting
-     * the image from the remote server.
-     * @property {import("../proj.js").ProjectionLike} [projection] Projection. Default is the view projection.
+     * @property {boolean} [opaque=false] Whether the layer is opaque.
+     * @property {import("../proj.js").ProjectionLike} [projection='EPSG:3857'] Projection.
      * @property {number} [reprojectionErrorThreshold=0.5] Maximum allowed reprojection error (in pixels).
      * Higher values can increase reprojection performance, but decrease precision.
-     * @property {typeof import("../ImageTile.js").default} [tileClass] Class used to instantiate image tiles.
-     * Default is {@link module:ol/ImageTile~ImageTile}.
-     * @property {import("../tilegrid/TileGrid.js").default} [tileGrid] Tile grid. Base this on the resolutions,
-     * tilesize and extent supported by the server.
-     * If this is not defined, a default grid will be used: if there is a projection
-     * extent, the grid will be based on that; if not, a grid based on a global
-     * extent with origin at 0,0 will be used..
-     * @property {import("./WMSServerType.js").default|string} [serverType]
-     * The type of the remote WMS server. Currently only used when `hidpi` is
-     * `true`.
+     * @property {number} [maxZoom=42] Optional max zoom level. Not used if `tileGrid` is provided.
+     * @property {number} [minZoom=0] Optional min zoom level. Not used if `tileGrid` is provided.
+     * @property {number} [maxResolution] Optional tile grid resolution at level zero. Not used if `tileGrid` is provided.
+     * @property {import("../tilegrid/TileGrid.js").default} [tileGrid] Tile grid.
      * @property {import("../Tile.js").LoadFunction} [tileLoadFunction] Optional function to load a tile given a URL. The default is
      * ```js
      * function(imageTile, src) {
      *   imageTile.getImage().src = src;
      * };
      * ```
-     * @property {string} [url] WMS service URL.
-     * @property {Array<string>} [urls] WMS service urls.
-     * Use this instead of `url` when the WMS supports multiple urls for GetMap requests.
+     * @property {number} [tilePixelRatio=1] The pixel ratio used by the tile service.
+     * For example, if the tile service advertizes 256px by 256px tiles but actually sends 512px
+     * by 512px images (for retina/hidpi devices) then `tilePixelRatio`
+     * should be set to `2`.
+     * @property {number|import("../size.js").Size} [tileSize=[256, 256]] The tile size used by the tile service.
+     * Not used if `tileGrid` is provided.
+     * @property {import("../Tile.js").UrlFunction} [tileUrlFunction] Optional function to get
+     * tile URL given a tile coordinate and the projection.
+     * Required if `url` or `urls` are not provided.
+     * @property {string} [url] URL template. Must include `{x}`, `{y}` or `{-y}`,
+     * and `{z}` placeholders. A `{?-?}` template pattern, for example `subdomain{a-f}.domain.com`,
+     * may be used instead of defining each one separately in the `urls` option.
+     * @property {Array<string>} [urls] An array of URL templates.
      * @property {boolean} [wrapX=true] Whether to wrap the world horizontally.
-     * When set to `false`, only one world
-     * will be rendered. When `true`, tiles will be requested for one world only,
-     * but they will be wrapped horizontally to render multiple worlds.
      * @property {number} [transition] Duration of the opacity transition for rendering.
      * To disable the opacity transition, pass `transition: 0`.
+     * @property {number} [zDirection=0] Indicate which resolution should be used
+     * by a renderer if the view resolution does not match any resolution of the tile source.
+     * If 0, the nearest resolution will be used. If 1, the nearest lower resolution
+     * will be used. If -1, the nearest higher resolution will be used.
      */
     /**
      * @classdesc
-     * Layer source for tile data from WMS servers.
+     * Layer source for tile data with URLs in a set XYZ format that are
+     * defined in a URL template. By default, this follows the widely-used
+     * Google grid where `x` 0 and `y` 0 are in the top left. Grids like
+     * TMS where `x` 0 and `y` 0 are in the bottom left can be used by
+     * using the `{-y}` placeholder in the URL template, so long as the
+     * source does not have a custom tile grid. In this case,
+     * {@link module:ol/source/TileImage} can be used with a `tileUrlFunction`
+     * such as:
+     *
+     *  tileUrlFunction: function(coordinate) {
+     *    return 'http://mapserver.com/' + coordinate[0] + '/' +
+     *        coordinate[1] + '/' + coordinate[2] + '.png';
+     *    }
+     *
      * @api
      */
-    var TileWMS = /** @class */ (function (_super) {
-        __extends$V(TileWMS, _super);
+    var XYZ = /** @class */ (function (_super) {
+        __extends$V(XYZ, _super);
         /**
-         * @param {Options=} [opt_options] Tile WMS options.
+         * @param {Options=} opt_options XYZ options.
          */
-        function TileWMS(opt_options) {
+        function XYZ(opt_options) {
             var _this = this;
-            var options = opt_options ? opt_options : /** @type {Options} */ ({});
-            var params = options.params || {};
-            var transparent = 'TRANSPARENT' in params ? params['TRANSPARENT'] : true;
+            var options = opt_options || {};
+            var projection = options.projection !== undefined ? options.projection : 'EPSG:3857';
+            var tileGrid = options.tileGrid !== undefined
+                ? options.tileGrid
+                : createXYZ({
+                    extent: extentFromProjection(projection),
+                    maxResolution: options.maxResolution,
+                    maxZoom: options.maxZoom,
+                    minZoom: options.minZoom,
+                    tileSize: options.tileSize,
+                });
             _this = _super.call(this, {
                 attributions: options.attributions,
                 cacheSize: options.cacheSize,
                 crossOrigin: options.crossOrigin,
                 imageSmoothing: options.imageSmoothing,
-                opaque: !transparent,
-                projection: options.projection,
+                opaque: options.opaque,
+                projection: projection,
                 reprojectionErrorThreshold: options.reprojectionErrorThreshold,
-                tileClass: options.tileClass,
-                tileGrid: options.tileGrid,
+                tileGrid: tileGrid,
                 tileLoadFunction: options.tileLoadFunction,
+                tilePixelRatio: options.tilePixelRatio,
+                tileUrlFunction: options.tileUrlFunction,
                 url: options.url,
                 urls: options.urls,
                 wrapX: options.wrapX !== undefined ? options.wrapX : true,
                 transition: options.transition,
+                attributionsCollapsible: options.attributionsCollapsible,
+                zDirection: options.zDirection,
             }) || this;
-            /**
-             * @private
-             * @type {number}
-             */
-            _this.gutter_ = options.gutter !== undefined ? options.gutter : 0;
-            /**
-             * @private
-             * @type {!Object}
-             */
-            _this.params_ = params;
-            /**
-             * @private
-             * @type {boolean}
-             */
-            _this.v13_ = true;
-            /**
-             * @private
-             * @type {import("./WMSServerType.js").default|undefined}
-             */
-            _this.serverType_ = /** @type {import("./WMSServerType.js").default|undefined} */ (options.serverType);
-            /**
-             * @private
-             * @type {boolean}
-             */
-            _this.hidpi_ = options.hidpi !== undefined ? options.hidpi : true;
-            /**
-             * @private
-             * @type {import("../extent.js").Extent}
-             */
-            _this.tmpExtent_ = createEmpty();
-            _this.updateV13_();
-            _this.setKey(_this.getKeyForParams_());
             return _this;
         }
-        /**
-         * Return the GetFeatureInfo URL for the passed coordinate, resolution, and
-         * projection. Return `undefined` if the GetFeatureInfo URL cannot be
-         * constructed.
-         * @param {import("../coordinate.js").Coordinate} coordinate Coordinate.
-         * @param {number} resolution Resolution.
-         * @param {import("../proj.js").ProjectionLike} projection Projection.
-         * @param {!Object} params GetFeatureInfo params. `INFO_FORMAT` at least should
-         *     be provided. If `QUERY_LAYERS` is not provided then the layers specified
-         *     in the `LAYERS` parameter will be used. `VERSION` should not be
-         *     specified here.
-         * @return {string|undefined} GetFeatureInfo URL.
-         * @api
-         */
-        TileWMS.prototype.getFeatureInfoUrl = function (coordinate, resolution, projection, params) {
-            var projectionObj = get$2(projection);
-            var sourceProjectionObj = this.getProjection();
-            var tileGrid = this.getTileGrid();
-            if (!tileGrid) {
-                tileGrid = this.getTileGridForProjection(projectionObj);
-            }
-            var z = tileGrid.getZForResolution(resolution, this.zDirection);
-            var tileCoord = tileGrid.getTileCoordForCoordAndZ(coordinate, z);
-            if (tileGrid.getResolutions().length <= tileCoord[0]) {
-                return undefined;
-            }
-            var tileResolution = tileGrid.getResolution(tileCoord[0]);
-            var tileExtent = tileGrid.getTileCoordExtent(tileCoord, this.tmpExtent_);
-            var tileSize = toSize(tileGrid.getTileSize(tileCoord[0]), this.tmpSize);
-            var gutter = this.gutter_;
-            if (gutter !== 0) {
-                tileSize = buffer$1(tileSize, gutter, this.tmpSize);
-                tileExtent = buffer(tileExtent, tileResolution * gutter, tileExtent);
-            }
-            if (sourceProjectionObj && sourceProjectionObj !== projectionObj) {
-                tileResolution = calculateSourceResolution(sourceProjectionObj, projectionObj, coordinate, tileResolution);
-                tileExtent = transformExtent(tileExtent, projectionObj, sourceProjectionObj);
-                coordinate = transform(coordinate, projectionObj, sourceProjectionObj);
-            }
-            var baseParams = {
-                'SERVICE': 'WMS',
-                'VERSION': DEFAULT_WMS_VERSION,
-                'REQUEST': 'GetFeatureInfo',
-                'FORMAT': 'image/png',
-                'TRANSPARENT': true,
-                'QUERY_LAYERS': this.params_['LAYERS'],
-            };
-            assign(baseParams, this.params_, params);
-            var x = Math.floor((coordinate[0] - tileExtent[0]) / tileResolution);
-            var y = Math.floor((tileExtent[3] - coordinate[1]) / tileResolution);
-            baseParams[this.v13_ ? 'I' : 'X'] = x;
-            baseParams[this.v13_ ? 'J' : 'Y'] = y;
-            return this.getRequestUrl_(tileCoord, tileSize, tileExtent, 1, sourceProjectionObj || projectionObj, baseParams);
-        };
-        /**
-         * Return the GetLegendGraphic URL, optionally optimized for the passed
-         * resolution and possibly including any passed specific parameters. Returns
-         * `undefined` if the GetLegendGraphic URL cannot be constructed.
-         *
-         * @param {number} [resolution] Resolution. If set to undefined, `SCALE`
-         *     will not be calculated and included in URL.
-         * @param {Object} [params] GetLegendGraphic params. If `LAYER` is set, the
-         *     request is generated for this wms layer, else it will try to use the
-         *     configured wms layer. Default `FORMAT` is `image/png`.
-         *     `VERSION` should not be specified here.
-         * @return {string|undefined} GetLegendGraphic URL.
-         * @api
-         */
-        TileWMS.prototype.getLegendUrl = function (resolution, params) {
-            if (this.urls[0] === undefined) {
-                return undefined;
-            }
-            var baseParams = {
-                'SERVICE': 'WMS',
-                'VERSION': DEFAULT_WMS_VERSION,
-                'REQUEST': 'GetLegendGraphic',
-                'FORMAT': 'image/png',
-            };
-            if (params === undefined || params['LAYER'] === undefined) {
-                var layers = this.params_.LAYERS;
-                var isSingleLayer = !Array.isArray(layers) || layers.length === 1;
-                if (!isSingleLayer) {
-                    return undefined;
-                }
-                baseParams['LAYER'] = layers;
-            }
-            if (resolution !== undefined) {
-                var mpu = this.getProjection()
-                    ? this.getProjection().getMetersPerUnit()
-                    : 1;
-                var dpi = 25.4 / 0.28;
-                var inchesPerMeter = 39.37;
-                baseParams['SCALE'] = resolution * mpu * inchesPerMeter * dpi;
-            }
-            assign(baseParams, params);
-            return appendParams(/** @type {string} */ (this.urls[0]), baseParams);
-        };
-        /**
-         * @return {number} Gutter.
-         */
-        TileWMS.prototype.getGutter = function () {
-            return this.gutter_;
-        };
-        /**
-         * Get the user-provided params, i.e. those passed to the constructor through
-         * the "params" option, and possibly updated using the updateParams method.
-         * @return {Object} Params.
-         * @api
-         */
-        TileWMS.prototype.getParams = function () {
-            return this.params_;
-        };
-        /**
-         * @param {import("../tilecoord.js").TileCoord} tileCoord Tile coordinate.
-         * @param {import("../size.js").Size} tileSize Tile size.
-         * @param {import("../extent.js").Extent} tileExtent Tile extent.
-         * @param {number} pixelRatio Pixel ratio.
-         * @param {import("../proj/Projection.js").default} projection Projection.
-         * @param {Object} params Params.
-         * @return {string|undefined} Request URL.
-         * @private
-         */
-        TileWMS.prototype.getRequestUrl_ = function (tileCoord, tileSize, tileExtent, pixelRatio, projection, params) {
-            var urls = this.urls;
-            if (!urls) {
-                return undefined;
-            }
-            params['WIDTH'] = tileSize[0];
-            params['HEIGHT'] = tileSize[1];
-            params[this.v13_ ? 'CRS' : 'SRS'] = projection.getCode();
-            if (!('STYLES' in this.params_)) {
-                params['STYLES'] = '';
-            }
-            if (pixelRatio != 1) {
-                switch (this.serverType_) {
-                    case WMSServerType.GEOSERVER:
-                        var dpi = (90 * pixelRatio + 0.5) | 0;
-                        if ('FORMAT_OPTIONS' in params) {
-                            params['FORMAT_OPTIONS'] += ';dpi:' + dpi;
-                        }
-                        else {
-                            params['FORMAT_OPTIONS'] = 'dpi:' + dpi;
-                        }
-                        break;
-                    case WMSServerType.MAPSERVER:
-                        params['MAP_RESOLUTION'] = 90 * pixelRatio;
-                        break;
-                    case WMSServerType.CARMENTA_SERVER:
-                    case WMSServerType.QGIS:
-                        params['DPI'] = 90 * pixelRatio;
-                        break;
-                    default:
-                        assert(false, 52); // Unknown `serverType` configured
-                        break;
-                }
-            }
-            var axisOrientation = projection.getAxisOrientation();
-            var bbox = tileExtent;
-            if (this.v13_ && axisOrientation.substr(0, 2) == 'ne') {
-                var tmp = void 0;
-                tmp = tileExtent[0];
-                bbox[0] = tileExtent[1];
-                bbox[1] = tmp;
-                tmp = tileExtent[2];
-                bbox[2] = tileExtent[3];
-                bbox[3] = tmp;
-            }
-            params['BBOX'] = bbox.join(',');
-            var url;
-            if (urls.length == 1) {
-                url = urls[0];
-            }
-            else {
-                var index = modulo(hash(tileCoord), urls.length);
-                url = urls[index];
-            }
-            return appendParams(url, params);
-        };
-        /**
-         * Get the tile pixel ratio for this source.
-         * @param {number} pixelRatio Pixel ratio.
-         * @return {number} Tile pixel ratio.
-         */
-        TileWMS.prototype.getTilePixelRatio = function (pixelRatio) {
-            return !this.hidpi_ || this.serverType_ === undefined ? 1 : pixelRatio;
-        };
-        /**
-         * @private
-         * @return {string} The key for the current params.
-         */
-        TileWMS.prototype.getKeyForParams_ = function () {
-            var i = 0;
-            var res = [];
-            for (var key in this.params_) {
-                res[i++] = key + '-' + this.params_[key];
-            }
-            return res.join('/');
-        };
-        /**
-         * Update the user-provided params.
-         * @param {Object} params Params.
-         * @api
-         */
-        TileWMS.prototype.updateParams = function (params) {
-            assign(this.params_, params);
-            this.updateV13_();
-            this.setKey(this.getKeyForParams_());
-        };
-        /**
-         * @private
-         */
-        TileWMS.prototype.updateV13_ = function () {
-            var version = this.params_['VERSION'] || DEFAULT_WMS_VERSION;
-            this.v13_ = compareVersions(version, '1.3') >= 0;
-        };
-        /**
-         * @param {import("../tilecoord.js").TileCoord} tileCoord The tile coordinate
-         * @param {number} pixelRatio The pixel ratio
-         * @param {import("../proj/Projection.js").default} projection The projection
-         * @return {string|undefined} The tile URL
-         * @override
-         */
-        TileWMS.prototype.tileUrlFunction = function (tileCoord, pixelRatio, projection) {
-            var tileGrid = this.getTileGrid();
-            if (!tileGrid) {
-                tileGrid = this.getTileGridForProjection(projection);
-            }
-            if (tileGrid.getResolutions().length <= tileCoord[0]) {
-                return undefined;
-            }
-            if (pixelRatio != 1 && (!this.hidpi_ || this.serverType_ === undefined)) {
-                pixelRatio = 1;
-            }
-            var tileResolution = tileGrid.getResolution(tileCoord[0]);
-            var tileExtent = tileGrid.getTileCoordExtent(tileCoord, this.tmpExtent_);
-            var tileSize = toSize(tileGrid.getTileSize(tileCoord[0]), this.tmpSize);
-            var gutter = this.gutter_;
-            if (gutter !== 0) {
-                tileSize = buffer$1(tileSize, gutter, this.tmpSize);
-                tileExtent = buffer(tileExtent, tileResolution * gutter, tileExtent);
-            }
-            if (pixelRatio != 1) {
-                tileSize = scale$2(tileSize, pixelRatio, this.tmpSize);
-            }
-            var baseParams = {
-                'SERVICE': 'WMS',
-                'VERSION': DEFAULT_WMS_VERSION,
-                'REQUEST': 'GetMap',
-                'FORMAT': 'image/png',
-                'TRANSPARENT': true,
-            };
-            assign(baseParams, this.params_);
-            return this.getRequestUrl_(tileCoord, tileSize, tileExtent, pixelRatio, projection, baseParams);
-        };
-        return TileWMS;
+        return XYZ;
     }(TileImage));
 
     function _classCallCheck(instance, Constructor) {
@@ -27622,6 +27175,7 @@
           }
         }
 
+        console.log(shader);
         return shader;
       };
 
@@ -27684,7 +27238,7 @@
 
     var rgbaManipulation = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform vec4 rgbam_multiplier;\r\nuniform sampler2D rgbam_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(rgbam_image, o_texCoord) * rgbam_multiplier;\r\n}";
 
-    var rgbPercentageFiltering = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform float rgbfp_filter;\r\nuniform vec4 rgbfp_removed;\r\nuniform sampler2D rgbfp_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 raw_colour = texture(rgbfp_image, o_texCoord);\r\n    float sum_colours = raw_colour.r + raw_colour.g + raw_colour.b;\r\n    float threshold_colour = sum_colours / 3.0;\r\n    if(raw_colour.{rgbfpd1_colour} {rgbfpd2_keep} threshold_colour){\r\n        raw_colour.{rgbfpd1_colour} = raw_colour.{rgbfpd1_colour};\r\n    } else {\r\n        raw_colour = rgbfp_removed;\r\n    }\r\n\r\n    o_colour = raw_colour;\r\n}";
+    var rgbPercentageFiltering = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform float rgbfp_filter;\r\nuniform vec4 rgbfp_removed;\r\nuniform sampler2D rgbfp_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 raw_colour = texture(rgbfp_image, o_texCoord);\r\n    float sum_colours = raw_colour.r + raw_colour.g + raw_colour.b;\r\n    float threshold_colour = raw_colour.{rgbfpd1_colour} / sum_colours;\r\n    if(raw_colour.{rgbfpd1_colour} {rgbfpd2_keep} threshold_colour){\r\n        raw_colour.{rgbfpd1_colour} = raw_colour.{rgbfpd1_colour};\r\n    } else {\r\n        raw_colour = rgbfp_removed;\r\n    }\r\n    o_colour = raw_colour;\r\n}";
 
     var apply3x3Kernel = "#version 300 es\r\nprecision mediump float;\r\n\r\nuniform sampler2D a3k_image;\r\nuniform float a3k_textureWidth;\r\nuniform float a3k_textureHeight;\r\nuniform float a3k_kernel[9];\r\nuniform float a3k_kernelWeight;\r\n\r\nin vec2 o_texCoord;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   vec2 onePixel = vec2(1.0 / a3k_textureWidth, 1.0 / a3k_textureHeight);\r\n   vec4 colorSum =\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1, -1)) * a3k_kernel[0] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0, -1)) * a3k_kernel[1] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1, -1)) * a3k_kernel[2] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  0)) * a3k_kernel[3] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  0)) * a3k_kernel[4] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  0)) * a3k_kernel[5] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  1)) * a3k_kernel[6] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  1)) * a3k_kernel[7] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  1)) * a3k_kernel[8] ;\r\n   o_colour = vec4((colorSum / a3k_kernelWeight).rgb, 1);\r\n}";
 
@@ -27692,27 +27246,16 @@
       center: [-19529.660727, 6643944.717062],
       zoom: 7
     });
-    var testWMS = new TileWMS({
-      url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
+    var testWMS = new XYZ({
+      url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
       params: {
-        'LAYERS': "TRUE_COLOR",
+        // 'LAYERS': "TRUE_COLOR", 
         'TILED': true,
         'FORMAT': 'image/png',
-        'showLogo': false,
-        'CRS': "EPSG:3857",
-        'TIME': "2018-03-29/2018-05-29"
-      },
-      attribution: "test",
-      crossOrigin: "anonymous"
-    });
-    var testWMS2 = new TileWMS({
-      url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
-      params: {
-        'LAYERS': "NDVI",
-        'TILED': true,
-        'FORMAT': 'image/png',
-        'showLogo': false,
-        'CRS': "EPSG:3857"
+        attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community' // 'showLogo': false,
+        // 'CRS': "EPSG:3857",
+        // 'TIME': "2018-03-29/2018-05-29",
+
       },
       attribution: "test",
       crossOrigin: "anonymous"
@@ -27724,40 +27267,31 @@
       opacity: 1,
       minZoom: 6
     });
-    var testMapLayer2 = new TileLayer({
-      source: testWMS2,
-      visible: true,
-      title: "Sentinel testing",
-      opacity: 1,
-      minZoom: 6
-    });
     var webgl = new WebGLCanvas("canvas_map");
     var l1 = new LayerObject(testMapLayer1, testMapView);
-    var l2 = new LayerObject(testMapLayer2, testMapView);
     var p1 = webgl.generatePseudoLayer(l1);
-    var p2 = webgl.generatePseudoLayer(l1);
     var pp1 = webgl.processPseudoLayer({
       inputs: {
         rgbam_image: p1
       },
       shader: rgbaManipulation,
       variables: {
-        rgbam_multiplier: [2.5, 2.5, 2.5, 1.0]
+        rgbam_multiplier: [0.0, 1.0, 1.0, 1.0]
       },
       dynamics: {}
     });
     var pp2 = webgl.processPseudoLayer({
       inputs: {
-        rgbfp_image: p1
+        rgbfp_image: pp1
       },
       shader: rgbPercentageFiltering,
       variables: {
-        rgbfp_filter: 0.8,
+        rgbfp_filter: 0.75,
         rgbfp_removed: [0.0, 0.0, 0.0, 1.0]
       },
       dynamics: {
         rgbfpd1_colour: "g",
-        rgbfpd2_keep: "<"
+        rgbfpd2_keep: ">"
       }
     });
     var pp3 = webgl.processPseudoLayer({
@@ -27777,7 +27311,7 @@
     var thisLayer = pp3;
     var otherLayer = pp1;
     var intermediateLayer;
-    l2.olMap.on('click', function () {
+    l1.olMap.on('click', function () {
       webgl.renderPseudoLayer(otherLayer, 5);
       intermediateLayer = thisLayer;
       thisLayer = otherLayer;
