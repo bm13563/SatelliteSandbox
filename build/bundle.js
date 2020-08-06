@@ -27282,30 +27282,6 @@
         }
       };
 
-      this.checkLayerVisibility = function (checkbox) {
-        if (checkbox.classList.contains("hidden_layer")) {
-          checkbox.classList.remove("hidden_layer");
-
-          _this.showLayer(checkbox.dataset.id);
-        } else {
-          checkbox.classList.add("hidden_layer");
-
-          _this.hideLayer(checkbox.dataset.id);
-        }
-      };
-
-      this.showLayer = function (uiId) {
-        _this.uiLayers[uiId].visible = true;
-
-        _this._determineLayerToRender();
-      };
-
-      this.hideLayer = function (uiId) {
-        _this.uiLayers[uiId].visible = false;
-
-        _this._determineLayerToRender();
-      };
-
       this.selectLayer = function (layer, className) {
         var elements = document.getElementsByClassName(className);
 
@@ -27335,9 +27311,8 @@
         }
       };
 
-      this.removeLayer = function () {
-        var toDelete = _this.findSelectedLayer();
-
+      this.removeLayer = function (layer) {
+        var toDelete = layer.dataset.id;
         delete _this.uiLayers[toDelete];
         _this.layerOrder = _this.layerOrder.filter(function (item) {
           return item !== parseInt(toDelete);
@@ -27348,7 +27323,7 @@
       };
 
       this.webgl = webgl;
-      this.uiLayers = {}; // ordered array
+      this.uiLayers = {}; // ordered array -> first element in this array is the pseudolayer that is rendered
 
       this.layerOrder = [];
     };
@@ -27366,13 +27341,9 @@
     var testWMS = new XYZ({
       url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
       params: {
-        // 'LAYERS': "TRUE_COLOR", 
         'TILED': true,
         'FORMAT': 'image/png',
-        attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community' // 'showLogo': false,
-        // 'CRS': "EPSG:3857",
-        // 'TIME': "2018-03-29/2018-05-29",
-
+        attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community'
       },
       attribution: "test",
       crossOrigin: "anonymous"
@@ -27382,7 +27353,7 @@
       visible: true,
       title: "Sentinel testing",
       opacity: 1,
-      minZoom: 6
+      minZoom: 1
     });
     var webgl = new WebGLCanvas("canvas_map");
     var ui = new Ui(webgl);
@@ -27459,52 +27430,6 @@
       if (deleteButton && deleteButton.classList.contains("delete_layer")) {
         ui.removeLayer(deleteButton);
       }
-    }); // webgl.renderPseudoLayer(p1, 5);
-    // const pp1 = webgl.processPseudoLayer({
-    //     inputs: {
-    //         rgbam_image: p1, 
-    //     },
-    //     shader: rgbaManipulation,
-    //     variables: {
-    //         rgbam_multiplier: [0.0, 1.0, 1.0, 1.0],
-    //     },
-    //     dynamics: {}
-    // })
-    // const pp2 = webgl.processPseudoLayer({
-    //     inputs: {
-    //         rgbfp_image: pp1,
-    //     },
-    //     shader: rgbPercentageFiltering,
-    //     variables: {
-    //         rgbfp_filter: 0.75,
-    //         rgbfp_removed: [0.0, 0.0, 0.0, 1.0]
-    //     },
-    //     dynamics: {
-    //         rgbfpd1_colour: "g",
-    //         rgbfpd2_keep: ">",
-    //     }
-    // })
-    // const pp3 = webgl.processPseudoLayer({
-    //     inputs: {
-    //         a3k_image: pp2,
-    //     },
-    //     shader: apply3x3Kernel,
-    //     variables: {
-    //         a3k_textureWidth: webgl.width,
-    //         a3k_textureHeight: webgl.height,
-    //         a3k_kernel: [
-    //             -1, -1, -1,
-    //             -1,  8, -1,
-    //             -1, -1, -1
-    //          ],
-    //         a3k_kernelWeight: 1,
-    //     },
-    //     dynamics: {}
-    // })
-    // webgl.renderPseudoLayer(pp3, 5);
-    // var thisLayer = pp3;
-    // var otherLayer = pp1;
-    // var intermediateLayer;
-    // l1.olMap.on('click', () => {webgl.renderPseudoLayer(otherLayer, 5); intermediateLayer = thisLayer; thisLayer = otherLayer; otherLayer = intermediateLayer;})
+    });
 
 })));

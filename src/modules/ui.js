@@ -16,7 +16,7 @@ export class Ui {
     constructor(webgl) {
         this.webgl = webgl;
         this.uiLayers = {};
-        // ordered array
+        // ordered array -> first element in this array is the pseudolayer that is rendered
         this.layerOrder = [];
     }
 
@@ -46,26 +46,6 @@ export class Ui {
         }
     }
 
-    checkLayerVisibility = (checkbox) => {
-        if (checkbox.classList.contains("hidden_layer")) {
-            checkbox.classList.remove("hidden_layer");
-            this.showLayer(checkbox.dataset.id);
-        } else {
-            checkbox.classList.add("hidden_layer");
-            this.hideLayer(checkbox.dataset.id);
-        }
-    }
-
-    showLayer = (uiId) => {
-        this.uiLayers[uiId].visible = true;
-        this._determineLayerToRender();
-    }
-
-    hideLayer = (uiId) => {
-        this.uiLayers[uiId].visible = false;
-        this._determineLayerToRender();
-    }
-
     // currently selecting a layer renders it on the screen. may keep, may switch
     selectLayer = (layer, className) => {
         const elements = document.getElementsByClassName(className);
@@ -89,8 +69,8 @@ export class Ui {
         }
     }
 
-    removeLayer = () => {
-        const toDelete = this.findSelectedLayer();
+    removeLayer = (layer) => {
+        const toDelete = layer.dataset.id;
         delete this.uiLayers[toDelete];
         this.layerOrder = this.layerOrder.filter(item => item !== parseInt(toDelete));
         document.getElementById(toDelete).remove();
