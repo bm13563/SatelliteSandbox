@@ -27241,7 +27241,7 @@
 
       this.id = pseudolayer.id;
       this.pseudolayer = pseudolayer;
-      var html = "<div class=\"layer\" id=\"".concat(this.id, "\" data-id=\"").concat(this.id, "\">\n                        <input class=\"show_layer\" type=\"checkbox\" data-id=\"").concat(this.id, "\" checked></input>\n                        <span class=\"layer_text\" data-id=\"").concat(this.id, "\">Test layer ").concat(layerNumber, "</span>\n                     </div>");
+      var html = "<div class=\"layer\" id=\"".concat(this.id, "\" data-id=\"").concat(this.id, "\">\n                        <button class=\"delete_layer\" data-id=\"").concat(this.id, "\">&#10060</button>\n                        <span class=\"layer_text\" data-id=\"").concat(this.id, "\">Test layer ").concat(layerNumber, "</span>\n                     </div>");
       this.html = document.createElement("div");
       this.html.innerHTML = html;
       this.visible = true;
@@ -27269,6 +27269,7 @@
           var uiLayer = _this.uiLayers[_this.layerOrder[x]];
 
           if (uiLayer.visible === true) {
+            document.getElementById(_this.layerOrder[x]).classList.add("selected");
             pseudolayer = uiLayer.pseudolayer;
             break;
           }
@@ -27306,18 +27307,22 @@
       };
 
       this.selectLayer = function (layer, className) {
-        if (layer.classList.contains(className)) {
-          layer.classList.remove(className);
-          return;
-        }
         var elements = document.getElementsByClassName(className);
 
         for (var x = 0; x < elements.length; x++) {
           elements[x].classList.remove(className);
         }
 
-        var div = document.getElementById(layer.dataset.id);
+        var divId = layer.dataset.id;
+        var div = document.getElementById(divId);
         div.classList.add(className);
+        _this.layerOrder = _this.layerOrder.filter(function (item) {
+          return item !== parseInt(divId);
+        });
+
+        _this.layerOrder.unshift(parseInt(divId));
+
+        _this._determineLayerToRender();
       };
 
       this.findSelectedLayer = function () {
@@ -27391,15 +27396,7 @@
       dynamics: {}
     });
     ui.addLayer(pp1); // UI EVENTS
-    // layer visibility
-
-    document.addEventListener('click', function (e) {
-      var checkbox = e.target;
-
-      if (checkbox && checkbox.classList.contains('show_layer')) {
-        ui.checkLayerVisibility(checkbox);
-      }
-    }); // select layer
+    // select layer
 
     document.addEventListener('click', function (e) {
       var layerDiv = e.target;
@@ -27407,12 +27404,12 @@
       if (layerDiv && layerDiv.classList.contains('layer') || layerDiv.classList.contains('layer_text')) {
         ui.selectLayer(layerDiv, 'selected');
       }
-    }); //remove layer
+    }); // remove layer
 
     document.addEventListener('click', function (e) {
       var deleteButton = e.target;
 
-      if (deleteButton && deleteButton.id === "delete_layer") {
+      if (deleteButton && deleteButton.classList.contains("delete_layer")) {
         ui.removeLayer(deleteButton);
       }
     }); // webgl.renderPseudoLayer(p1, 5);

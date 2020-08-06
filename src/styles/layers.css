@@ -1,7 +1,6 @@
 #layer_container #layer_title { margin: 13.5px;  text-align: center; font-size: 20px; }
-#layer_container #layer_tools { height:50px; background-color: lightpink; }
-#layer_container #layer_tools .layer_tools { position:relative; width: 40px; height: 30px; margin-top: 10px; margin-left: 5px; }
-#layer_container #layers_holder { height: 650px; background-color: lightseagreen; overflow-y: hidden; }
+#layer_container #layers_holder { height: 700px; background-color: lightseagreen; overflow-y: hidden; }
 #layer_container #layers_holder .layer { height:20px; padding-bottom: 5px; margin:5px; background-color: lightgray; text-align: left; font-size: 16px; overflow: hidden; cursor:pointer; }
-#layer_container #layers_holder .layer .show_layer { height: 15px; margin-top: 6px;}
+#layer_container #layers_holder .layer .delete_layer { background-color: transparent; border: none; margin-top:3px; font-size: 12px; cursor: pointer; }
+#layer_container #layers_holder .layer .delete_layer:focus { outline:none; box-shadow: none; }
 #layer_container #layers_holder .selected { background-color: gray; }

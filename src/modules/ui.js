@@ -3,7 +3,7 @@ export class UiLayer{
         this.id = pseudolayer.id;
         this.pseudolayer = pseudolayer;
         const html = `<div class="layer" id="${this.id}" data-id="${this.id}">
-                        <input class="show_layer" type="checkbox" data-id="${this.id}" checked></input>
+                        <button class="delete_layer" data-id="${this.id}">&#10060</button>
                         <span class="layer_text" data-id="${this.id}">Test layer ${layerNumber}</span>
                      </div>`
         this.html = document.createElement("div");
@@ -34,6 +34,7 @@ export class Ui {
         for (let x = 0; x < this.layerOrder.length; x++) {
             const uiLayer = this.uiLayers[this.layerOrder[x]];
             if (uiLayer.visible === true) {
+                document.getElementById(this.layerOrder[x]).classList.add("selected");
                 pseudolayer = uiLayer.pseudolayer;
                 break
             }
@@ -65,17 +66,18 @@ export class Ui {
         this._determineLayerToRender();
     }
 
+    // currently selecting a layer renders it on the screen. may keep, may switch
     selectLayer = (layer, className) => {
-        if (layer.classList.contains(className)) {
-            layer.classList.remove(className);
-            return;
-        };
         const elements = document.getElementsByClassName(className);
         for (let x = 0; x < elements.length; x++) {
             elements[x].classList.remove(className);
         }
-        const div = document.getElementById(layer.dataset.id);
+        const divId = layer.dataset.id;
+        const div = document.getElementById(divId);
         div.classList.add(className);
+        this.layerOrder = this.layerOrder.filter(item => item !== parseInt(divId));
+        this.layerOrder.unshift(parseInt(divId));
+        this._determineLayerToRender();
     }
 
     findSelectedLayer = () => {

@@ -66,14 +66,6 @@ const pp1 = webgl.processPseudoLayer({
 ui.addLayer(pp1);
 
 // UI EVENTS
-// layer visibility
-document.addEventListener('click',function(e){
-    const checkbox = e.target;
-    if(checkbox && checkbox.classList.contains('show_layer')){
-        ui.checkLayerVisibility(checkbox);
-    }
-});
-
 // select layer
 document.addEventListener('click',function(e){
     const layerDiv = e.target;
@@ -82,18 +74,10 @@ document.addEventListener('click',function(e){
     }
 });
 
-//remove layer
+// remove layer
 document.addEventListener('click',function(e){
     const deleteButton = e.target;
-    if(deleteButton && deleteButton.id === "delete_layer"){
-        ui.removeLayer(deleteButton);
-    }
-});
-
-//move layer up
-document.addEventListener('click',function(e){
-    const deleteButton = e.target;
-    if(deleteButton && deleteButton.id === "delete_layer"){
+    if(deleteButton && deleteButton.classList.contains("delete_layer")){
         ui.removeLayer(deleteButton);
     }
 });
