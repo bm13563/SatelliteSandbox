@@ -154,7 +154,7 @@ export class WebGLCanvas{
             return shader;
         } else {
             for (const key of Object.keys(dynamics)) {
-                const regex = new RegExp(key, "g");
+                const regex = new RegExp("{" + key + "}", "g");
                 shader = shader.replace(regex, dynamics[key].toString());
             }
         }

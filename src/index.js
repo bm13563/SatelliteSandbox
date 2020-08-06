@@ -11,12 +11,13 @@ import * as util from './modules/utils.js'
 
 import rgbaManipulation from './shaders/processing/rgbaManipulation.shader';
 import rgbFiltering from './shaders/processing/rgbFiltering.shader';
+import rgbPercentageFiltering from './shaders/processing/rgbPercentageFiltering.shader';
 import averageLayers from './shaders/processing/averageLayers.shader';
 import apply3x3Kernel from './shaders/processing/apply3x3Kernel.shader';
 
 
 const testMapView = new View({
-    center: [-7337.954715, 6709336.594760],
+    center: [-19529.660727, 6643944.717062],
     zoom: 7,
 })
 
@@ -82,7 +83,22 @@ const pp1 = webgl.processPseudoLayer({
 
 const pp2 = webgl.processPseudoLayer({
     inputs: {
-        a3k_image: pp1,
+        rgbfp_image: p1,
+    },
+    shader: rgbPercentageFiltering,
+    variables: {
+        rgbfp_filter: 0.8,
+        rgbfp_removed: [0.0, 0.0, 0.0, 1.0]
+    },
+    dynamics: {
+        rgbfpd1_colour: "g",
+        rgbfpd2_keep: "<",
+    }
+})
+
+const pp3 = webgl.processPseudoLayer({
+    inputs: {
+        a3k_image: pp2,
     },
     shader: apply3x3Kernel,
     variables: {
@@ -90,32 +106,17 @@ const pp2 = webgl.processPseudoLayer({
         a3k_textureHeight: webgl.height,
         a3k_kernel: [
             -1, -1, -1,
-            -1, 16, -1,
+            -1,  8, -1,
             -1, -1, -1
          ],
-        a3k_kernelWeight: 8,
+        a3k_kernelWeight: 1,
     },
     dynamics: {}
-})
-
-const pp3 = webgl.processPseudoLayer({
-    inputs: {
-        rgbf_image: pp1,
-    },
-    shader: rgbFiltering,
-    variables: {
-        rgbf_filter: 0.9,
-        rgbf_removed: [0.0, 0.0, 0.0, 1.0]
-    },
-    dynamics: {
-        rgbfd1_colour: "b",
-        rgbfd2_keep: ">",
-    }
 })
 
 webgl.renderPseudoLayer(pp3, 5);
 
 var thisLayer = pp3;
-var otherLayer = p2;
+var otherLayer = pp1;
 var intermediateLayer;
 l2.olMap.on('click', () => {webgl.renderPseudoLayer(otherLayer, 5); intermediateLayer = thisLayer; thisLayer = otherLayer; otherLayer = intermediateLayer;})
