@@ -1,5 +1,6 @@
 import * as twgl from 'twgl.js';
 import { PseudoLayer } from './pseudolayer.js';
+import {unByKey} from 'ol/Observable';
 
 // a class representing the canvas to which webgl should render to
 // contains hard-coded "final shaders" to render an unaltered image from a framebuffer, always used for the final shader pass
@@ -17,6 +18,10 @@ export class WebGLCanvas{
         this.baseProgram = twgl.createProgramInfo(this.gl, [baseVertexShader, baseFragmentShader]);
         this.vFlipProgram = twgl.createProgramInfo(this.gl, [vFlipVertexShader, baseFragmentShader]);
         this.framebufferTracker = {};
+        this.shaderPasses = 0;
+        this.frameTracker = 0;
+        this.mapsUsed = [];
+        this.currentEvent = false;
     }
 
     // compiles webgl shaders from string
@@ -45,15 +50,15 @@ export class WebGLCanvas{
 
     // renders a pseudo layer with the attached shader applied. reconstructs any child pseudolayers first, stores framebuffers for these
     // children in the framebuffertracker, then uses the framebuffers to apply any processing
-    renderPseudoLayer = (pseudolayer) => {
-        console.log("===")
+    _renderPseudoLayer = (pseudolayer) => {
+        this.shaderPasses = 0;
         this._recurseThroughChildLayers(pseudolayer, pseudolayer);
         const framebufferTexture = this._generatePseudoLayer(pseudolayer);
         this._runvFlipProgram(framebufferTexture);
         this.framebufferTracker = {};
     }
 
-    // recurses through the child layers of a pseudolayer to reconstruct the pseudolayer.
+    // recurses through the child layers of a pseudolayer to reconstruct all input pseudolayers
     _recurseThroughChildLayers = (thisLayer, originalLayer) => {
         for (const key of Object.keys(thisLayer.inputs)) {
             const nextLayer = thisLayer.inputs[key];
@@ -107,6 +112,7 @@ export class WebGLCanvas{
 
     _startRendering = (inputs, variables, programInfo, currentFramebuffer) => {
         const gl = this.gl;
+        this.shaderPasses++;
         requestAnimationFrame(render);
         function render() {
             twgl.resizeCanvasToDisplaySize(gl.canvas);
@@ -147,5 +153,38 @@ export class WebGLCanvas{
             }
         }
         return shader;
+    }
+
+    renderPseudoLayer = (pseudolayer, throttle) => {
+        this.stopRendering();
+        // set maps used to generate pseudolayer to visible
+        for (let x = 0; x < pseudolayer.layers.length; x++) {
+            pseudolayer.layers[x].setVisible(true);
+            this.mapsUsed.push(pseudolayer.layers[x]);
+        }
+        // sets the current event handler
+        this.currentEvent = pseudolayer.maps[pseudolayer.maps.length-1].on("postrender", (e) => {
+            if (this.frameTracker % throttle == 0) {
+                this._renderPseudoLayer(pseudolayer);
+            }
+            this.frameTracker++;
+        });
+    }
+
+    stopRendering = () => {
+        // set maps previously used to generate pseudolayer to invisible -> prevent unnecessary tile calls
+        if (this.mapsUsed.length > 0) {
+            for (let x = 0; x < this.mapsUsed.length; x++) {
+                this.mapsUsed[x].setVisible(false);
+            }
+            this.mapsUsed = [];
+        }
+        // remove the current event handler if it exists
+        if (this.currentEvent) {
+            this.frameTracker = 0;
+            unByKey(this.currentEvent);
+            this.currentEvent = false;
+        }
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
     }
 }

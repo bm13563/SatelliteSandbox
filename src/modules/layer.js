@@ -44,6 +44,8 @@ export class LayerObject{
             view: this.olView,
         });
         map.getView().setZoom(16);
+        // layers are not requested until they are used -> saves requests
+        this.olLayer.setVisible(false);
         this.olMap = map;
     }
 

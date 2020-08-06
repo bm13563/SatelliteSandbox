@@ -87,16 +87,42 @@ const pp2 = webgl.processPseudoLayer({
         a3k_textureHeight: webgl.height,
         a3k_kernel: [
             -1, -1, -1,
-            -1,  8, -1,
+            -1, 16, -1,
             -1, -1, -1
          ],
-        a3k_kernelWeight: 1,
+        a3k_kernelWeight: 8,
     },
     dynamics: {}
 })
 
-pp2.onRender(5, () => {
-    webgl.renderPseudoLayer(pp2);
+const pp3 = webgl.processPseudoLayer({
+    inputs: {
+        a3k_image: pp2,
+    },
+    shader: apply3x3Kernel,
+    variables: {
+        a3k_textureWidth: webgl.width,
+        a3k_textureHeight: webgl.height,
+        a3k_kernel: [
+            -1, -1, -1,
+            -1,  8, -1,
+            -1, -1, -1
+         ],
+        a3k_kernelWeight: 0.5,
+    },
+    dynamics: {}
 })
 
+const pp4 = webgl.processPseudoLayer({
+    inputs: {
+        al1_image: pp2,
+        al2_image: pp3,
+    },
+    shader: averageLayers,
+    variables: {},
+    dynamics: {},
+})
 
+webgl.renderPseudoLayer(pp4, 5);
+
+l1.olMap.on('click', () => {webgl.renderPseudoLayer(pp1, 5); })

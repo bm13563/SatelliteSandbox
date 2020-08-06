@@ -6,10 +6,11 @@ export class PseudoLayer{
         this.shader = shader;
         this.variables = variables;
         this.maps = [];
+        this.layers = [];
         this._getMaps(this);
         this.maps.sort((x, y) => {return x.mapId - y.mapId});
         this.maps = this.maps.map(({ map }) => map);
-        this.fpsTracker = 0;
+        this._getLayers();
     }
 
     _getMaps = (thisLayer) => {
@@ -24,15 +25,10 @@ export class PseudoLayer{
         }
     }
 
-    // addPass = () {
-    // }
-
-    onRender = (divisor, callback) => {
-        this.maps[this.maps.length-1].on("postrender", (e) => {
-            if (this.fpsTracker % divisor == 0) {
-                callback();
-            }
-            this.fpsTracker++;
-        });
+    _getLayers = () => {
+        for (var x = 0; x < this.maps.length; x++) {
+            const thisLayer = this.maps[x].getLayers().getArray()[0];
+            this.layers.push(thisLayer);
+        }
     }
 }

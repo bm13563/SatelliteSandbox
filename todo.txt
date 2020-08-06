@@ -8,4 +8,5 @@
 7. comment code
 8. try kerneling DONE
 9. build argument formatters
-10. implement fps control semi-done
+10. implement FPS throttling DONE
+11. ensure that only the maps that are currently used for pseudolayers are rendered to save requests
