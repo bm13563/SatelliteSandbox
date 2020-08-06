@@ -59,11 +59,65 @@ const pp1 = webgl.processPseudoLayer({
     },
     shader: rgbaManipulation,
     variables: {
-        rgbam_multiplier: [0.0, 1.0, 1.0, 1.0],
+        rgbam_multiplier: [2.0, 2.0, 2.0, 1.0],
     },
     dynamics: {}
 })
 ui.addLayer(pp1);
+
+const pp2 = webgl.processPseudoLayer({
+    inputs: {
+        a3k_image: pp1,
+    },
+    shader: apply3x3Kernel,
+    variables: {
+        a3k_textureWidth: webgl.width,
+        a3k_textureHeight: webgl.height,
+        a3k_kernel: [
+            -1, -1, -1,
+            -1, 16, -1,
+            -1, -1, -1
+         ],
+        a3k_kernelWeight: 8,
+    },
+    dynamics: {}
+})
+ui.addLayer(pp2);
+
+const pp3 = webgl.processPseudoLayer({
+    inputs: {
+        rgbfp_image: p1,
+    },
+    shader: rgbPercentageFiltering,
+    variables: {
+        rgbfp_filter: 0.6,
+        rgbfp_removed: [0.0, 0.0, 0.0, 1.0]
+    },
+    dynamics: {
+        rgbfpd1_colour: "g",
+        rgbfpd2_keep: ">",
+    }
+})
+ui.addLayer(pp3);
+
+const pp4 = webgl.processPseudoLayer({
+    inputs: {
+        a3k_image: pp3,
+    },
+    shader: apply3x3Kernel,
+    variables: {
+        a3k_textureWidth: webgl.width,
+        a3k_textureHeight: webgl.height,
+        a3k_kernel: [
+            -1, -1, -1,
+            -1,  8, -1,
+            -1, -1, -1
+         ],
+        a3k_kernelWeight: 1,
+    },
+    dynamics: {}
+})
+ui.addLayer(pp4);
 
 // UI EVENTS
 // select layer

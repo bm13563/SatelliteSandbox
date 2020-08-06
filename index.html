@@ -18,18 +18,19 @@
             </div>
             <div id="tile_container"></div>
         </div>
-        <!-- <p><strong>Red:</strong> <span id="red-value"></span></p>
-        <div class="slidecontainer">
-            <input type="range" min="0" max="100" value="100" class="slider" id="red-range">
-        </div>
-        <p><strong>Green:</strong> <span id="green-value"></span></p>
-        <div class="slidecontainer">
-            <input type="range" min="0" max="100" value="100" class="slider" id="green-range">
-        </div>
-        <p><strong>Blue:</strong> <span id="blue-value"></span></p>
-        <div class="slidecontainer">
-            <input type="range" min="0" max="100" value="100" class="slider" id="blue-range">
-        </div> -->
+        <br>
+        <h3>aerial.js</h3>
+        <p>This is an early stage demo of aerial.js. The layers in the demo are generated on the fly by your GPU in webGL. All of the above layers are derived from a single WMS source - you can validate this by checking the network tab. Image processing is done by stacking multiple shader programs. The effects above, in order, are:</p>
+        <ul>
+            <li>1. Normal WMS image</li>
+            <li>2. Enhanced (RGB * 2.0) WMS image produced from 1</li>
+            <li>3. Sharpening kernel produced from 2</li>
+            <li>4. Removing pixels that are > 60% green produced from 1</li>
+            <li>5. Edge detection kernel produced from 4</li>
+        </ul>
+        <p>aerial.js is set up so that multiple shaders from multiple sources can be stacked on top of each other. In theory, any processing algorithm that can be run on e.g SNAP, QGIS etc etc can be written into aerial. The end-game for aerial.js is an open-source, online resource where anyone with access to a WMS can process satellite imagery in real time, using a number of different shaders.</p>
+        <h3>I am not an Earth Observation expert!!</h3>
+        <p>The shaders used in this demo, and in general, are very basic. If you would like to contribute 1) information that can help me write useful shaders or 2) useful shaders, you are welcome to do so via GitHub. For other enquiries about aerial.js, please contact me on my email - bm13563@my.bristol.ac.uk.</p>
     </body>
     <link rel="stylesheet" href="./build/bundle.css" />
     <script src="./build/bundle.js"></script>

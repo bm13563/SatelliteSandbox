@@ -27355,6 +27355,10 @@
 
     var rgbaManipulation = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform vec4 rgbam_multiplier;\r\nuniform sampler2D rgbam_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(rgbam_image, o_texCoord) * rgbam_multiplier;\r\n}";
 
+    var rgbPercentageFiltering = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform float rgbfp_filter;\r\nuniform vec4 rgbfp_removed;\r\nuniform sampler2D rgbfp_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 raw_colour = texture(rgbfp_image, o_texCoord);\r\n    float sum_colours = raw_colour.r + raw_colour.g + raw_colour.b;\r\n    float threshold_colour = raw_colour.{rgbfpd1_colour} / sum_colours;\r\n    if(raw_colour.{rgbfpd1_colour} {rgbfpd2_keep} threshold_colour){\r\n        raw_colour.{rgbfpd1_colour} = raw_colour.{rgbfpd1_colour};\r\n    } else {\r\n        raw_colour = rgbfp_removed;\r\n    }\r\n    o_colour = raw_colour;\r\n}";
+
+    var apply3x3Kernel = "#version 300 es\r\nprecision mediump float;\r\n\r\nuniform sampler2D a3k_image;\r\nuniform float a3k_textureWidth;\r\nuniform float a3k_textureHeight;\r\nuniform float a3k_kernel[9];\r\nuniform float a3k_kernelWeight;\r\n\r\nin vec2 o_texCoord;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   vec2 onePixel = vec2(1.0 / a3k_textureWidth, 1.0 / a3k_textureHeight);\r\n   vec4 colorSum =\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1, -1)) * a3k_kernel[0] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0, -1)) * a3k_kernel[1] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1, -1)) * a3k_kernel[2] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  0)) * a3k_kernel[3] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  0)) * a3k_kernel[4] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  0)) * a3k_kernel[5] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  1)) * a3k_kernel[6] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  1)) * a3k_kernel[7] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  1)) * a3k_kernel[8] ;\r\n   o_colour = vec4((colorSum / a3k_kernelWeight).rgb, 1);\r\n}";
+
     var testMapView = new View({
       center: [-19529.660727, 6643944.717062],
       zoom: 7
@@ -27391,11 +27395,54 @@
       },
       shader: rgbaManipulation,
       variables: {
-        rgbam_multiplier: [0.0, 1.0, 1.0, 1.0]
+        rgbam_multiplier: [2.0, 2.0, 2.0, 1.0]
       },
       dynamics: {}
     });
-    ui.addLayer(pp1); // UI EVENTS
+    ui.addLayer(pp1);
+    var pp2 = webgl.processPseudoLayer({
+      inputs: {
+        a3k_image: pp1
+      },
+      shader: apply3x3Kernel,
+      variables: {
+        a3k_textureWidth: webgl.width,
+        a3k_textureHeight: webgl.height,
+        a3k_kernel: [-1, -1, -1, -1, 16, -1, -1, -1, -1],
+        a3k_kernelWeight: 8
+      },
+      dynamics: {}
+    });
+    ui.addLayer(pp2);
+    var pp3 = webgl.processPseudoLayer({
+      inputs: {
+        rgbfp_image: p1
+      },
+      shader: rgbPercentageFiltering,
+      variables: {
+        rgbfp_filter: 0.6,
+        rgbfp_removed: [0.0, 0.0, 0.0, 1.0]
+      },
+      dynamics: {
+        rgbfpd1_colour: "g",
+        rgbfpd2_keep: ">"
+      }
+    });
+    ui.addLayer(pp3);
+    var pp4 = webgl.processPseudoLayer({
+      inputs: {
+        a3k_image: pp3
+      },
+      shader: apply3x3Kernel,
+      variables: {
+        a3k_textureWidth: webgl.width,
+        a3k_textureHeight: webgl.height,
+        a3k_kernel: [-1, -1, -1, -1, 8, -1, -1, -1, -1],
+        a3k_kernelWeight: 1
+      },
+      dynamics: {}
+    });
+    ui.addLayer(pp4); // UI EVENTS
     // select layer
 
     document.addEventListener('click', function (e) {
