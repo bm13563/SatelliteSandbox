@@ -27313,7 +27313,8 @@
 
         for (var x = 0; x < selectedItems.length; x++) {
           if (selectedItems[x].classList.contains("layer")) {
-            return selectedItems[x].dataset.id;
+            var layerId = selectedItems[x].dataset.id;
+            return _this.uiLayers[layerId];
           }
         }
       };
@@ -27341,16 +27342,14 @@
 
       this.removeGui = function () {
         var processingGui = document.getElementById("processing_gui");
-        console.log(_this.activeGui);
         processingGui.removeChild(_this.activeGui); // event listener *should* be garbage collected
 
         _this.activeGui = false;
       };
 
       this.rgbaManipulationGui = function (con) {
-        var targetLayerId = _this.findSelectedLayer();
+        var targetLayer = _this.findSelectedLayer(); // check if the ui layer has been changed by this gui before -> if so, restore these values
 
-        var targetLayer = _this.uiLayers[targetLayerId]; // check if the ui layer has been changed by this gui before -> if so, restore these values
 
         if ("rgbaManipulation" in targetLayer.state) {
           var red = targetLayer.state.rgbaManipulation.red;
@@ -27368,7 +27367,7 @@
             "blue": blue,
             "alpha": alpha
           };
-        } // generate gui -> styled in guis.css
+        } // generate gui -> can be unstyled, as will resize to fit generic gui container, or can be styled in guis.css
 
 
         var html = "<div id=\"rgbaManipulation\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Change RGBA</p>\n                          <p class=\"gui_text\">Red: <span id=\"red_value\">".concat(red, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"500\" value=\"").concat(red * 100, "\" class=\"gui_slider\" id=\"red_slider\">\n                          <p class=\"gui_text\">Green: <span id=\"green_value\">").concat(green, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"500\" value=\"").concat(green * 100, "\" class=\"gui_slider\" id=\"green_slider\">\n                          <p class=\"gui_text\">Blue: <span id=\"blue_value\">").concat(blue, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"500\" value=\"").concat(blue * 100, "\" class=\"gui_slider\" id=\"blue_slider\">\n                      </div>");
@@ -27389,11 +27388,79 @@
 
             ui._determineLayerToRender();
           };
-        }
+        } //TODO ADD EVENT FOR RESET -> JUST updateLayer() with original pseudolayer and render
+
 
         addSliderEvent("red_slider", "red_value", "red", targetLayer, _this);
         addSliderEvent("green_slider", "green_value", "green", targetLayer, _this);
         addSliderEvent("blue_slider", "blue_value", "blue", targetLayer, _this);
+      };
+
+      this.rgbFilteringGui = function (con) {
+        var targetLayer = _this.findSelectedLayer();
+
+        if ("rgbFiltering" in targetLayer.state) {
+          var filter = targetLayer.state.rgbFiltering.filter;
+          var colour = targetLayer.state.rgbFiltering.colour;
+          var operator = targetLayer.state.rgbFiltering.operator;
+        } else {
+          var filter = 1.0;
+          var colour = "r";
+          var operator = "<";
+          targetLayer.state["rgbFiltering"] = {
+            "filter": filter,
+            "colour": colour,
+            "operator": operator
+          };
+        }
+
+        var html = "<div id=\"rgbFiltering\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Filter RGB</p>\n                          <p class=\"gui_text\">Value to filter:</p>\n                          <select name=\"filter_colour\" id=\"filter_colour\">\n                            <option value=\"r\" selected>Red</option>\n                            <option value=\"g\">Green</option>\n                            <option value=\"b\">Blue</option>\n                          </select>\n                          <p class=\"gui_text\">Value to filter: <span id=\"filter_value\">".concat(filter, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"250\" value=\"").concat(filter * 100, "\" class=\"gui_slider\" id=\"filter_slider\">\n                          <p class=\"gui_text\">Operator:</p>\n                          <select name=\"operator\" id=\"operator\">\n                            <option value=\"&lt\" selected>&lt</option>\n                            <option value=\"&gt\">&gt</option>\n                          </select><br><br>\n                      </div>");
+
+        var gui = _this._addToDOM(html);
+
+        _this.activeGui = gui; // event listener on colour to be filtered
+
+        document.getElementById("filter_colour").onchange = function () {
+          var state = targetLayer.state.rgbFiltering;
+          var thisInput = document.getElementById("filter_colour");
+          state.colour = thisInput.value;
+          var targetPseudoLayer = targetLayer.originalPseudolayer;
+          console.log(_this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
+          var pseudolayer = con.rgbFiltering(_this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
+
+          _this.updateLayer(targetLayer, pseudolayer);
+
+          _this._determineLayerToRender();
+        }; // event listener on filter value
+
+
+        document.getElementById("filter_slider").oninput = function () {
+          var state = targetLayer.state.rgbFiltering;
+          var thisSlider = document.getElementById("filter_slider");
+          state.filter = thisSlider.value / 100;
+          document.getElementById("filter_value").innerHTML = thisSlider.value / 100;
+          var targetPseudoLayer = targetLayer.originalPseudolayer;
+          console.log(_this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
+          var pseudolayer = con.rgbFiltering(_this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
+
+          _this.updateLayer(targetLayer, pseudolayer);
+
+          _this._determineLayerToRender();
+        }; // event listener on operator to use
+
+
+        document.getElementById("operator").onchange = function () {
+          var state = targetLayer.state.rgbFiltering;
+          var thisInput = document.getElementById("operator");
+          state.operator = thisInput.value;
+          var targetPseudoLayer = targetLayer.originalPseudolayer;
+          console.log(_this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
+          var pseudolayer = con.rgbFiltering(_this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
+
+          _this.updateLayer(targetLayer, pseudolayer);
+
+          _this._determineLayerToRender();
+        };
       };
 
       this.webgl = webgl;
@@ -27403,7 +27470,8 @@
       this.events = [];
       this.activeGui = false;
       this.guis = {
-        "rgbaManipulation": this.rgbaManipulationGui
+        "rgbaManipulation": this.rgbaManipulationGui,
+        "rgbFiltering": this.rgbFilteringGui
       };
     };
 
@@ -27465,16 +27533,16 @@
       // todo handling for dynamics
       var pseudolayer = webgl.processPseudoLayer({
         inputs: {
-          rgbfp_image: rgbf_image
+          rgbf_image: rgbf_image
         },
         shader: rgbFilteringShader,
         variables: {
-          rgbfp_filter: rgbf_filter,
-          rgbfp_removed: rgbf_removed
+          rgbf_filter: rgbf_filter,
+          rgbf_removed: rgbf_removed
         },
         dynamics: {
-          rgbfpd1_colour: rgbfd1_colour,
-          rgbfpd2_keep: rgbfd2_keep
+          rgbfd1_colour: rgbfd1_colour,
+          rgbfd2_keep: rgbfd2_keep
         }
       });
       return pseudolayer;

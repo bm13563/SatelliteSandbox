@@ -24,6 +24,7 @@ export class Ui {
         this.activeGui = false;
         this.guis = {
             "rgbaManipulation": this.rgbaManipulationGui,
+            "rgbFiltering": this.rgbFilteringGui,
         }
     }
 
@@ -76,7 +77,8 @@ export class Ui {
         const selectedItems = document.getElementsByClassName("selected");
         for (let x = 0; x < selectedItems.length; x++) {
             if (selectedItems[x].classList.contains("layer")) {
-                return selectedItems[x].dataset.id;
+                const layerId = selectedItems[x].dataset.id;
+                return this.uiLayers[layerId];
             }
         }
     }
@@ -106,9 +108,9 @@ export class Ui {
         this.activeGui = false;
     }
 
+    // working template for setting up a gui
     rgbaManipulationGui = (con) => {
-        const targetLayerId = this.findSelectedLayer();
-        const targetLayer = this.uiLayers[targetLayerId];
+        const targetLayer = this.findSelectedLayer();
 
         // check if the ui layer has been changed by this gui before -> if so, restore these values
         if ("rgbaManipulation" in targetLayer.state) {
@@ -129,7 +131,7 @@ export class Ui {
             }
         }
 
-        // generate gui -> styled in guis.css
+        // generate gui -> can be unstyled, as will resize to fit generic gui container, or can be styled in guis.css
         const html = `<div id="rgbaManipulation" class="inner_gui">
                           <p class="gui_title">Change RGBA</p>
                           <p class="gui_text">Red: <span id="red_value">${red}</span></p>
@@ -155,9 +157,82 @@ export class Ui {
                 ui._determineLayerToRender();
             }
         }
+        //TODO ADD EVENT FOR RESET -> JUST updateLayer() with original pseudolayer and render
 
         addSliderEvent("red_slider", "red_value", "red", targetLayer, this);
         addSliderEvent("green_slider", "green_value", "green", targetLayer, this);
         addSliderEvent("blue_slider", "blue_value", "blue", targetLayer, this);
-    } 
+    }
+
+    rgbFilteringGui = (con) => {
+        const targetLayer = this.findSelectedLayer();
+
+        if ("rgbFiltering" in targetLayer.state) {
+            var filter = targetLayer.state.rgbFiltering.filter;
+            var colour = targetLayer.state.rgbFiltering.colour;
+            var operator = targetLayer.state.rgbFiltering.operator;
+        } else {
+            var filter = 1.0;
+            var colour = "r";
+            var operator = "<";
+            targetLayer.state["rgbFiltering"] = {
+                "filter": filter,
+                "colour": colour,
+                "operator": operator,
+            }
+        }
+
+        const html = `<div id="rgbFiltering" class="inner_gui">
+                          <p class="gui_title">Filter RGB</p>
+                          <p class="gui_text">Value to filter:</p>
+                          <select name="filter_colour" id="filter_colour">
+                            <option value="r" selected>Red</option>
+                            <option value="g">Green</option>
+                            <option value="b">Blue</option>
+                          </select>
+                          <p class="gui_text">Value to filter: <span id="filter_value">${filter}</span></p>
+                          <input type="range" min="0" max="250" value="${filter*100}" class="gui_slider" id="filter_slider">
+                          <p class="gui_text">Operator:</p>
+                          <select name="operator" id="operator">
+                            <option value="&lt" selected>&lt</option>
+                            <option value="&gt">&gt</option>
+                          </select><br><br>
+                      </div>`
+        const gui = this._addToDOM(html);
+        this.activeGui = gui;
+
+        // event listener on colour to be filtered
+        document.getElementById("filter_colour").onchange = () => {
+            const state = targetLayer.state.rgbFiltering;
+            const thisInput = document.getElementById("filter_colour");
+            state.colour = thisInput.value;
+            const targetPseudoLayer = targetLayer.originalPseudolayer;
+            const pseudolayer = con.rgbFiltering(this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
+            this.updateLayer(targetLayer, pseudolayer);
+            this._determineLayerToRender();
+        }
+
+        // event listener on filter value
+        document.getElementById("filter_slider").oninput = () => {
+            const state = targetLayer.state.rgbFiltering;
+            const thisSlider = document.getElementById("filter_slider");
+            state.filter = thisSlider.value/100;
+            document.getElementById("filter_value").innerHTML = thisSlider.value/100;
+            const targetPseudoLayer = targetLayer.originalPseudolayer;
+            const pseudolayer = con.rgbFiltering(this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
+            this.updateLayer(targetLayer, pseudolayer);
+            this._determineLayerToRender();
+        }
+
+        // event listener on operator to use
+        document.getElementById("operator").onchange = () => {
+            const state = targetLayer.state.rgbFiltering;
+            const thisInput = document.getElementById("operator");
+            state.operator = thisInput.value;
+            const targetPseudoLayer = targetLayer.originalPseudolayer;
+            const pseudolayer = con.rgbFiltering(this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
+            this.updateLayer(targetLayer, pseudolayer);
+            this._determineLayerToRender();
+        }
+    }
 }

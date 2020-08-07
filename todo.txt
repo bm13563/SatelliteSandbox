@@ -12,4 +12,5 @@
 11. ensure that only the maps that are currently used for pseudolayers are rendered to save requests DONE
 12. work out how to pass arrays of textures
 13. environment variables -> including current map with control (due to z-index ordering)
-14. flexible guis that are easy to add to
+14. flexible guis that are easy to add to DONE-ish
+15. Add "create new layer" to GUIS

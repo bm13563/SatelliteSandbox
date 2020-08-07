@@ -56,16 +56,16 @@ export const rgbFiltering = (webgl, rgbf_image, rgbf_filter, rgbf_removed, rgbfd
     // todo handling for dynamics
     const pseudolayer = webgl.processPseudoLayer({
         inputs: {
-            rgbfp_image: rgbf_image,
+            rgbf_image: rgbf_image,
         },
         shader: rgbFilteringShader,
         variables: {
-            rgbfp_filter: rgbf_filter,
-            rgbfp_removed: rgbf_removed,
+            rgbf_filter: rgbf_filter,
+            rgbf_removed: rgbf_removed,
         },
         dynamics: {
-            rgbfpd1_colour: rgbfd1_colour,
-            rgbfpd2_keep: rgbfd2_keep,
+            rgbfd1_colour: rgbfd1_colour,
+            rgbfd2_keep: rgbfd2_keep,
         }
     })
     return pseudolayer;
