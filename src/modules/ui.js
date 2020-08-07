@@ -42,6 +42,18 @@ export class Ui {
         uilayer.pseudolayer = pseudolayer;
     }
 
+    // this is quite hacky and should probably be re-written
+    resetLayer = (con) => {
+        const uiLayer = this.findSelectedLayer();
+        uiLayer.pseudolayer = uiLayer.originalPseudolayer;
+        uiLayer.state = {};
+        const activeGui = this.activeGui.id;
+        this.removeGui();
+        const buildGui = this.guis[activeGui];
+        buildGui(con);
+        this._determineLayerToRender();
+    }
+
     _determineLayerToRender = () => {
         var pseudolayer = false;
         for (let x = 0; x < this.layerOrder.length; x++) {
@@ -97,7 +109,8 @@ export class Ui {
         htmlElement = htmlElement.firstChild;
         const processingGui = document.getElementById("processing_gui");
         processingGui.style.visibility = "visible";
-        processingGui.appendChild(htmlElement);
+        const insertPoint = document.getElementById("processing_gui_actions");
+        insertPoint.insertAdjacentElement('beforebegin', htmlElement);
         return htmlElement;
     }
 

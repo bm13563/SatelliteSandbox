@@ -27269,6 +27269,21 @@
         uilayer.pseudolayer = pseudolayer;
       };
 
+      this.resetLayer = function (con) {
+        var uiLayer = _this.findSelectedLayer();
+
+        uiLayer.pseudolayer = uiLayer.originalPseudolayer;
+        uiLayer.state = {};
+        var activeGui = _this.activeGui.id;
+
+        _this.removeGui();
+
+        var buildGui = _this.guis[activeGui];
+        buildGui(con);
+
+        _this._determineLayerToRender();
+      };
+
       this._determineLayerToRender = function () {
         var pseudolayer = false;
 
@@ -27336,7 +27351,8 @@
         htmlElement = htmlElement.firstChild;
         var processingGui = document.getElementById("processing_gui");
         processingGui.style.visibility = "visible";
-        processingGui.appendChild(htmlElement);
+        var insertPoint = document.getElementById("processing_gui_actions");
+        insertPoint.insertAdjacentElement('beforebegin', htmlElement);
         return htmlElement;
       };
 
@@ -27425,7 +27441,6 @@
           var thisInput = document.getElementById("filter_colour");
           state.colour = thisInput.value;
           var targetPseudoLayer = targetLayer.originalPseudolayer;
-          console.log(_this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
           var pseudolayer = con.rgbFiltering(_this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
 
           _this.updateLayer(targetLayer, pseudolayer);
@@ -27440,7 +27455,6 @@
           state.filter = thisSlider.value / 100;
           document.getElementById("filter_value").innerHTML = thisSlider.value / 100;
           var targetPseudoLayer = targetLayer.originalPseudolayer;
-          console.log(_this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
           var pseudolayer = con.rgbFiltering(_this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
 
           _this.updateLayer(targetLayer, pseudolayer);
@@ -27454,7 +27468,6 @@
           var thisInput = document.getElementById("operator");
           state.operator = thisInput.value;
           var targetPseudoLayer = targetLayer.originalPseudolayer;
-          console.log(_this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
           var pseudolayer = con.rgbFiltering(_this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
 
           _this.updateLayer(targetLayer, pseudolayer);
@@ -27644,6 +27657,23 @@
       if (menuOption && menuOption.classList.contains("dropdown_menu_option")) {
         var buildGui = ui.guis[menuOption.dataset.id];
         buildGui(con);
+      }
+    }); // generate a new ui layer from selected layer
+
+    document.addEventListener('click', function (e) {
+      var newLayer = e.target;
+
+      if (newLayer && newLayer.id === "new_layer") {
+        var pseudolayer = ui.findSelectedLayer().pseudolayer;
+        ui.addLayer(pseudolayer);
+      }
+    }); // reset a ui layer
+
+    document.addEventListener('click', function (e) {
+      var resetLayer = e.target;
+
+      if (resetLayer && resetLayer.id === "reset_layer") {
+        ui.resetLayer(con);
       }
     });
 

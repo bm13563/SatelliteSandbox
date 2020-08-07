@@ -93,3 +93,19 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// generate a new ui layer from selected layer
+document.addEventListener('click', (e) => {
+    const newLayer = e.target;
+    if(newLayer && newLayer.id === "new_layer"){
+        const pseudolayer = ui.findSelectedLayer().pseudolayer;
+        ui.addLayer(pseudolayer);
+    }
+});
+
+// reset a ui layer
+document.addEventListener('click', (e) => {
+    const resetLayer = e.target;
+    if(resetLayer && resetLayer.id === "reset_layer"){
+        ui.resetLayer(con);
+    }
+});
