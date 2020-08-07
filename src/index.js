@@ -43,19 +43,19 @@ var ui = new Ui(webgl);
 var l1 = new LayerObject(testMapLayer1, testMapView);
 
 const p1 = webgl.generatePseudoLayer(l1);
-ui.addLayer(p1);
+const uil1 = ui.addLayer(p1);
 
 const pp1 = con.rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);
-ui.addLayer(pp1);
+const uil2 = ui.addLayer(pp1);
 
 const pp2 = con.apply3x3Kernel(webgl, pp1, [-1, -1, -1, -1, 16, -1, -1, -1, -1], 8);
-ui.addLayer(pp2);
+const uil3 = ui.addLayer(pp2);
 
 const pp3 = con.rgbPercentageFiltering(webgl, p1, 0.6, [0.0, 0.0, 0.0, 1.0], "g", ">");
-ui.addLayer(pp3);
+const uil4 = ui.addLayer(pp3);
 
 const pp4 = con.apply3x3Kernel(webgl, pp3, [-1, -1, -1, -1,  8, -1, -1, -1, -1], 1);
-ui.addLayer(pp4);
+const uil5 = ui.addLayer(pp4);
 
 // UI EVENTS
 // select layer
@@ -73,3 +73,23 @@ document.addEventListener('click', (e) => {
         ui.removeLayer(deleteButton);
     }
 });
+
+// close processing gui -> hide gui container and remove gui
+document.addEventListener('click', (e) => {
+    const closeButton = e.target;
+    if(closeButton && closeButton.id === "close_processing_gui"){
+        const processingGui = document.getElementById("processing_gui");
+        processingGui.style.visibility = "hidden";
+        ui.removeGui();
+    }
+});
+
+// open processing gui when dropdown selected
+document.addEventListener('click', (e) => {
+    const menuOption = e.target;
+    if(menuOption && menuOption.classList.contains("dropdown_menu_option")){
+        const buildGui = ui.guis[menuOption.dataset.id];
+        buildGui(con);
+    }
+});
+

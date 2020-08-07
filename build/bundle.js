@@ -27175,7 +27175,6 @@
           }
         }
 
-        console.log(shader);
         return shader;
       };
 
@@ -27241,10 +27240,12 @@
 
       this.id = pseudolayer.id;
       this.pseudolayer = pseudolayer;
+      this.originalPseudolayer = pseudolayer;
       var html = "<div class=\"layer\" id=\"".concat(this.id, "\" data-id=\"").concat(this.id, "\">\n                        <button class=\"delete_layer\" data-id=\"").concat(this.id, "\">&#10060</button>\n                        <span id=\"Test layer ").concat(layerNumber, "\" class=\"layer_text\" data-id=\"").concat(this.id, "\">Test layer ").concat(layerNumber, "</span>\n                     </div>");
       this.html = document.createElement("div");
       this.html.innerHTML = html;
       this.visible = true;
+      this.state = {};
     };
     var Ui = function Ui(webgl) {
       var _this = this;
@@ -27260,6 +27261,12 @@
         _this.layerOrder.push(uiLayer.id);
 
         _this._determineLayerToRender();
+
+        return uiLayer;
+      };
+
+      this.updateLayer = function (uilayer, pseudolayer) {
+        uilayer.pseudolayer = pseudolayer;
       };
 
       this._determineLayerToRender = function () {
@@ -27322,15 +27329,91 @@
         _this._determineLayerToRender();
       };
 
+      this._addToDOM = function (string) {
+        var htmlElement = document.createElement("div");
+        htmlElement.innerHTML = string;
+        htmlElement = htmlElement.firstChild;
+        var processingGui = document.getElementById("processing_gui");
+        processingGui.style.visibility = "visible";
+        processingGui.appendChild(htmlElement);
+        return htmlElement;
+      };
+
+      this.removeGui = function () {
+        var processingGui = document.getElementById("processing_gui");
+        console.log(_this.activeGui);
+        processingGui.removeChild(_this.activeGui); // event listener *should* be garbage collected
+
+        _this.activeGui = false;
+      };
+
+      this.rgbaManipulationGui = function (con) {
+        var targetLayerId = _this.findSelectedLayer();
+
+        var targetLayer = _this.uiLayers[targetLayerId]; // check if the ui layer has been changed by this gui before -> if so, restore these values
+
+        if ("rgbaManipulation" in targetLayer.state) {
+          var red = targetLayer.state.rgbaManipulation.red;
+          var green = targetLayer.state.rgbaManipulation.green;
+          var blue = targetLayer.state.rgbaManipulation.blue;
+          var alpha = targetLayer.state.rgbaManipulation.alpha;
+        } else {
+          var red = 1.0;
+          var green = 1.0;
+          var blue = 1.0;
+          var alpha = 1.0;
+          targetLayer.state["rgbaManipulation"] = {
+            "red": red,
+            "green": green,
+            "blue": blue,
+            "alpha": alpha
+          };
+        } // generate gui -> styled in guis.css
+
+
+        var html = "<div id=\"rgbaManipulation\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Change RGBA</p>\n                          <p class=\"gui_text\">Red: <span id=\"red_value\">".concat(red, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"500\" value=\"").concat(red * 100, "\" class=\"gui_slider\" id=\"red_slider\">\n                          <p class=\"gui_text\">Green: <span id=\"green_value\">").concat(green, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"500\" value=\"").concat(green * 100, "\" class=\"gui_slider\" id=\"green_slider\">\n                          <p class=\"gui_text\">Blue: <span id=\"blue_value\">").concat(blue, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"500\" value=\"").concat(blue * 100, "\" class=\"gui_slider\" id=\"blue_slider\">\n                      </div>");
+
+        var gui = _this._addToDOM(html);
+
+        _this.activeGui = gui; // add event handlers -> these should be garbage collected when the gui is removed
+
+        function addSliderEvent(sliderId, valueId, colour, targetLayer, ui) {
+          document.getElementById(sliderId).oninput = function () {
+            var state = targetLayer.state.rgbaManipulation;
+            var thisSlider = document.getElementById(sliderId);
+            state[colour] = thisSlider.value / 100;
+            document.getElementById(valueId).innerHTML = thisSlider.value / 100;
+            var targetPseudoLayer = targetLayer.originalPseudolayer;
+            var pseudolayer = con.rgbaManipulation(ui.webgl, targetPseudoLayer, [state.red, state.green, state.blue, state.alpha]);
+            ui.updateLayer(targetLayer, pseudolayer);
+
+            ui._determineLayerToRender();
+          };
+        }
+
+        addSliderEvent("red_slider", "red_value", "red", targetLayer, _this);
+        addSliderEvent("green_slider", "green_value", "green", targetLayer, _this);
+        addSliderEvent("blue_slider", "blue_value", "blue", targetLayer, _this);
+      };
+
       this.webgl = webgl;
       this.uiLayers = {}; // ordered array -> first element in this array is the pseudolayer that is rendered
 
       this.layerOrder = [];
+      this.events = [];
+      this.activeGui = false;
+      this.guis = {
+        "rgbaManipulation": this.rgbaManipulationGui
+      };
     };
 
     var rgbaManipulationShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform vec4 rgbam_multiplier;\r\nuniform sampler2D rgbam_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(rgbam_image, o_texCoord) * rgbam_multiplier;\r\n}";
 
+    var rgbFilteringShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform float rgbf_filter;\r\nuniform vec4 rgbf_removed;\r\nuniform sampler2D rgbf_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 raw_colour = texture(rgbf_image, o_texCoord);\r\n\r\n    if(raw_colour.{rgbfd1_colour} {rgbfd2_keep} rgbf_filter){\r\n        raw_colour.{rgbfd1_colour} = raw_colour.{rgbfd1_colour};\r\n    } else {\r\n        raw_colour = rgbf_removed;\r\n    }\r\n\r\n    o_colour = raw_colour;\r\n}";
+
     var rgbPercentageFilteringShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform float rgbfp_filter;\r\nuniform vec4 rgbfp_removed;\r\nuniform sampler2D rgbfp_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 raw_colour = texture(rgbfp_image, o_texCoord);\r\n    float sum_colours = raw_colour.r + raw_colour.g + raw_colour.b;\r\n    float threshold_colour = raw_colour.{rgbfpd1_colour} / sum_colours;\r\n    if(raw_colour.{rgbfpd1_colour} {rgbfpd2_keep} threshold_colour){\r\n        raw_colour.{rgbfpd1_colour} = raw_colour.{rgbfpd1_colour};\r\n    } else {\r\n        raw_colour = rgbfp_removed;\r\n    }\r\n    o_colour = raw_colour;\r\n}";
+
+    var averageLayersShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D al1_image;\r\nuniform sampler2D al2_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 al1_texture = texture(al1_image, o_texCoord);\r\n    vec4 al2_texture = texture(al2_image, o_texCoord);\r\n    vec4 sum_texture = al1_texture + al2_texture;\r\n    o_colour = sum_texture / vec4(2.0, 2.0, 2.0, 1.0);\r\n}";
 
     var apply3x3KernelShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nuniform sampler2D a3k_image;\r\nuniform float a3k_textureWidth;\r\nuniform float a3k_textureHeight;\r\nuniform float a3k_kernel[9];\r\nuniform float a3k_kernelWeight;\r\n\r\nin vec2 o_texCoord;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   vec2 onePixel = vec2(1.0 / a3k_textureWidth, 1.0 / a3k_textureHeight);\r\n   vec4 colorSum =\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1, -1)) * a3k_kernel[0] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0, -1)) * a3k_kernel[1] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1, -1)) * a3k_kernel[2] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  0)) * a3k_kernel[3] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  0)) * a3k_kernel[4] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  0)) * a3k_kernel[5] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  1)) * a3k_kernel[6] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  1)) * a3k_kernel[7] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  1)) * a3k_kernel[8] ;\r\n   o_colour = vec4((colorSum / a3k_kernelWeight).rgb, 1);\r\n}";
 
@@ -27365,6 +27448,38 @@
       return pseudolayer;
     }; // takes in 2 pseudolayers
 
+    var averageLayers = function averageLayers(webgl, al1_image, al2_image) {
+      var pseudolayer = webgl.processPseudoLayer({
+        inputs: {
+          al1_image: al1_image,
+          al2_image: al2_image
+        },
+        shader: averageLayersShader,
+        variables: {},
+        dynamics: {}
+      });
+      return pseudolayer;
+    }; // takes in a pseudolayer, a float (0-1), a vec4 (float 0-1), string ("r", "g", "b") and a string ("<", ">")
+
+    var rgbFiltering = function rgbFiltering(webgl, rgbf_image, rgbf_filter, rgbf_removed, rgbfd1_colour, rgbfd2_keep) {
+      // todo handling for dynamics
+      var pseudolayer = webgl.processPseudoLayer({
+        inputs: {
+          rgbfp_image: rgbf_image
+        },
+        shader: rgbFilteringShader,
+        variables: {
+          rgbfp_filter: rgbf_filter,
+          rgbfp_removed: rgbf_removed
+        },
+        dynamics: {
+          rgbfpd1_colour: rgbfd1_colour,
+          rgbfpd2_keep: rgbfd2_keep
+        }
+      });
+      return pseudolayer;
+    }; // takes in a pseudolayer, a float (0-1), a vec4 (float 0-1), string ("r", "g", "b") and a string ("<", ">")
+
     var rgbPercentageFiltering = function rgbPercentageFiltering(webgl, rgbfp_image, rgbfp_filter, rgbfp_removed, rgbfpd1_colour, rgbfpd2_keep) {
       // todo handling for dynamics
       var pseudolayer = webgl.processPseudoLayer({
@@ -27383,6 +27498,15 @@
       });
       return pseudolayer;
     };
+
+    var con = /*#__PURE__*/Object.freeze({
+        __proto__: null,
+        rgbaManipulation: rgbaManipulation,
+        apply3x3Kernel: apply3x3Kernel,
+        averageLayers: averageLayers,
+        rgbFiltering: rgbFiltering,
+        rgbPercentageFiltering: rgbPercentageFiltering
+    });
 
     var testMapView = new View({
       center: [-19529.660727, 6643944.717062],
@@ -27409,15 +27533,15 @@
     var ui = new Ui(webgl);
     var l1 = new LayerObject(testMapLayer1, testMapView);
     var p1 = webgl.generatePseudoLayer(l1);
-    ui.addLayer(p1);
+    var uil1 = ui.addLayer(p1);
     var pp1 = rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);
-    ui.addLayer(pp1);
+    var uil2 = ui.addLayer(pp1);
     var pp2 = apply3x3Kernel(webgl, pp1, [-1, -1, -1, -1, 16, -1, -1, -1, -1], 8);
-    ui.addLayer(pp2);
+    var uil3 = ui.addLayer(pp2);
     var pp3 = rgbPercentageFiltering(webgl, p1, 0.6, [0.0, 0.0, 0.0, 1.0], "g", ">");
-    ui.addLayer(pp3);
+    var uil4 = ui.addLayer(pp3);
     var pp4 = apply3x3Kernel(webgl, pp3, [-1, -1, -1, -1, 8, -1, -1, -1, -1], 1);
-    ui.addLayer(pp4); // UI EVENTS
+    var uil5 = ui.addLayer(pp4); // UI EVENTS
     // select layer
 
     document.addEventListener('click', function (e) {
@@ -27433,6 +27557,25 @@
 
       if (deleteButton && deleteButton.classList.contains("delete_layer")) {
         ui.removeLayer(deleteButton);
+      }
+    }); // close processing gui -> hide gui container and remove gui
+
+    document.addEventListener('click', function (e) {
+      var closeButton = e.target;
+
+      if (closeButton && closeButton.id === "close_processing_gui") {
+        var processingGui = document.getElementById("processing_gui");
+        processingGui.style.visibility = "hidden";
+        ui.removeGui();
+      }
+    }); // open processing gui when dropdown selected
+
+    document.addEventListener('click', function (e) {
+      var menuOption = e.target;
+
+      if (menuOption && menuOption.classList.contains("dropdown_menu_option")) {
+        var buildGui = ui.guis[menuOption.dataset.id];
+        buildGui(con);
       }
     });
 

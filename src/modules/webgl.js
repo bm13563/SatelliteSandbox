@@ -158,7 +158,6 @@ export class WebGLCanvas{
                 shader = shader.replace(regex, dynamics[key].toString());
             }
         }
-        console.log(shader)
         return shader;
     }
 

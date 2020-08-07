@@ -6,6 +6,12 @@
     </head>
     <body>
         <!-- This way of generating a GUI needs to be more flexible -->
+        <div id="processing_gui_container">
+            <div id="processing_gui">
+                <div id="close_processing_gui">&#10060</div>
+                <!-- indiviudal guis are appended here -->
+            </div>
+        </div>
         <div id="top_bar_container">
             <div id="processing_div" class="dropdown">
                 <div id="processing_title" class="dropdown_title">Processing</div>
@@ -33,7 +39,7 @@
         </div>
         <br>
         <h3>aerial.js</h3>
-        <p>This is an early stage demo of aerial.js. The "layers" in the demo are actually generated on the fly by your GPU in webGL. All of the above layers are derived from a single WMS source - you can validate this by checking the network tab. Image processing is done by stacking multiple shader programs. The effects above, in order, are:</p>
+        <p>This is an early stage demo of aerial.js. The "layers" in the demo are generated on the fly by your GPU in webGL. All of the above layers are derived from a single WMS source - you can validate this by checking the network tab. Image processing is done by stacking multiple shader programs. The effects above, in order, are:</p>
         <ul>
             <li>1. Unaltered WMS</li>
             <li>2. Enhanced (RGB * 2.0) WMS image produced from 1</li>
