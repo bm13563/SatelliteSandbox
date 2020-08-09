@@ -11,7 +11,7 @@ import XYZ from 'ol/source/XYZ';
 import {LayerObject} from './modules/layer.js';
 import {WebGLCanvas} from './modules/webgl.js';
 import {UiLayer, Ui} from './modules/ui.js';
-import * as con from './modules/constructors.js';
+import {Constructor} from './modules/constructor.js';
 
 
 const testMapView = new View({
@@ -39,30 +39,27 @@ const testMapLayer1 = new TileLayer({
 });
 
 var webgl = new WebGLCanvas("canvas_map");
-var ui = new Ui(webgl);
+var con = new Constructor();
+var ui = new Ui(webgl, con);
 var l1 = new LayerObject(testMapLayer1, testMapView);
 
 const p1 = webgl.generatePseudoLayer(l1);
-const uil1 = ui.addLayer(p1);
+ui.addUiLayer(p1);
 
-const pp1 = con.rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);
-const uil2 = ui.addLayer(pp1);
+// const pp1 = con.rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);
 
-const pp2 = con.apply3x3Kernel(webgl, pp1, [-1, -1, -1, -1, 16, -1, -1, -1, -1], 8);
-const uil3 = ui.addLayer(pp2);
+// const pp2 = con.apply3x3Kernel(webgl, pp1, [-1, -1, -1, -1, 16, -1, -1, -1, -1], 8);
 
-const pp3 = con.rgbPercentageFiltering(webgl, p1, 0.6, [0.0, 0.0, 0.0, 1.0], "g", ">");
-const uil4 = ui.addLayer(pp3);
+// const pp3 = con.rgbPercentageFiltering(webgl, p1, 0.6, [0.0, 0.0, 0.0, 1.0], "g", ">");
 
-const pp4 = con.apply3x3Kernel(webgl, pp3, [-1, -1, -1, -1,  8, -1, -1, -1, -1], 1);
-const uil5 = ui.addLayer(pp4);
+// const pp4 = con.apply3x3Kernel(webgl, pp3, [-1, -1, -1, -1,  8, -1, -1, -1, -1], 1);
 
 // UI EVENTS
 // select layer
 document.addEventListener('click', (e) => {
     const layerDiv = e.target;
     if(layerDiv && layerDiv.classList.contains('layer') || layerDiv.classList.contains('layer_text')){
-        ui.selectLayer(layerDiv, 'selected');
+        ui.activateUiLayer(layerDiv);
     }
 });
 
@@ -70,7 +67,7 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', (e) => {
     const deleteButton = e.target;
     if(deleteButton && deleteButton.classList.contains("delete_layer")){
-        ui.removeLayer(deleteButton);
+        ui.removeUiLayer(deleteButton);
     }
 });
 
@@ -78,8 +75,6 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', (e) => {
     const closeButton = e.target;
     if(closeButton && closeButton.id === "close_processing_gui"){
-        const processingGui = document.getElementById("processing_gui");
-        processingGui.style.visibility = "hidden";
         ui.removeGui();
     }
 });
@@ -89,7 +84,7 @@ document.addEventListener('click', (e) => {
     const menuOption = e.target;
     if(menuOption && menuOption.classList.contains("dropdown_menu_option")){
         const buildGui = ui.guis[menuOption.dataset.id];
-        buildGui(con);
+        buildGui();
     }
 });
 
@@ -97,8 +92,8 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', (e) => {
     const newLayer = e.target;
     if(newLayer && newLayer.id === "new_layer"){
-        const pseudolayer = ui.findSelectedLayer().pseudolayer;
-        ui.addLayer(pseudolayer);
+        const pseudolayer = ui.activeUiLayer.pseudolayer;
+        ui.addUiLayer(pseudolayer);
     }
 });
 
@@ -106,6 +101,6 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', (e) => {
     const resetLayer = e.target;
     if(resetLayer && resetLayer.id === "reset_layer"){
-        ui.resetLayer(con);
+        ui.resetUiLayer();
     }
 });

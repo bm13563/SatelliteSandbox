@@ -67,7 +67,7 @@ export class WebGLCanvas{
     _recurseThroughChildLayers = (thisLayer, originalLayer) => {
         for (const key of Object.keys(thisLayer.inputs)) {
             const nextLayer = thisLayer.inputs[key];
-            if (nextLayer.type === "layer") {
+            if (nextLayer.type === "layerObject") {
                 const framebufferTexture = this._generatePseudoLayer(thisLayer);
                 this.framebufferTracker[thisLayer.id] = framebufferTexture;
             } else {
@@ -88,7 +88,7 @@ export class WebGLCanvas{
         const renderVariables = pseudolayer.variables;
         const renderShader = pseudolayer.shader;
         for (const key of Object.keys(inputs)) {
-            if (inputs[key].type === "layer") {
+            if (inputs[key].type === "layerObject") {
                 const textureId = this._generateTexture(inputs[key].container.querySelector("canvas"));
                 renderInputs[key] = textureId;
             } else {

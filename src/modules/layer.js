@@ -6,17 +6,17 @@ import * as twgl from 'twgl.js';
 // an openlayers layer. layers will be synced as long as the same view is used
 export class LayerObject{
     constructor(olLayer, olView) {
-        this.type = 'layer';
+        this.type = 'layerObject';
         this.olLayer = olLayer;
         this.olView = olView;
         this.mapOrderId = parseInt(this.olLayer.ol_uid);
         this.containerId = Date.now() + (Math.floor(Math.random() * 1000000));
         this.container;
-        this._createCanvasElement();
         this.olMap;
-        this._createMap();
         this.shaders = {};
         this.activeShader;
+        this._createCanvasElement();
+        this._createMap();
     }
 
     _createCanvasElement = () => {
@@ -48,5 +48,4 @@ export class LayerObject{
         this.olLayer.setVisible(false);
         this.olMap = map;
     }
-
 }
