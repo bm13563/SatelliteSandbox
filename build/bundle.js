@@ -27328,7 +27328,7 @@
         var selectedElements = document.getElementsByClassName("selected");
 
         for (var x = 0; x < selectedElements.length; x++) {
-          elements[x].classList.remove("selected");
+          selectedElements[x].classList.remove("selected");
         } // get id of the layer that was clicked
 
 
@@ -27359,8 +27359,10 @@
           _this.webgl.renderPseudoLayer(pseudoLayerToRender, 5);
         } else if (_this.uiLayersOrder.length > 0) {
           // if it's the first layer to be added, render and set as active
-          var uiLayerToActivate = _this.uiLayers[_this.uiLayersOrder[0]];
+          var uiLayerIdToActivate = _this.uiLayersOrder[0];
+          var uiLayerToActivate = _this.uiLayers[uiLayerIdToActivate];
           var _pseudoLayerToRender = uiLayerToActivate.pseudolayer;
+          document.getElementById(uiLayerIdToActivate).classList.add("selected");
           _this.activeUiLayer = uiLayerToActivate;
 
           _this.webgl.renderPseudoLayer(_pseudoLayerToRender, 5);
@@ -27415,7 +27417,7 @@
         } // generate gui -> can be unstyled, as will resize to fit generic gui container, or can be styled in guis.css
 
 
-        var html = "<div id=\"rgbaManipulation\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Change RGBA</p>\n                          <p class=\"gui_text\">Red: <span id=\"red_value\">".concat(red, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"500\" value=\"").concat(red * 100, "\" class=\"gui_slider\" id=\"red_slider\">\n                          <p class=\"gui_text\">Green: <span id=\"green_value\">").concat(green, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"500\" value=\"").concat(green * 100, "\" class=\"gui_slider\" id=\"green_slider\">\n                          <p class=\"gui_text\">Blue: <span id=\"blue_value\">").concat(blue, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"500\" value=\"").concat(blue * 100, "\" class=\"gui_slider\" id=\"blue_slider\">\n                      </div>");
+        var html = "<div id=\"rgbaManipulation\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Multiply RGBA</p>\n                          <p class=\"gui_text\">Red: <span id=\"red_value\">".concat(red, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"500\" value=\"").concat(red * 100, "\" class=\"gui_slider\" id=\"red_slider\">\n                          <p class=\"gui_text\">Green: <span id=\"green_value\">").concat(green, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"500\" value=\"").concat(green * 100, "\" class=\"gui_slider\" id=\"green_slider\">\n                          <p class=\"gui_text\">Blue: <span id=\"blue_value\">").concat(blue, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"500\" value=\"").concat(blue * 100, "\" class=\"gui_slider\" id=\"blue_slider\">\n                      </div>");
 
         var gui = _this._addGuiToDOM(html);
 
@@ -27442,50 +27444,45 @@
         var targetLayer = _this.activeUiLayer;
 
         if ("rgbFiltering" in targetLayer.state) {
-          var filter = targetLayer.state.rgbFiltering.filter;
-          var colour = targetLayer.state.rgbFiltering.colour;
+          var red = targetLayer.state.rgbFiltering.red;
+          var green = targetLayer.state.rgbFiltering.rgreened;
+          var blue = targetLayer.state.rgbFiltering.blue;
           var operator = targetLayer.state.rgbFiltering.operator;
         } else {
-          var filter = 1.0;
-          var colour = "r";
-          var operator = "<";
+          var red = 1.0;
+          var green = 1.0;
+          var blue = 1.0;
+          var operator = ">";
           targetLayer.state["rgbFiltering"] = {
-            "filter": filter,
-            "colour": colour,
+            "red": red,
+            "green": green,
+            "blue": blue,
             "operator": operator
           };
         }
 
-        var html = "<div id=\"rgbFiltering\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Filter RGB</p>\n                          <p class=\"gui_text\">Value to filter:</p>\n                          <select name=\"filter_colour\" id=\"filter_colour\">\n                            <option value=\"r\" selected>Red</option>\n                            <option value=\"g\">Green</option>\n                            <option value=\"b\">Blue</option>\n                          </select>\n                          <p class=\"gui_text\">Value to filter: <span id=\"filter_value\">".concat(filter, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"250\" value=\"").concat(filter * 100, "\" class=\"gui_slider\" id=\"filter_slider\">\n                          <p class=\"gui_text\">Operator:</p>\n                          <select name=\"operator\" id=\"operator\">\n                            <option value=\"&lt\" selected>&lt</option>\n                            <option value=\"&gt\">&gt</option>\n                          </select><br><br>\n                      </div>");
+        var html = "<div id=\"rgbFiltering\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Filter RGB</p>\n                          <p class=\"gui_text\">Value to filter:</p>\n                          <p class=\"gui_text\">Red: <span id=\"red_value\">".concat(red * 255, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"255\" value=\"").concat(red * 255, "\" class=\"gui_slider\" id=\"red_slider\">\n                          <p class=\"gui_text\">Green: <span id=\"green_value\">").concat(green * 255, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"255\" value=\"").concat(green * 255, "\" class=\"gui_slider\" id=\"green_slider\">\n                          <p class=\"gui_text\">Blue: <span id=\"blue_value\">").concat(blue * 255, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"255\" value=\"").concat(blue * 255, "\" class=\"gui_slider\" id=\"blue_slider\">\n                          <p class=\"gui_text\">Operator:</p>\n                          <select name=\"operator\" id=\"operator\">\n                            <option value=\"&gt\" selected>&lt</option>\n                            <option value=\"&lt\">&gt</option>\n                          </select><br><br>\n                      </div>");
 
         var gui = _this._addGuiToDOM(html);
 
-        _this.activeGui = gui; // event listener on colour to be filtered
+        _this.activeGui = gui;
 
-        document.getElementById("filter_colour").onchange = function () {
-          var state = targetLayer.state.rgbFiltering;
-          var thisInput = document.getElementById("filter_colour");
-          state.colour = thisInput.value;
-          var targetPseudoLayer = targetLayer.originalPseudolayer;
+        function addSliderEvent(sliderId, valueId, colour, targetLayer, ui) {
+          document.getElementById(sliderId).oninput = function () {
+            var state = targetLayer.state.rgbFiltering;
+            var thisSlider = document.getElementById(sliderId);
+            state[colour] = thisSlider.value / 100;
+            console.log(ui.webgl, targetPseudoLayer, [state.red, state.green, state.blue], [0.0, 0.0, 0.0, 1.0], state.operator);
+            document.getElementById(valueId).innerHTML = thisSlider.value;
+            var targetPseudoLayer = targetLayer.originalPseudolayer;
+            var pseudolayer = ui.constructor.rgbFiltering(ui.webgl, targetPseudoLayer, [state.red, state.green, state.blue], [0.0, 0.0, 0.0, 1.0], state.operator);
+            ui.updateUiLayer(targetLayer, pseudolayer);
+          };
+        }
 
-          var pseudolayer = _this.constructor.rgbFiltering(_this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
-
-          _this.updateUiLayer(targetLayer, pseudolayer);
-        }; // event listener on filter value
-
-
-        document.getElementById("filter_slider").oninput = function () {
-          var state = targetLayer.state.rgbFiltering;
-          var thisSlider = document.getElementById("filter_slider");
-          state.filter = thisSlider.value / 100;
-          document.getElementById("filter_value").innerHTML = thisSlider.value / 100;
-          var targetPseudoLayer = targetLayer.originalPseudolayer;
-
-          var pseudolayer = _this.constructor.rgbFiltering(_this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
-
-          _this.updateUiLayer(targetLayer, pseudolayer);
-        }; // event listener on operator to use
-
+        addSliderEvent("red_slider", "red_value", "red", targetLayer, _this);
+        addSliderEvent("green_slider", "green_value", "green", targetLayer, _this);
+        addSliderEvent("blue_slider", "blue_value", "blue", targetLayer, _this); // event listener on operator to use
 
         document.getElementById("operator").onchange = function () {
           var state = targetLayer.state.rgbFiltering;
@@ -27493,7 +27490,7 @@
           state.operator = thisInput.value;
           var targetPseudoLayer = targetLayer.originalPseudolayer;
 
-          var pseudolayer = _this.constructor.rgbFiltering(_this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
+          var pseudolayer = _this.constructor.rgbFiltering(_this.webgl, targetPseudoLayer, [state.red, state.green, state.blue], [0.0, 0.0, 0.0, 1.0], state.operator);
 
           _this.updateUiLayer(targetLayer, pseudolayer);
         };
@@ -27522,7 +27519,7 @@
 
     var rgbaManipulationShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform vec4 rgbam_multiplier;\r\nuniform sampler2D rgbam_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(rgbam_image, o_texCoord) * rgbam_multiplier;\r\n}";
 
-    var rgbFilteringShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform float rgbf_filter;\r\nuniform vec4 rgbf_removed;\r\nuniform sampler2D rgbf_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 raw_colour = texture(rgbf_image, o_texCoord);\r\n\r\n    if(raw_colour.{rgbfd1_colour} {rgbfd2_keep} rgbf_filter){\r\n        raw_colour.{rgbfd1_colour} = raw_colour.{rgbfd1_colour};\r\n    } else {\r\n        raw_colour = rgbf_removed;\r\n    }\r\n\r\n    o_colour = raw_colour;\r\n}";
+    var rgbFilteringShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform float rgbf_filter[3];\r\nuniform vec4 rgbf_removed;\r\nuniform sampler2D rgbf_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 raw_colour = texture(rgbf_image, o_texCoord);\r\n    float keep_remove = 0.0;\r\n\r\n    if(raw_colour.r {rgbfd1_remove} rgbf_filter[0]){\r\n        keep_remove = 1.0;\r\n    }\r\n\r\n    if(raw_colour.g {rgbfd1_remove} rgbf_filter[1]){\r\n        keep_remove = 1.0;\r\n    }\r\n\r\n    if(raw_colour.b {rgbfd1_remove} rgbf_filter[2]){\r\n        keep_remove = 1.0;\r\n    }\r\n\r\n    vec4 final_colour;\r\n    if(keep_remove == 1.0){\r\n        final_colour = rgbf_removed;\r\n    } else {\r\n        final_colour = raw_colour;\r\n    }\r\n\r\n    o_colour = final_colour;\r\n}";
 
     var rgbPercentageFilteringShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform float rgbfp_filter;\r\nuniform vec4 rgbfp_removed;\r\nuniform sampler2D rgbfp_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 raw_colour = texture(rgbfp_image, o_texCoord);\r\n    float sum_colours = raw_colour.r + raw_colour.g + raw_colour.b;\r\n    float threshold_colour = raw_colour.{rgbfpd1_colour} / sum_colours;\r\n    if(raw_colour.{rgbfpd1_colour} {rgbfpd2_keep} threshold_colour){\r\n        raw_colour.{rgbfpd1_colour} = raw_colour.{rgbfpd1_colour};\r\n    } else {\r\n        raw_colour = rgbfp_removed;\r\n    }\r\n    o_colour = raw_colour;\r\n}";
 
@@ -27577,7 +27574,7 @@
         return pseudolayer;
       };
 
-      this.rgbFiltering = function (webgl, rgbf_image, rgbf_filter, rgbf_removed, rgbfd1_colour, rgbfd2_keep) {
+      this.rgbFiltering = function (webgl, rgbf_image, rgbf_filter, rgbf_removed, rgbfd1_remove) {
         // todo handling for dynamics
         var pseudolayer = webgl.processPseudoLayer({
           inputs: {
@@ -27589,8 +27586,7 @@
             rgbf_removed: rgbf_removed
           },
           dynamics: {
-            rgbfd1_colour: rgbfd1_colour,
-            rgbfd2_keep: rgbfd2_keep
+            rgbfd1_remove: rgbfd1_remove
           }
         });
         return pseudolayer;
@@ -27641,8 +27637,10 @@
     var con = new Constructor();
     var ui = new Ui(webgl, con);
     var l1 = new LayerObject(testMapLayer1, testMapView);
-    var p1 = webgl.generatePseudoLayer(l1);
-    ui.addUiLayer(p1); // const pp1 = con.rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);
+    var p1 = webgl.generatePseudoLayer(l1); // ui.addUiLayer(p1);
+
+    var pp3 = con.rgbFiltering(webgl, p1, [0.6, 1.0, 1.0], [0.0, 0.0, 0.0, 1.0], ">");
+    ui.addUiLayer(pp3); // const pp1 = con.rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);
     // const pp2 = con.apply3x3Kernel(webgl, pp1, [-1, -1, -1, -1, 16, -1, -1, -1, -1], 8);
     // const pp3 = con.rgbPercentageFiltering(webgl, p1, 0.6, [0.0, 0.0, 0.0, 1.0], "g", ">");
     // const pp4 = con.apply3x3Kernel(webgl, pp3, [-1, -1, -1, -1,  8, -1, -1, -1, -1], 1);

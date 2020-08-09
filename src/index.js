@@ -44,7 +44,10 @@ var ui = new Ui(webgl, con);
 var l1 = new LayerObject(testMapLayer1, testMapView);
 
 const p1 = webgl.generatePseudoLayer(l1);
-ui.addUiLayer(p1);
+// ui.addUiLayer(p1);
+
+const pp3 = con.rgbFiltering(webgl, p1, [0.6, 1.0, 1.0], [0.0, 0.0, 0.0, 1.0], ">");
+ui.addUiLayer(pp3)
 
 // const pp1 = con.rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);
 

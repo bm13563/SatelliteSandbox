@@ -116,7 +116,7 @@ export class Ui {
         // remove selected class from any element that is currently selected
         const selectedElements = document.getElementsByClassName("selected");
         for (let x = 0; x < selectedElements.length; x++) {
-            elements[x].classList.remove("selected");
+            selectedElements[x].classList.remove("selected");
         }
         // get id of the layer that was clicked
         const uiLayerId = clickedLayer.dataset.id;
@@ -142,8 +142,10 @@ export class Ui {
             this.webgl.renderPseudoLayer(pseudoLayerToRender, 5);
         } else if (this.uiLayersOrder.length > 0) {
             // if it's the first layer to be added, render and set as active
-            const uiLayerToActivate = this.uiLayers[this.uiLayersOrder[0]];
+            const uiLayerIdToActivate = this.uiLayersOrder[0];
+            const uiLayerToActivate = this.uiLayers[uiLayerIdToActivate];
             const pseudoLayerToRender = uiLayerToActivate.pseudolayer;
+            document.getElementById(uiLayerIdToActivate).classList.add("selected");
             this.activeUiLayer = uiLayerToActivate;
             this.webgl.renderPseudoLayer(pseudoLayerToRender, 5);
         } else {
@@ -202,7 +204,7 @@ export class Ui {
 
         // generate gui -> can be unstyled, as will resize to fit generic gui container, or can be styled in guis.css
         const html = `<div id="rgbaManipulation" class="inner_gui">
-                          <p class="gui_title">Change RGBA</p>
+                          <p class="gui_title">Multiply RGBA</p>
                           <p class="gui_text">Red: <span id="red_value">${red}</span></p>
                           <input type="range" min="0" max="500" value="${red*100}" class="gui_slider" id="red_slider">
                           <p class="gui_text">Green: <span id="green_value">${green}</span></p>
@@ -235,16 +237,19 @@ export class Ui {
         const targetLayer = this.activeUiLayer;
 
         if ("rgbFiltering" in targetLayer.state) {
-            var filter = targetLayer.state.rgbFiltering.filter;
-            var colour = targetLayer.state.rgbFiltering.colour;
+            var red = targetLayer.state.rgbFiltering.red;
+            var green = targetLayer.state.rgbFiltering.rgreened;
+            var blue = targetLayer.state.rgbFiltering.blue;
             var operator = targetLayer.state.rgbFiltering.operator;
         } else {
-            var filter = 1.0;
-            var colour = "r";
-            var operator = "<";
+            var red = 1.0;
+            var green = 1.0;
+            var blue = 1.0;
+            var operator = ">";
             targetLayer.state["rgbFiltering"] = {
-                "filter": filter,
-                "colour": colour,
+                "red": red,
+                "green": green,
+                "blue": blue,
                 "operator": operator,
             }
         }
@@ -252,42 +257,37 @@ export class Ui {
         const html = `<div id="rgbFiltering" class="inner_gui">
                           <p class="gui_title">Filter RGB</p>
                           <p class="gui_text">Value to filter:</p>
-                          <select name="filter_colour" id="filter_colour">
-                            <option value="r" selected>Red</option>
-                            <option value="g">Green</option>
-                            <option value="b">Blue</option>
-                          </select>
-                          <p class="gui_text">Value to filter: <span id="filter_value">${filter}</span></p>
-                          <input type="range" min="0" max="250" value="${filter*100}" class="gui_slider" id="filter_slider">
+                          <p class="gui_text">Red: <span id="red_value">${red*255}</span></p>
+                          <input type="range" min="0" max="255" value="${red*255}" class="gui_slider" id="red_slider">
+                          <p class="gui_text">Green: <span id="green_value">${green*255}</span></p>
+                          <input type="range" min="0" max="255" value="${green*255}" class="gui_slider" id="green_slider">
+                          <p class="gui_text">Blue: <span id="blue_value">${blue*255}</span></p>
+                          <input type="range" min="0" max="255" value="${blue*255}" class="gui_slider" id="blue_slider">
                           <p class="gui_text">Operator:</p>
                           <select name="operator" id="operator">
-                            <option value="&lt" selected>&lt</option>
-                            <option value="&gt">&gt</option>
+                            <option value="&gt" selected>&lt</option>
+                            <option value="&lt">&gt</option>
                           </select><br><br>
                       </div>`
         const gui = this._addGuiToDOM(html);
         this.activeGui = gui;
 
-        // event listener on colour to be filtered
-        document.getElementById("filter_colour").onchange = () => {
-            const state = targetLayer.state.rgbFiltering;
-            const thisInput = document.getElementById("filter_colour");
-            state.colour = thisInput.value;
-            const targetPseudoLayer = targetLayer.originalPseudolayer;
-            const pseudolayer = this.constructor.rgbFiltering(this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
-            this.updateUiLayer(targetLayer, pseudolayer);
+        function addSliderEvent(sliderId, valueId, colour, targetLayer, ui) {
+            document.getElementById(sliderId).oninput = () => {
+                const state = targetLayer.state.rgbFiltering;
+                const thisSlider = document.getElementById(sliderId);
+                state[colour] = thisSlider.value/100;
+                console.log(ui.webgl, targetPseudoLayer, [state.red, state.green, state.blue], [0.0, 0.0, 0.0, 1.0], state.operator);
+                document.getElementById(valueId).innerHTML = thisSlider.value;
+                const targetPseudoLayer = targetLayer.originalPseudolayer;
+                const pseudolayer = ui.constructor.rgbFiltering(ui.webgl, targetPseudoLayer, [state.red, state.green, state.blue], [0.0, 0.0, 0.0, 1.0], state.operator);
+                ui.updateUiLayer(targetLayer, pseudolayer);
+            }
         }
 
-        // event listener on filter value
-        document.getElementById("filter_slider").oninput = () => {
-            const state = targetLayer.state.rgbFiltering;
-            const thisSlider = document.getElementById("filter_slider");
-            state.filter = thisSlider.value/100;
-            document.getElementById("filter_value").innerHTML = thisSlider.value/100;
-            const targetPseudoLayer = targetLayer.originalPseudolayer;
-            const pseudolayer = this.constructor.rgbFiltering(this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
-            this.updateUiLayer(targetLayer, pseudolayer);
-        }
+        addSliderEvent("red_slider", "red_value", "red", targetLayer, this);
+        addSliderEvent("green_slider", "green_value", "green", targetLayer, this);
+        addSliderEvent("blue_slider", "blue_value", "blue", targetLayer, this);
 
         // event listener on operator to use
         document.getElementById("operator").onchange = () => {
@@ -295,7 +295,7 @@ export class Ui {
             const thisInput = document.getElementById("operator");
             state.operator = thisInput.value;
             const targetPseudoLayer = targetLayer.originalPseudolayer;
-            const pseudolayer = this.constructor.rgbFiltering(this.webgl, targetPseudoLayer, state.filter, [0.0, 0.0, 0.0, 1.0], state.colour, state.operator);
+            const pseudolayer = this.constructor.rgbFiltering(this.webgl, targetPseudoLayer, [state.red, state.green, state.blue], [0.0, 0.0, 0.0, 1.0], state.operator);
             this.updateUiLayer(targetLayer, pseudolayer);
         }
     }

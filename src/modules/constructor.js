@@ -53,7 +53,7 @@ export class Constructor{
     }
 
     // takes in a pseudolayer, a float (0-1), a vec4 (float 0-1), string ("r", "g", "b") and a string ("<", ">")
-    rgbFiltering = (webgl, rgbf_image, rgbf_filter, rgbf_removed, rgbfd1_colour, rgbfd2_keep) => {
+    rgbFiltering = (webgl, rgbf_image, rgbf_filter, rgbf_removed, rgbfd1_remove) => {
         // todo handling for dynamics
         const pseudolayer = webgl.processPseudoLayer({
             inputs: {
@@ -65,8 +65,7 @@ export class Constructor{
                 rgbf_removed: rgbf_removed,
             },
             dynamics: {
-                rgbfd1_colour: rgbfd1_colour,
-                rgbfd2_keep: rgbfd2_keep,
+                rgbfd1_remove: rgbfd1_remove,
             }
         })
         return pseudolayer;

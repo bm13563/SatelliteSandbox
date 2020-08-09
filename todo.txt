@@ -12,7 +12,7 @@
 11. ensure that only the maps that are currently used for pseudolayers are rendered to save requests DONE
 12. work out how to pass arrays of textures
 13. environment variables -> including current map with control (due to z-index ordering)
-14. flexible guis that are easy to add to DONE-ish
+14. flexible guis that are easy to add to DONE
 15. Add "create new layer" and "reset layer" to GUIS DONE
-16. refactor -> differentiate between "layerObject", "guiLayer" and "pseudolayer". standardise punction for the above
+16. refactor -> differentiate between "layerObject", "guiLayer" and "pseudolayer". standardise punction for the above DONE
 17. pass constructors to gui on instantiation
