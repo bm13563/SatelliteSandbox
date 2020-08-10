@@ -136,6 +136,7 @@ export class WebGLCanvas{
 
     generatePseudoLayer = (layer) => {
         return new PseudoLayer(
+            "baseProgram",
             {f_image: layer},
             this.baseProgram,
             {},
@@ -146,7 +147,7 @@ export class WebGLCanvas{
     processPseudoLayer = (args) => {
         const dynamicShader = this._addDynamicsToShader(args.shader, args.dynamics);
         const compiledShader = this._compileShaders(dynamicShader);
-        return new PseudoLayer(args.inputs, compiledShader, args.variables);
+        return new PseudoLayer(args.shaderName, args.inputs, compiledShader, args.variables);
     }
 
     _addDynamicsToShader = (shader, dynamics) => {

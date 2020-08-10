@@ -1,8 +1,9 @@
 export class PseudoLayer{
-    constructor(inputs, shader, variables) {
+    constructor(shaderName, inputs, shader, variables) {
         this.type = 'pseudolayer';
         this.id = Date.now() + (Math.floor(Math.random() * 1000000));
         this.inputs = inputs;
+        this.shaderName = shaderName;
         this.shader = shader;
         this.variables = variables;
         this.maps = [];

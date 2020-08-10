@@ -6,8 +6,9 @@ import apply3x3KernelShader from '../shaders/processing/apply3x3Kernel.shader';
 
 export class Constructor{
     // takes in a pseudolayer and a vec4 (float 0-1)
-    rgbaManipulation = (webgl, rgbam_image, rgbam_multiplier) => {
+    rgbaManipulation = ({webgl, rgbam_image, rgbam_multiplier}={}) => {
         const pseudolayer = webgl.processPseudoLayer({
+            shaderName: "rgbaManipulation",
             inputs: {
                 rgbam_image: rgbam_image, 
             },
@@ -21,8 +22,9 @@ export class Constructor{
     }
 
     // takes in a pseudolayer, a 3x3 matrix and a float 
-    apply3x3Kernel = (webgl, a3k_image, a3k_kernel, a3k_kernelWeight) => {
+    apply3x3Kernel = ({webgl, a3k_image, a3k_kernel, a3k_kernelWeight}={}) => {
         const pseudolayer = webgl.processPseudoLayer({
+            shaderName: "apply3x3Kernel",
             inputs: {
                 a3k_image: a3k_image,
             },
@@ -39,8 +41,9 @@ export class Constructor{
     }
 
     // takes in 2 pseudolayers
-    averageLayers = (webgl, al1_image, al2_image) => {
+    averageLayers = ({webgl, al1_image, al2_image}={}) => {
         const pseudolayer = webgl.processPseudoLayer({
+            shaderName: "averageLayers",
             inputs: {
                 al1_image: al1_image,
                 al2_image: al2_image,
@@ -53,9 +56,10 @@ export class Constructor{
     }
 
     // takes in a pseudolayer, a float (0-1), a vec4 (float 0-1) and a string ("<", ">")
-    rgbFiltering = (webgl, rgbf_image, rgbf_filter, rgbf_removed, rgbfd1_remove) => {
+    rgbFiltering = ({webgl, rgbf_image, rgbf_filter, rgbf_removed, rgbfd1_remove}={}) => {
         // todo handling for dynamics
         const pseudolayer = webgl.processPseudoLayer({
+            shaderName: "rgbFiltering",
             inputs: {
                 rgbf_image: rgbf_image,
             },
@@ -72,9 +76,10 @@ export class Constructor{
     }
 
     // takes in a pseudolayer, a float (0-1), a vec4 (float 0-1) and a string ("<", ">")
-    rgbPercentageFiltering = (webgl, rgbfp_image, rgbfp_filter, rgbfp_removed, rgbfpd2_keep) => {
+    rgbPercentageFiltering = ({webgl, rgbfp_image, rgbfp_filter, rgbfp_removed, rgbfpd1_remove}={}) => {
         // todo handling for dynamics
         const pseudolayer = webgl.processPseudoLayer({
+            shaderName: "rgbPercentageFiltering",
             inputs: {
                 rgbfp_image: rgbfp_image,
             },
@@ -84,7 +89,7 @@ export class Constructor{
                 rgbfp_removed: rgbfp_removed,
             },
             dynamics: {
-                rgbfpd2_keep: rgbfpd2_keep,
+                rgbfpd1_remove: rgbfpd1_remove,
             }
         })
         return pseudolayer;

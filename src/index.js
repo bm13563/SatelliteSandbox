@@ -45,6 +45,7 @@ var ui = new Ui(webgl, con);
 var l1 = new LayerObject(testMapLayer1, testMapView);
 
 const p1 = webgl.generatePseudoLayer(l1);
+// const pp1 = con.rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);
 ui.addUiLayer(p1);
 
 
@@ -52,6 +53,7 @@ ui.addUiLayer(p1);
 // const pp1 = con.rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);
 
 // const pp2 = con.apply3x3Kernel(webgl, pp1, [-1, -1, -1, -1, 16, -1, -1, -1, -1], 8);
+
 
 // const pp3 = con.rgbPercentageFiltering(webgl, p1, [1.0, 1.0, 1.0], [0.0, 0.0, 0.0, 1.0], ">");
 

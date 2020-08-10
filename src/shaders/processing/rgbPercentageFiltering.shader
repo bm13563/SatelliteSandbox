@@ -14,15 +14,15 @@ void main() {
     float sum_colours = raw_colour.r + raw_colour.g + raw_colour.b;
     float remove = 0.0;
 
-    if(raw_colour.r / sum_colours {rgbfpd2_keep} rgbfp_filter[0]){
+    if(raw_colour.r / sum_colours {rgbfpd1_remove} rgbfp_filter[0]){
         remove = 1.0;
     }
 
-    if(raw_colour.g / sum_colours {rgbfpd2_keep} rgbfp_filter[1]){
+    if(raw_colour.g / sum_colours {rgbfpd1_remove} rgbfp_filter[1]){
         remove = 1.0;
     }
 
-    if(raw_colour.b / sum_colours {rgbfpd2_keep} rgbfp_filter[2]){
+    if(raw_colour.b / sum_colours {rgbfpd1_remove} rgbfp_filter[2]){
         remove = 1.0;
     }
 

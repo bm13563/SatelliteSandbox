@@ -16,7 +16,11 @@
 15. Add "create new layer" and "reset layer" to GUIS DONE
 16. refactor -> differentiate between "layerObject", "guiLayer" and "pseudolayer". standardise punction for the above DONE
 17. pass constructors to gui on instantiation DONE
-18. apply multiple effects to a pseudolayer without having to create a new layer DONE -> BUT may cause issue when same gui is opened consecutively
+18. apply multiple effects to a pseudolayer without having to create a new layer DONE
 19. fix bug where same pseudolayer duplicated breaks selection system DONE
 20. panel that shows the updates to a layer when changed (to track changes) DONE
-21. look into 18
+21. look into 18 DONE
+22. add suggested kernels
+23. find an actual real world example of how aerial can be used
+24. test and bug fix gui state (back to 18 sigh)
+25. bug fix changing operator on filter RGB
