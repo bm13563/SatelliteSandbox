@@ -1,0 +1,3 @@
+#processing_gui_container #processing_gui .inner_gui #kernel_table { margin:auto; background-color: lightseagreen; border-collapse: collapse; border: 1px solid black; }
+#processing_gui_container #processing_gui .inner_gui #kernel_table tbody tr td { padding: 4px; border: 1px solid black; }
+#processing_gui_container #processing_gui .inner_gui #kernel_table tbody tr td div { padding: 4px; }

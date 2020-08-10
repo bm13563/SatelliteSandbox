@@ -15,4 +15,8 @@
 14. flexible guis that are easy to add to DONE
 15. Add "create new layer" and "reset layer" to GUIS DONE
 16. refactor -> differentiate between "layerObject", "guiLayer" and "pseudolayer". standardise punction for the above DONE
-17. pass constructors to gui on instantiation
+17. pass constructors to gui on instantiation DONE
+18. apply multiple effects to a pseudolayer without having to create a new layer DONE -> BUT may cause issue when same gui is opened consecutively
+19. fix bug where same pseudolayer duplicated breaks selection system DONE
+20. panel that shows the updates to a layer when changed (to track changes) DONE
+21. look into 18

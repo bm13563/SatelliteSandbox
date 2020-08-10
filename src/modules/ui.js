@@ -1,13 +1,14 @@
 export class UiLayer{
     constructor(pseudolayer, layerNumber) {
-        // same id as the pseudolayer
+        // same id as the pseudolayer, can be used to get the DOM element, the pseudolayer or the uiLayer by id. 
         this.id = pseudolayer.id;
-        // the pseudolayer -> is updated if the layer is updated
+        // the pseudolayer that is rendered -> updated every time a parameter is updated. reset to originalPseudolayer on reset.
         this.pseudolayer = pseudolayer;
+        // the current base pseudolayer -> updated every time a gui is closed (to save state from last gui). reset to originalPseudolayer on reset.
+        // provides a point of reference for updating a pseudolayer -> don't want it to update off itself every time or the effects will stack
+        this.basePseudolayer = pseudolayer;
         // the original layer -> should never change
         this.originalPseudolayer = pseudolayer;
-        // whether the layer is currently visible on the WebGLCanvas
-        this.visible = true;
         // tracks state for all of the guis -> checked whenever a gui is initialised, so the gui can have the
         // same value as the last input by the user
         this.state = {};
@@ -39,6 +40,8 @@ export class Ui {
         this.guis = {
             "rgbaManipulation": this.rgbaManipulationGui,
             "rgbFiltering": this.rgbFilteringGui,
+            "rgbPercentageFiltering": this.rgbPercentageFilteringGui,
+            "apply3x3Kernel": this.apply3x3KernelGui,
         }
     }
 
@@ -68,17 +71,19 @@ export class Ui {
         // removes the uiLayer from uiLayersOrder array
         this.uiLayersOrder = this.uiLayersOrder.filter(item => item !== parseInt(uiLayerDeleteId));
         // updates the active uiLayer with the first element in the uiLayersOrder array if a uiLayer exists
+        console.log(this.uiLayersOrder)
         if (this.uiLayersOrder.length > 0) {
-            const newActiveUiLayer = this.uiLayersOrder[0];
+            const newActiveUiLayerId = this.uiLayersOrder[0];
+            const newActiveUiLayer = this.uiLayers[newActiveUiLayerId];
             // sets the active layer
             this.activeUiLayer = newActiveUiLayer;
             // update the css
-            document.getElementById(newActiveUiLayer).classList.add("selected");
+            document.getElementById(newActiveUiLayerId).classList.add("selected");
         } else {
             this.activeUiLayer = false;
         }
         // deletes the uiLayer from the DOM
-        document.getElementById(toDelete).remove();
+        document.getElementById(uiLayerDeleteId).remove();
         // determines which of the current uiLayers should be rendered
         this._renderActiveUiLayer();
     }
@@ -99,8 +104,9 @@ export class Ui {
         const activeGuiId = this.activeGui.id;
         // gets the method required to build that gui
         const buildGui = this.guis[activeGuiId];
-        // sets the pseudolayer of the uiLayer to the original pseudolayer
+        // sets the pseudolayer of the uiLayer and the base uiLayer to the original pseudolayer
         this.activeUiLayer.pseudolayer = this.activeUiLayer.originalPseudolayer;
+        this.activeUiLayer.basePseudolayer = this.activeUiLayer.originalPseudolayer;
         // resets the state object of the uiLayer
         this.activeUiLayer.state = {};
         // removes the current gui
@@ -170,6 +176,8 @@ export class Ui {
 
     // removes the gui from the DOM
     removeGui = () => {
+        // update the base pseudolayer, to maintain state when changing guis
+        this.activeUiLayer.basePseudolayer = this.activeUiLayer.pseudolayer
         // remove the gui placeholder
         const processingGui = document.getElementById("processing_gui");
         processingGui.style.visibility = "hidden";
@@ -179,22 +187,22 @@ export class Ui {
         this.activeGui = false;
     }
 
-    // working template for setting up a gui
+    // working template for setting up a gui -> comments here apply to all guis
     rgbaManipulationGui = () => {
-        const targetLayer = this.activeUiLayer;
+        const targetUiLayer = this.activeUiLayer;
 
         // check if the ui layer has been changed by this gui before -> if so, restore these values
-        if ("rgbaManipulation" in targetLayer.state) {
-            var red = targetLayer.state.rgbaManipulation.red;
-            var green = targetLayer.state.rgbaManipulation.green;
-            var blue = targetLayer.state.rgbaManipulation.blue;
-            var alpha = targetLayer.state.rgbaManipulation.alpha;
+        if ("rgbaManipulation" in targetUiLayer.state) {
+            var red = targetUiLayer.state.rgbaManipulation.red;
+            var green = targetUiLayer.state.rgbaManipulation.green;
+            var blue = targetUiLayer.state.rgbaManipulation.blue;
+            var alpha = targetUiLayer.state.rgbaManipulation.alpha;
         } else {
             var red = 1.0;
             var green = 1.0;
             var blue = 1.0;
             var alpha = 1.0;
-            targetLayer.state["rgbaManipulation"] = {
+            targetUiLayer.state["rgbaManipulation"] = {
                 "red": red,
                 "green": green,
                 "blue": blue,
@@ -216,37 +224,37 @@ export class Ui {
         this.activeGui = gui;
 
         // add event handlers -> these should be garbage collected when the gui is removed
-        function addSliderEvent(sliderId, valueId, colour, targetLayer, ui) {
+        function addSliderEvent(sliderId, valueId, colour, targetUiLayer, ui) {
             document.getElementById(sliderId).oninput = () => {
-                const state = targetLayer.state.rgbaManipulation;
+                const state = targetUiLayer.state.rgbaManipulation;
                 const thisSlider = document.getElementById(sliderId);
                 state[colour] = thisSlider.value/100;
                 document.getElementById(valueId).innerHTML = thisSlider.value/100;
-                const targetPseudoLayer = targetLayer.originalPseudolayer;
+                const targetPseudoLayer = targetUiLayer.basePseudolayer;
                 const pseudolayer = ui.constructor.rgbaManipulation(ui.webgl, targetPseudoLayer, [state.red, state.green, state.blue, state.alpha]);
-                ui.updateUiLayer(targetLayer, pseudolayer);
+                ui.updateUiLayer(targetUiLayer, pseudolayer);
             }
         }
 
-        addSliderEvent("red_slider", "red_value", "red", targetLayer, this);
-        addSliderEvent("green_slider", "green_value", "green", targetLayer, this);
-        addSliderEvent("blue_slider", "blue_value", "blue", targetLayer, this);
+        addSliderEvent("red_slider", "red_value", "red", targetUiLayer, this);
+        addSliderEvent("green_slider", "green_value", "green", targetUiLayer, this);
+        addSliderEvent("blue_slider", "blue_value", "blue", targetUiLayer, this);
     }
 
     rgbFilteringGui = () => {
-        const targetLayer = this.activeUiLayer;
+        const targetUiLayer = this.activeUiLayer;
 
-        if ("rgbFiltering" in targetLayer.state) {
-            var red = targetLayer.state.rgbFiltering.red;
-            var green = targetLayer.state.rgbFiltering.rgreened;
-            var blue = targetLayer.state.rgbFiltering.blue;
-            var operator = targetLayer.state.rgbFiltering.operator;
+        if ("rgbFiltering" in targetUiLayer.state) {
+            var red = targetUiLayer.state.rgbFiltering.red;
+            var green = targetUiLayer.state.rgbFiltering.rgreened;
+            var blue = targetUiLayer.state.rgbFiltering.blue;
+            var operator = targetUiLayer.state.rgbFiltering.operator;
         } else {
             var red = 1.0;
             var green = 1.0;
             var blue = 1.0;
             var operator = ">";
-            targetLayer.state["rgbFiltering"] = {
+            targetUiLayer.state["rgbFiltering"] = {
                 "red": red,
                 "green": green,
                 "blue": blue,
@@ -272,31 +280,155 @@ export class Ui {
         const gui = this._addGuiToDOM(html);
         this.activeGui = gui;
 
-        function addSliderEvent(sliderId, valueId, colour, targetLayer, ui) {
+        function addSliderEvent(sliderId, valueId, colour, targetUiLayer, ui) {
             document.getElementById(sliderId).oninput = () => {
-                const state = targetLayer.state.rgbFiltering;
+                const state = targetUiLayer.state.rgbFiltering;
                 const thisSlider = document.getElementById(sliderId);
-                state[colour] = thisSlider.value/100;
-                console.log(ui.webgl, targetPseudoLayer, [state.red, state.green, state.blue], [0.0, 0.0, 0.0, 1.0], state.operator);
+                state[colour] = thisSlider.value/255;
                 document.getElementById(valueId).innerHTML = thisSlider.value;
-                const targetPseudoLayer = targetLayer.originalPseudolayer;
+                const targetPseudoLayer = targetUiLayer.basePseudolayer;
                 const pseudolayer = ui.constructor.rgbFiltering(ui.webgl, targetPseudoLayer, [state.red, state.green, state.blue], [0.0, 0.0, 0.0, 1.0], state.operator);
-                ui.updateUiLayer(targetLayer, pseudolayer);
+                ui.updateUiLayer(targetUiLayer, pseudolayer);
             }
         }
 
-        addSliderEvent("red_slider", "red_value", "red", targetLayer, this);
-        addSliderEvent("green_slider", "green_value", "green", targetLayer, this);
-        addSliderEvent("blue_slider", "blue_value", "blue", targetLayer, this);
+        addSliderEvent("red_slider", "red_value", "red", targetUiLayer, this);
+        addSliderEvent("green_slider", "green_value", "green", targetUiLayer, this);
+        addSliderEvent("blue_slider", "blue_value", "blue", targetUiLayer, this);
 
         // event listener on operator to use
         document.getElementById("operator").onchange = () => {
-            const state = targetLayer.state.rgbFiltering;
+            const state = targetUiLayer.state.rgbFiltering;
             const thisInput = document.getElementById("operator");
             state.operator = thisInput.value;
-            const targetPseudoLayer = targetLayer.originalPseudolayer;
+            const targetPseudoLayer = targetUiLayer.basePseudolayer;
             const pseudolayer = this.constructor.rgbFiltering(this.webgl, targetPseudoLayer, [state.red, state.green, state.blue], [0.0, 0.0, 0.0, 1.0], state.operator);
-            this.updateUiLayer(targetLayer, pseudolayer);
+            this.updateUiLayer(targetUiLayer, pseudolayer);
+        }
+    }
+
+    rgbPercentageFilteringGui = () => {
+        const targetUiLayer = this.activeUiLayer;
+
+        if ("rgbPercentageFiltering" in targetUiLayer.state) {
+            var red = targetUiLayer.state.rgbPercentageFiltering.red;
+            var green = targetUiLayer.state.rgbPercentageFiltering.rgreened;
+            var blue = targetUiLayer.state.rgbPercentageFiltering.blue;
+            var operator = targetUiLayer.state.rgbPercentageFiltering.operator;
+        } else {
+            var red = 1.0;
+            var green = 1.0;
+            var blue = 1.0;
+            var operator = ">";
+            targetUiLayer.state["rgbPercentageFiltering"] = {
+                "red": red,
+                "green": green,
+                "blue": blue,
+                "operator": operator,
+            }
+        }
+
+        const html = `<div id="rgbPercentageFiltering" class="inner_gui">
+                          <p class="gui_title">Filter RGB by %</p>
+                          <p class="gui_text">Value to filter:</p>
+                          <p class="gui_text">Red: <span id="red_value">${red*100}%</span></p>
+                          <input type="range" min="0" max="100" value="${red*100}" class="gui_slider" id="red_slider">
+                          <p class="gui_text">Green: <span id="green_value">${green*100}%</span></p>
+                          <input type="range" min="0" max="100" value="${green*100}" class="gui_slider" id="green_slider">
+                          <p class="gui_text">Blue: <span id="blue_value">${blue*100}%</span></p>
+                          <input type="range" min="0" max="100" value="${blue*100}" class="gui_slider" id="blue_slider">
+                          <p class="gui_text">Operator:</p>
+                          <select name="operator" id="operator">
+                            <option value="&gt" selected>&lt</option>
+                            <option value="&lt">&gt</option>
+                          </select><br><br>
+                      </div>`
+        const gui = this._addGuiToDOM(html);
+        this.activeGui = gui;
+
+        function addSliderEvent(sliderId, valueId, colour, targetUiLayer, ui) {
+            document.getElementById(sliderId).oninput = () => {
+                const state = targetUiLayer.state.rgbPercentageFiltering;
+                const thisSlider = document.getElementById(sliderId);
+                state[colour] = thisSlider.value/100;
+                document.getElementById(valueId).innerHTML = thisSlider.value + "%";
+                const targetPseudoLayer = targetUiLayer.basePseudolayer;
+                const pseudolayer = ui.constructor.rgbPercentageFiltering(ui.webgl, targetPseudoLayer, [state.red, state.green, state.blue], [0.0, 0.0, 0.0, 1.0], state.operator);
+                ui.updateUiLayer(targetUiLayer, pseudolayer);
+            }
+        }
+
+        addSliderEvent("red_slider", "red_value", "red", targetUiLayer, this);
+        addSliderEvent("green_slider", "green_value", "green", targetUiLayer, this);
+        addSliderEvent("blue_slider", "blue_value", "blue", targetUiLayer, this);
+
+        // event listener on operator to use
+        document.getElementById("operator").onchange = () => {
+            const state = targetUiLayer.state.rgbPercentageFiltering;
+            const thisInput = document.getElementById("operator");
+            state.operator = thisInput.value;
+            const targetPseudoLayer = targetUiLayer.basePseudolayer;
+            const pseudolayer = this.constructor.rgbFiltering(this.webgl, targetPseudoLayer, [state.red, state.green, state.blue], [0.0, 0.0, 0.0, 1.0], state.operator);
+            this.updateUiLayer(targetUiLayer, pseudolayer);
+        }
+    }
+
+    apply3x3KernelGui = () => {
+        const targetUiLayer = this.activeUiLayer;
+
+        if ("apply3x3Kernel" in targetUiLayer.state) {
+            var kernel = targetUiLayer.state.apply3x3Kernel.kernel;
+            var multiplier = targetUiLayer.state.apply3x3Kernel.multiplier;
+        } else {
+            var kernel = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0];
+            var multiplier = 1.0;
+            targetUiLayer.state["apply3x3Kernel"] = {
+                "kernel": kernel,
+                "multiplier": multiplier,
+            }
+        }
+
+        const html = `<div id="apply3x3Kernel" class="inner_gui">
+                        <p class="gui_title">Apply 3x3 kernel</p>
+                        <table id="kernel_table">
+                            <tr>
+                                <td><div class="kernel_input" data-index="0" contenteditable>${kernel[0]}</div></td>
+                                <td><div class="kernel_input" data-index="1" contenteditable>${kernel[1]}</div></td>
+                                <td><div class="kernel_input" data-index="2" contenteditable>${kernel[2]}</div></td>
+                            </tr>
+                            <tr>
+                                <td><div class="kernel_input" data-index="3" contenteditable>${kernel[3]}</div></td>
+                                <td><div class="kernel_input" data-index="4" contenteditable>${kernel[4]}</div></td>
+                                <td><div class="kernel_input" data-index="5" contenteditable>${kernel[5]}</div></td>
+                            </tr>
+                            <tr>
+                                <td><div class="kernel_input" data-index="6" contenteditable>${kernel[6]}</div></td>
+                                <td><div class="kernel_input" data-index="7" contenteditable>${kernel[7]}</div></td>
+                                <td><div class="kernel_input" data-index="8" contenteditable>${kernel[8]}</div></td>
+                            </tr>
+                        </table>
+                        <p class="gui_text">Multiplier</p>
+                        <input id="kernel_multiplier" type="number" min="1" max="16" value="${multiplier}">
+                        <br><br>
+                        <input id="apply_kernel" type="button" value="Apply">
+                        <br><br>
+                    </div>`
+        const gui = this._addGuiToDOM(html);
+        this.activeGui = gui;
+
+        document.getElementById("apply_kernel").onclick = () => {
+            const state = targetUiLayer.state.apply3x3Kernel;
+            const kernelInputs = document.getElementsByClassName("kernel_input");
+            for (let x = 0; x < kernelInputs.length; x++) {
+                const kernelInput = kernelInputs[x];
+                const kernelInputIndex = parseInt(kernelInput.dataset.index);
+                state.kernel[kernelInputIndex] = parseInt(kernelInput.innerHTML);
+            }
+            console.log(state.kernel);
+            state.multiplier = document.getElementById("kernel_multiplier").value;
+            const targetPseudoLayer = targetUiLayer.basePseudolayer;
+            const pseudolayer = this.constructor.apply3x3Kernel(this.webgl, targetPseudoLayer, state.kernel, state.multiplier);
+            this.updateUiLayer(targetUiLayer, pseudolayer);
         }
     }
 }

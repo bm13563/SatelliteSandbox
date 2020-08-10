@@ -2,6 +2,7 @@ import "../node_modules/ol/ol.css";
 import "./styles/page.css";
 import "./styles/layers.css";
 import "./styles/top_bar.css";
+import "./styles/guis.css";
 
 import {Map, View} from 'ol';
 import TileLayer from 'ol/layer/Tile';
@@ -44,16 +45,15 @@ var ui = new Ui(webgl, con);
 var l1 = new LayerObject(testMapLayer1, testMapView);
 
 const p1 = webgl.generatePseudoLayer(l1);
-// ui.addUiLayer(p1);
+ui.addUiLayer(p1);
 
-const pp3 = con.rgbFiltering(webgl, p1, [0.6, 1.0, 1.0], [0.0, 0.0, 0.0, 1.0], ">");
-ui.addUiLayer(pp3)
+
 
 // const pp1 = con.rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);
 
 // const pp2 = con.apply3x3Kernel(webgl, pp1, [-1, -1, -1, -1, 16, -1, -1, -1, -1], 8);
 
-// const pp3 = con.rgbPercentageFiltering(webgl, p1, 0.6, [0.0, 0.0, 0.0, 1.0], "g", ">");
+// const pp3 = con.rgbPercentageFiltering(webgl, p1, [1.0, 1.0, 1.0], [0.0, 0.0, 0.0, 1.0], ">");
 
 // const pp4 = con.apply3x3Kernel(webgl, pp3, [-1, -1, -1, -1,  8, -1, -1, -1, -1], 1);
 
@@ -95,7 +95,10 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', (e) => {
     const newLayer = e.target;
     if(newLayer && newLayer.id === "new_layer"){
-        const pseudolayer = ui.activeUiLayer.pseudolayer;
+        var pseudolayer = ui.activeUiLayer.pseudolayer;
+        // generate a new pseudolayer before adding a new layer, just in case the old pseudolayer is the same
+        // as the new pseudolayer
+        var pseudolayer = webgl.generatePseudoLayer(pseudolayer);
         ui.addUiLayer(pseudolayer);
     }
 });
