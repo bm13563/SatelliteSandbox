@@ -1,7 +1,7 @@
 import rgbaManipulationShader from '../shaders/processing/rgbaManipulation.shader';
 import rgbFilteringShader from '../shaders/processing/rgbFiltering.shader';
 import rgbPercentageFilteringShader from '../shaders/processing/rgbPercentageFiltering.shader';
-import averageLayersShader from '../shaders/processing/averageLayers.shader';
+import stackLayers from '../shaders/processing/stackLayers.shader';
 import apply3x3KernelShader from '../shaders/processing/apply3x3Kernel.shader';
 
 export class Constructor{
@@ -91,6 +91,24 @@ export class Constructor{
             dynamics: {
                 rgbfpd1_remove: rgbfpd1_remove,
             }
+        })
+        return pseudolayer;
+    }
+
+    stackLayers = ({webgl, sl1_image, sl2_image, sl1_weight, sl2_weight, sl_multiplier}={}) => {
+        const pseudolayer = webgl.processPseudoLayer({
+            shaderName: "stackLayers",
+            inputs: {
+                sl1_image: sl1_image,
+                sl2_image: sl2_image,
+            },
+            shader: stackLayers,
+            variables: {
+                sl1_weight: sl1_weight,
+                sl2_weight: sl2_weight,
+                sl_multiplier: sl_multiplier,
+            },
+            dynamics: {}
         })
         return pseudolayer;
     }

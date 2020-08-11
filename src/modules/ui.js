@@ -140,6 +140,8 @@ export class Ui {
     // determines which layer should be rendered by webGL, based on which layer is selected
     _renderActiveUiLayer = () => {
         // if there is currently a uiLayer
+        console.log("===========")
+        console.log("rendering")
         if (this.activeUiLayer) {
             // render the pseudolayer of the active uiLayer
             const pseudoLayerToRender = this.activeUiLayer.pseudolayer;
@@ -180,7 +182,6 @@ export class Ui {
         // remove the gui
         processingGui.removeChild(this.activeGui);
         // event listeners *should* be garbage collected
-        this.activeGui = false;
     }
 
     // function that renders the current pseudolayer based on the state stored in the guis that have been used
@@ -189,7 +190,10 @@ export class Ui {
         var targetPseudolayer = uiLayer.originalPseudolayer;
         for (const key of Object.keys(uiLayer.state)) {
             var inputArguments = uiLayer.state[key];
+            // get function out of original object before deep copying the rest of the object
             const functionName = inputArguments.stateFunction;
+            // deep copy the state object -> prevents issues with mutation when state is changed by the guis
+            var inputArguments = JSON.parse(JSON.stringify(inputArguments));
             inputArguments[inputArguments["inputName"]] = targetPseudolayer;
             inputArguments["webgl"] = this._webgl;
             targetPseudolayer = functionName(inputArguments);
@@ -218,16 +222,17 @@ export class Ui {
         // this needs to be called after state is declared
         // rebuilds the pseudolayer with the state stored in all of the guis that have been used
         const targetPseudolayer = this.restoreGuiState(targetUiLayer);
+        this.updateUiLayer(targetUiLayer, targetPseudolayer);
 
         // generate gui -> can be unstyled, as will resize to fit generic gui container, or can be styled in guis.css
         const html = `<div id="rgbaManipulation" class="inner_gui">
                           <p class="gui_title">Multiply RGBA</p>
                           <p class="gui_text">Red: <span id="red_value">${rgbam_multiplier[0]}</span></p>
-                          <input type="range" min="0" max="500" value="${rgbam_multiplier[0]*100}" class="gui_slider" id="red_slider">
+                          <input type="range" min="0" max="300" value="${rgbam_multiplier[0]*100}" class="gui_slider" id="red_slider">
                           <p class="gui_text">Green: <span id="green_value">${rgbam_multiplier[1]}</span></p>
-                          <input type="range" min="0" max="500" value="${rgbam_multiplier[1]*100}" class="gui_slider" id="green_slider">
+                          <input type="range" min="0" max="300" value="${rgbam_multiplier[1]*100}" class="gui_slider" id="green_slider">
                           <p class="gui_text">Blue: <span id="blue_value">${rgbam_multiplier[2]}</span></p>
-                          <input type="range" min="0" max="500" value="${rgbam_multiplier[2]*100}" class="gui_slider" id="blue_slider">
+                          <input type="range" min="0" max="300" value="${rgbam_multiplier[2]*100}" class="gui_slider" id="blue_slider">
                       </div>`
         const gui = this._addGuiToDOM(html);
         this.activeGui = gui;
@@ -242,7 +247,7 @@ export class Ui {
                 const pseudolayer = ui._constructor.rgbaManipulation({
                     webgl: ui._webgl, 
                     rgbam_image: targetPseudolayer,
-                    rgbam_multiplier: state.rgbam_multiplier
+                    rgbam_multiplier: state.rgbam_multiplier,
                 });
                 ui.updateUiLayer(targetUiLayer, pseudolayer);
             }
@@ -286,8 +291,8 @@ export class Ui {
                           <input type="range" min="0" max="255" value="${rgbf_filter[2]*255}" class="gui_slider" id="blue_slider">
                           <p class="gui_text">Operator:</p>
                           <select name="operator" id="operator">
-                            <option value="&gt" selected>&lt</option>
-                            <option value="&lt">&gt</option>
+                            <option value="&gt" selected>&gt</option>
+                            <option value="&lt">&lt</option>
                           </select><br><br>
                       </div>`
         const gui = this._addGuiToDOM(html);
@@ -363,8 +368,8 @@ export class Ui {
                           <input type="range" min="0" max="100" value="${rgbfp_filter[2]*100}" class="gui_slider" id="blue_slider">
                           <p class="gui_text">Operator:</p>
                           <select name="operator" id="operator">
-                            <option value="&gt" selected>&lt</option>
-                            <option value="&lt">&gt</option>
+                            <option value="&gt" selected>&gt</option>
+                            <option value="&lt">&lt</option>
                           </select><br><br>
                       </div>`
         const gui = this._addGuiToDOM(html);
