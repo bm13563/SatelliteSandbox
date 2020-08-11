@@ -27060,6 +27060,23 @@
         });
       };
 
+      this._deleteTexturesFromGpu = function (textures) {
+        for (var _i = 0, _Object$keys = Object.keys(textures); _i < _Object$keys.length; _i++) {
+          var key = _Object$keys[_i];
+
+          _this.gl.deleteTexture(textures[key]);
+        }
+      };
+
+      this._deleteFramebuffersFromGpu = function () {
+        for (var _i2 = 0, _Object$keys2 = Object.keys(_this.framebufferTracker); _i2 < _Object$keys2.length; _i2++) {
+          var key = _Object$keys2[_i2];
+          bindFramebufferInfo(false);
+
+          _this.gl.deleteFramebuffer(_this.framebufferTracker[key]);
+        }
+      };
+
       this._renderPseudoLayer = function (pseudolayer) {
         _this.shaderPasses = 0; // get all child pseudolayers
 
@@ -27072,11 +27089,13 @@
         _this._runvFlipProgram(framebufferTexture);
 
         _this.framebufferTracker = {};
+
+        _this._deleteFramebuffersFromGpu();
       };
 
       this._recurseThroughChildLayers = function (thisLayer, originalLayer) {
-        for (var _i = 0, _Object$keys = Object.keys(thisLayer.inputs); _i < _Object$keys.length; _i++) {
-          var key = _Object$keys[_i];
+        for (var _i3 = 0, _Object$keys3 = Object.keys(thisLayer.inputs); _i3 < _Object$keys3.length; _i3++) {
+          var key = _Object$keys3[_i3];
           var nextLayer = thisLayer.inputs[key];
 
           if (nextLayer.type === "layerObject") {
@@ -27103,8 +27122,8 @@
         var renderVariables = pseudolayer.variables;
         var renderShader = pseudolayer.shader;
 
-        for (var _i2 = 0, _Object$keys2 = Object.keys(inputs); _i2 < _Object$keys2.length; _i2++) {
-          var key = _Object$keys2[_i2];
+        for (var _i4 = 0, _Object$keys4 = Object.keys(inputs); _i4 < _Object$keys4.length; _i4++) {
+          var key = _Object$keys4[_i4];
 
           if (inputs[key].type === "layerObject") {
             var textureId = _this._generateTexture(inputs[key].container.querySelector("canvas"));
@@ -27133,6 +27152,7 @@
 
       this._startRendering = function (inputs, variables, programInfo, currentFramebuffer) {
         var gl = _this.gl;
+        var deleteGPUTextures = _this._deleteTexturesFromGpu;
         _this.shaderPasses++;
         requestAnimationFrame(render);
 
@@ -27146,6 +27166,7 @@
           setUniforms(programInfo, variables);
           bindFramebufferInfo(gl, currentFramebuffer);
           drawBufferInfo(gl, quadVertices, gl.TRIANGLES);
+          deleteGPUTextures(inputs);
         }
       };
 
@@ -27167,8 +27188,8 @@
         if (dynamics === {}) {
           return shader;
         } else {
-          for (var _i3 = 0, _Object$keys3 = Object.keys(dynamics); _i3 < _Object$keys3.length; _i3++) {
-            var key = _Object$keys3[_i3];
+          for (var _i5 = 0, _Object$keys5 = Object.keys(dynamics); _i5 < _Object$keys5.length; _i5++) {
+            var key = _Object$keys5[_i5];
             var regex = new RegExp("{" + key + "}", "g");
             shader = shader.replace(regex, dynamics[key].toString());
           }
@@ -27188,8 +27209,8 @@
         } // sets the current event handler
 
 
-        _this.currentEvent = pseudolayer.maps[pseudolayer.maps.length - 1].on("postrender", function (e) {
-          if (_this.frameTracker % throttle == 0) {
+        _this.currentEvent = pseudolayer.maps[pseudolayer.maps.length - 1].on("postrender", function () {
+          if (_this.frameTracker % throttle === 0) {
             _this._renderPseudoLayer(pseudolayer);
           }
 
@@ -27352,9 +27373,6 @@
 
       this._renderActiveUiLayer = function () {
         // if there is currently a uiLayer
-        console.log("===========");
-        console.log("rendering");
-
         if (_this.activeUiLayer) {
           // render the pseudolayer of the active uiLayer
           var pseudoLayerToRender = _this.activeUiLayer.pseudolayer;
@@ -27403,7 +27421,7 @@
           var key = _Object$keys[_i];
           var inputArguments = uiLayer.state[key]; // get function out of original object before deep copying the rest of the object
 
-          var functionName = inputArguments.stateFunction; // deep copy the object -> prevents issues with mutation when state is changed by the guis
+          var functionName = inputArguments.stateFunction; // deep copy the state variables -> prevents issues with mutation when state is changed by the guis
 
           var inputArguments = JSON.parse(JSON.stringify(inputArguments));
           inputArguments[inputArguments["inputName"]] = targetPseudolayer;
@@ -27853,28 +27871,28 @@
     var con = new Constructor();
     var ui = new Ui(webgl, con);
     var l1 = new LayerObject(testMapLayer1, testMapView);
-    var p1 = webgl.generatePseudoLayer(l1);
-    var pp1 = con.rgbaManipulation({
-      webgl: webgl,
-      rgbam_image: p1,
-      rgbam_multiplier: [1.0, 1.0, 1.0, 1.0]
-    });
-    var pp3 = con.rgbaManipulation({
-      webgl: webgl,
-      rgbam_image: p1,
-      rgbam_multiplier: [1.5, 1.5, 1.5, 1.5]
-    });
-    var pp2 = con.stackLayers({
-      webgl: webgl,
-      sl1_image: p1,
-      sl2_image: pp1,
-      sl1_weight: 1.5,
-      sl2_weight: 1.0,
-      sl_multiplier: 2.0
-    });
-    ui.addUiLayer(p1);
-    ui.addUiLayer(pp1);
-    ui.addUiLayer(pp3); // const pp1 = con.rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);
+    var p1 = webgl.generatePseudoLayer(l1); // const pp1 = con.rgbaManipulation({
+    //     webgl: webgl, 
+    //     rgbam_image: p1, 
+    //     rgbam_multiplier: [1.0, 1.0, 1.0, 1.0],
+    // });
+    // const pp3 = con.rgbaManipulation({
+    //     webgl: webgl, 
+    //     rgbam_image: p1, 
+    //     rgbam_multiplier: [1.5, 1.5, 1.5, 1.5],
+    // });
+    // const pp2 = con.stackLayers({
+    //     webgl: webgl,
+    //     sl1_image: p1,
+    //     sl2_image: pp1,
+    //     sl1_weight: 1.5,
+    //     sl2_weight: 1.0,
+    //     sl_multiplier: 2.0,
+    // })
+
+    ui.addUiLayer(p1); // ui.addUiLayer(pp1);
+    // ui.addUiLayer(pp3);
+    // const pp1 = con.rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);
     // const pp2 = con.apply3x3Kernel(webgl, pp1, [-1, -1, -1, -1, 16, -1, -1, -1, -1], 8);
     // const pp3 = con.rgbPercentageFiltering(webgl, p1, [1.0, 1.0, 1.0], [0.0, 0.0, 0.0, 1.0], ">");
     // const pp4 = con.apply3x3Kernel(webgl, pp3, [-1, -1, -1, -1,  8, -1, -1, -1, -1], 1);

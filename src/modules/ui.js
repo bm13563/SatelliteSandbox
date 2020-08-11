@@ -140,8 +140,6 @@ export class Ui {
     // determines which layer should be rendered by webGL, based on which layer is selected
     _renderActiveUiLayer = () => {
         // if there is currently a uiLayer
-        console.log("===========")
-        console.log("rendering")
         if (this.activeUiLayer) {
             // render the pseudolayer of the active uiLayer
             const pseudoLayerToRender = this.activeUiLayer.pseudolayer;
@@ -192,7 +190,7 @@ export class Ui {
             var inputArguments = uiLayer.state[key];
             // get function out of original object before deep copying the rest of the object
             const functionName = inputArguments.stateFunction;
-            // deep copy the state object -> prevents issues with mutation when state is changed by the guis
+            // deep copy the state variables -> prevents issues with mutation when state is changed by the guis
             var inputArguments = JSON.parse(JSON.stringify(inputArguments));
             inputArguments[inputArguments["inputName"]] = targetPseudolayer;
             inputArguments["webgl"] = this._webgl;
@@ -244,7 +242,7 @@ export class Ui {
                 const thisSlider = document.getElementById(sliderId);
                 state.rgbam_multiplier[index] = thisSlider.value/100;
                 document.getElementById(valueId).innerHTML = thisSlider.value/100;
-                const pseudolayer = ui._constructor.rgbaManipulation({
+                let pseudolayer = ui._constructor.rgbaManipulation({
                     webgl: ui._webgl, 
                     rgbam_image: targetPseudolayer,
                     rgbam_multiplier: state.rgbam_multiplier,
@@ -304,7 +302,7 @@ export class Ui {
                 const thisSlider = document.getElementById(sliderId);
                 state.rgbf_filter[index] = thisSlider.value/255;
                 document.getElementById(valueId).innerHTML = thisSlider.value;
-                const pseudolayer = ui._constructor.rgbFiltering({
+                let pseudolayer = ui._constructor.rgbFiltering({
                     webgl: ui._webgl, 
                     rgbf_image: targetPseudolayer, 
                     rgbf_filter: state.rgbf_filter, 

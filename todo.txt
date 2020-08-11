@@ -21,7 +21,8 @@
 20. panel that shows the updates to a layer when changed (to track changes) DONE
 21. look into 18 DONE
 22. add suggested kernels
-23. test and bug fix gui state (back to 18 sigh)
+23. test and bug fix gui state (back to 18 sigh) DONE
 24. bug fix changing operator on filter RGB. when shader is called, variable changes seem to be affecting the child layer
     SHADER IS BEING APPLIED TWICE. issue is with object mutation - state object is mutating so any changes in state are stacking
-    and effect is being applied multiple times
+    and effect is being applied multiple times DONE
+25. fix GPU memory leak

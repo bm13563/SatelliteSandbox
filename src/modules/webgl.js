@@ -33,7 +33,7 @@ export class WebGLCanvas{
     // creates a specified number of framebuffers
     _createFramebuffers = (number) => {
         const gl = this.gl;
-        const framebuffers = [];
+        let framebuffers = [];
         for (let x = 0; x < number; x++) {
             const fbo = twgl.createFramebufferInfo(gl);
             framebuffers.push(fbo);
@@ -48,6 +48,21 @@ export class WebGLCanvas{
         });
     }
 
+    // cant guarantee that webgl object will be garbage collected
+    _deleteTexturesFromGpu = (textures) => {
+        for (const key of Object.keys(textures)) {
+            this.gl.deleteTexture(textures[key]);
+        };
+    }
+
+    // cant guarantee that webgl object will be garbage collected
+    _deleteFramebuffersFromGpu = () => {
+        for (const key of Object.keys(this.framebufferTracker)) {
+            twgl.bindFramebufferInfo(false);
+            this.gl.deleteFramebuffer(this.framebufferTracker[key]);
+        }; 
+    }
+
     // renders a pseudo layer with the attached shader applied. reconstructs any child pseudolayers first, stores framebuffers for these
     // children in the framebuffertracker, then uses the framebuffers to apply any processing
     _renderPseudoLayer = (pseudolayer) => {
@@ -59,6 +74,7 @@ export class WebGLCanvas{
         // flip the output of the current operation
         this._runvFlipProgram(framebufferTexture);
         this.framebufferTracker = {};
+        this._deleteFramebuffersFromGpu();
     }
 
     // recurses through the child layers of a pseudolayer to reconstruct all input pseudolayers
@@ -117,6 +133,7 @@ export class WebGLCanvas{
 
     _startRendering = (inputs, variables, programInfo, currentFramebuffer) => {
         const gl = this.gl;
+        const deleteGPUTextures = this._deleteTexturesFromGpu;
         this.shaderPasses++;
         requestAnimationFrame(render);
         function render() {
@@ -131,6 +148,7 @@ export class WebGLCanvas{
             twgl.setUniforms(programInfo, variables);
             twgl.bindFramebufferInfo(gl, currentFramebuffer);
             twgl.drawBufferInfo(gl, quadVertices, gl.TRIANGLES);
+            deleteGPUTextures(inputs);
         }
     }
 
@@ -170,8 +188,8 @@ export class WebGLCanvas{
             this.mapsUsed.push(pseudolayer.layers[x]);
         }
         // sets the current event handler
-        this.currentEvent = pseudolayer.maps[pseudolayer.maps.length-1].on("postrender", (e) => {
-            if (this.frameTracker % throttle == 0) {
+        this.currentEvent = pseudolayer.maps[pseudolayer.maps.length-1].on("postrender", () => {
+            if (this.frameTracker % throttle === 0) {
                 this._renderPseudoLayer(pseudolayer);
             }
             this.frameTracker++;
