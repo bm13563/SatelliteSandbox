@@ -25,5 +25,5 @@
 24. bug fix changing operator on filter RGB. when shader is called, variable changes seem to be affecting the child layer
     SHADER IS BEING APPLIED TWICE. issue is with object mutation - state object is mutating so any changes in state are stacking
     and effect is being applied multiple times DONE
-25. fix GPU memory leak DONE
+25. fix GPU memory leak DONE -> kind of, is getting garbage collected but probably not as often as it should. still runs into memory issues
 26. refactor webgl.js

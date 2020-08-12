@@ -27070,6 +27070,8 @@
         for (var x = 0; x < number; x++) {
           var fbo = createFramebufferInfo(gl);
           framebuffers.push(fbo);
+
+          _this.cleanupTracker.framebuffers.push(fbo);
         }
 
         return framebuffers;
@@ -27080,36 +27082,20 @@
           src: source
         });
 
-        _this.textureTracker.push(texture);
+        _this.cleanupTracker.textures.push(texture);
 
         return texture;
       };
 
-      this._deleteTexturesFromGpu = function (textures) {
-        var numTextureUnits = _this.gl.getParameter(_this.gl.MAX_TEXTURE_IMAGE_UNITS);
-
-        for (var unit = 0; unit < numTextureUnits; ++unit) {
-          _this.gl.activeTexture(_this.gl.TEXTURE0 + unit);
-
-          _this.gl.bindTexture(_this.gl.TEXTURE_2D, null);
-        }
-
-        for (var _i = 0, _Object$keys = Object.keys(textures); _i < _Object$keys.length; _i++) {
-          var key = _Object$keys[_i];
-
-          _this.gl.deleteTexture(textures[key]);
-        }
-      };
-
       this._tidyUp = function (pseudolayer) {
-        var canDelete = _this.canDelete;
+        var shaderPassTracker = _this.shaderPassTracker;
         var cleanUpGpuMemory = _this._cleanUpGpuMemory;
         setTimeout(waitForResult);
 
         function waitForResult() {
-          console.log(canDelete.length, pseudolayer.shaderPasses);
+          console.log(shaderPassTracker.length, pseudolayer.shaderPasses);
 
-          if (canDelete.length === pseudolayer.shaderPasses) {
+          if (shaderPassTracker.length === pseudolayer.shaderPasses) {
             cleanUpGpuMemory();
           } else {
             setTimeout(waitForResult);
@@ -27136,20 +27122,51 @@
 
         _this.gl.bindFramebuffer(_this.gl.FRAMEBUFFER, null);
 
-        for (var _i2 = 0, _Object$keys2 = Object.keys(_this.framebufferTracker); _i2 < _Object$keys2.length; _i2++) {
-          var key = _Object$keys2[_i2];
+        for (var x = 0; x < _this.cleanupTracker.framebuffers.length; x++) {
+          var framebufferToDelete = _this.cleanupTracker.framebuffers[x];
 
-          _this.gl.deleteFramebuffer(_this.framebufferTracker[key].framebuffer);
+          _this.gl.deleteFramebuffer(framebufferToDelete.framebuffer);
         }
 
-        for (var x = 0; x < _this.textureTracker.length; x++) {
-          _this.gl.deleteTexture(_this.textureTracker[x]);
+        for (var _x = 0; _x < _this.cleanupTracker.textures.length; _x++) {
+          var textureToDelete = _this.cleanupTracker.textures[_x];
+
+          _this.gl.deleteTexture(textureToDelete);
         }
+
+        for (var _x2 = 0; _x2 < _this.cleanupTracker.arrayBuffers.length; _x2++) {
+          var bufferToDelete = _this.cleanupTracker.arrayBuffers[_x2];
+          console.log(bufferToDelete);
+
+          _this.gl.bindBuffer(_this.gl.ARRAY_BUFFER, bufferToDelete);
+
+          _this.gl.bufferData(_this.gl.ARRAY_BUFFER, 1, _this.gl.STATIC_DRAW);
+
+          _this.gl.deleteBuffer(bufferToDelete);
+        }
+
+        for (var _x3 = 0; _x3 < _this.cleanupTracker.elementArrayBuffers.length; _x3++) {
+          var _bufferToDelete = _this.cleanupTracker.elementArrayBuffers[_x3];
+          console.log(_bufferToDelete);
+
+          _this.gl.bindBuffer(_this.gl.ELEMENT_ARRAY_BUFFER, _bufferToDelete);
+
+          _this.gl.bufferData(_this.gl.ELEMENT_ARRAY_BUFFER, 1, _this.gl.STATIC_DRAW);
+
+          _this.gl.deleteBuffer(_bufferToDelete);
+        }
+
+        _this.gl.flush();
 
         _this.framebufferTracker = {};
-        _this.textureTracker = [];
-        _this.canDelete = [];
-        _this.readToRender = true;
+        _this.cleanupTracker = {
+          textures: [],
+          framebuffers: [],
+          arrayBuffers: [],
+          elementArrayBuffers: []
+        };
+        _this.shaderPassTracker = [];
+        _this.canvasReady = true;
       };
 
       this._renderPseudoLayer = function (pseudolayer) {
@@ -27157,39 +27174,38 @@
         _this._recurseThroughChildLayers(pseudolayer, pseudolayer); // render the target pseudolayer
 
 
-        var framebufferTexture = _this._generatePseudoLayer(pseudolayer); // flip the output of the current operation
+        var framebuffer = _this._generatePseudoLayer(pseudolayer); // flip the output of the current operation
 
 
-        _this._runvFlipProgram(framebufferTexture.attachments[0]); // this._tidyUp(pseudolayer);
+        _this._runvFlipProgram(framebuffer.attachments[0]);
 
+        _this._tidyUp(pseudolayer);
       };
 
       this._recurseThroughChildLayers = function (thisLayer, originalLayer) {
-        for (var _i3 = 0, _Object$keys3 = Object.keys(thisLayer.inputs); _i3 < _Object$keys3.length; _i3++) {
-          var key = _Object$keys3[_i3];
+        for (var _i = 0, _Object$keys = Object.keys(thisLayer.inputs); _i < _Object$keys.length; _i++) {
+          var key = _Object$keys[_i];
           var nextLayer = thisLayer.inputs[key];
 
           if (nextLayer.type === "layerObject") {
-            var framebufferTexture = _this._generatePseudoLayer(thisLayer);
+            if (!(thisLayer.id === originalLayer.id)) {
+              var framebuffer = _this._generatePseudoLayer(thisLayer);
 
-            _this.framebufferTracker[thisLayer.id] = framebufferTexture; // if (!(thisLayer.id === originalLayer.id)) {
-            //     const framebufferTexture = this._generatePseudoLayer(thisLayer);
-            //     this.framebufferTracker[thisLayer.id] = framebufferTexture;
-            // }
+              _this.framebufferTracker[thisLayer.id] = framebuffer;
+            }
           } else {
             _this._recurseThroughChildLayers(nextLayer, originalLayer);
 
             if (!(thisLayer.id === originalLayer.id)) {
-              var _framebufferTexture = _this._generatePseudoLayer(thisLayer);
+              var _framebuffer = _this._generatePseudoLayer(thisLayer);
 
-              _this.framebufferTracker[thisLayer.id] = _framebufferTexture;
+              _this.framebufferTracker[thisLayer.id] = _framebuffer;
             }
           }
         }
       };
 
       this._generatePseudoLayer = function (pseudolayer) {
-        // returns an array of framebuffers obejcts, so get first
         var framebuffer = _this._createFramebuffers(1)[0];
 
         var renderInputs = {};
@@ -27197,15 +27213,14 @@
         var renderVariables = pseudolayer.variables;
         var renderShader = pseudolayer.shader;
 
-        for (var _i4 = 0, _Object$keys4 = Object.keys(inputs); _i4 < _Object$keys4.length; _i4++) {
-          var key = _Object$keys4[_i4];
+        for (var _i2 = 0, _Object$keys2 = Object.keys(inputs); _i2 < _Object$keys2.length; _i2++) {
+          var key = _Object$keys2[_i2];
 
           if (inputs[key].type === "layerObject") {
             var textureId = _this._generateTexture(inputs[key].container.querySelector("canvas"));
 
             renderInputs[key] = textureId;
           } else {
-            // get the texture out of the framebuffer
             renderInputs[key] = _this.framebufferTracker[inputs[key].id].attachments[0];
           }
         }
@@ -27226,29 +27241,32 @@
       };
 
       this._startRendering = function (inputs, variables, programInfo, currentFramebuffer) {
-        console.log(inputs, variables, currentFramebuffer);
         var gl = _this.gl;
-        var canDelete = _this.canDelete;
+        var shaderPassTracker = _this.shaderPassTracker;
+        var cleanupTracker = _this.cleanupTracker;
         requestAnimationFrame(render);
 
         function render() {
           resizeCanvasToDisplaySize(gl.canvas);
           gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
           var quadVertices = primitives.createXYQuadBufferInfo(gl);
+          cleanupTracker.arrayBuffers.push(quadVertices.attribs.normal.buffer);
+          cleanupTracker.arrayBuffers.push(quadVertices.attribs.position.buffer);
+          cleanupTracker.arrayBuffers.push(quadVertices.attribs.texcoord.buffer);
+          cleanupTracker.elementArrayBuffers.push(quadVertices.indices);
           setBuffersAndAttributes(gl, programInfo, quadVertices);
           gl.useProgram(programInfo.program);
           setUniforms(programInfo, inputs);
-          setUniforms(programInfo, variables); // uniforms are bound, notify canvas that this has happened
-
-          canDelete.push(true);
+          setUniforms(programInfo, variables);
           bindFramebufferInfo(gl, currentFramebuffer);
+          shaderPassTracker.push(true);
           drawBufferInfo(gl, quadVertices, gl.TRIANGLES);
         }
       };
 
       this.generatePseudoLayer = function (layer) {
         return new PseudoLayer("baseProgram", {
-          b_image: layer
+          f_image: layer
         }, _this.baseProgram, {});
       };
 
@@ -27264,8 +27282,8 @@
         if (dynamics === {}) {
           return shader;
         } else {
-          for (var _i5 = 0, _Object$keys5 = Object.keys(dynamics); _i5 < _Object$keys5.length; _i5++) {
-            var key = _Object$keys5[_i5];
+          for (var _i3 = 0, _Object$keys3 = Object.keys(dynamics); _i3 < _Object$keys3.length; _i3++) {
+            var key = _Object$keys3[_i3];
             var regex = new RegExp("{" + key + "}", "g");
             shader = shader.replace(regex, dynamics[key].toString());
           }
@@ -27275,11 +27293,13 @@
       };
 
       this.renderPseudoLayer = function (pseudolayer, throttle) {
-        // if (!(this.readToRender)) {
-        //     console.log("not ready to render, returning")
-        //     return;
-        // }
-        // this.readToRender = false;
+        if (!_this.canvasReady) {
+          console.log("not ready to render, returning");
+          return;
+        }
+
+        _this.canvasReady = false;
+
         _this.stopRendering(); // set maps used to generate pseudolayer to visible
 
 
@@ -27324,14 +27344,19 @@
       this.height = this.gl.canvas.height;
       var baseVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
       var vFlipVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
-      var baseFragmentShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D b_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(b_image, o_texCoord);\r\n}";
+      var baseFragmentShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D f_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(f_image, o_texCoord);\r\n}";
       this.baseVertexShader = baseVertexShader;
       this.baseProgram = createProgramInfo(this.gl, [baseVertexShader, baseFragmentShader]);
       this.vFlipProgram = createProgramInfo(this.gl, [vFlipVertexShader, baseFragmentShader]);
       this.framebufferTracker = {};
-      this.textureTracker = [];
-      this.canDelete = [];
-      this.readToRender = true;
+      this.cleanupTracker = {
+        textures: [],
+        framebuffers: [],
+        arrayBuffers: [],
+        elementArrayBuffers: []
+      };
+      this.shaderPassTracker = [];
+      this.canvasReady = true;
       this.frameTracker = 0;
       this.mapsUsed = [];
       this.currentEvent = false;

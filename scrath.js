@@ -13,14 +13,14 @@ export class WebGLCanvas{
         this.height = this.gl.canvas.height;
         var baseVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
         var vFlipVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
-        var baseFragmentShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D f_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(f_image, o_texCoord);\r\n}";
+        var baseFragmentShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D b_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(b_image, o_texCoord);\r\n}";
         this.baseVertexShader = baseVertexShader;
         this.baseProgram = twgl.createProgramInfo(this.gl, [baseVertexShader, baseFragmentShader]);
         this.vFlipProgram = twgl.createProgramInfo(this.gl, [vFlipVertexShader, baseFragmentShader]);
         this.framebufferTracker = {};
-        this.cleanupTracker = {textures: [], framebuffers: [], arrayBuffers: [], elementArrayBuffers: []};
-        this.shaderPassTracker = [];
-        this.canvasReady = true;
+        this.textureTracker = [];
+        this.canDelete = [];
+        this.readToRender = true;
         this.frameTracker = 0;
         this.mapsUsed = [];
         this.currentEvent = false;
@@ -39,7 +39,6 @@ export class WebGLCanvas{
         for (let x = 0; x < number; x++) {
             const fbo = twgl.createFramebufferInfo(gl);
             framebuffers.push(fbo);
-            this.cleanupTracker.framebuffers.push(fbo);
         }
         return framebuffers;
     }
@@ -49,8 +48,20 @@ export class WebGLCanvas{
         const texture = twgl.createTexture(this.gl, {
             src: source,
         });
-        this.cleanupTracker.textures.push(texture);
+        this.textureTracker.push(texture);
         return texture;
+    }
+
+    // cant guarantee that webgl object will be garbage collected
+    _deleteTexturesFromGpu = (textures) => {
+        var numTextureUnits = this.gl.getParameter(this.gl.MAX_TEXTURE_IMAGE_UNITS);
+        for (var unit = 0; unit < numTextureUnits; ++unit) {
+            this.gl.activeTexture(this.gl.TEXTURE0 + unit);
+            this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+        }
+        for (const key of Object.keys(textures)) {
+            this.gl.deleteTexture(textures[key]);
+        };
     }
 
     // cant guarantee that webgl object will be garbage collected -> was having an issue where 
@@ -61,13 +72,14 @@ export class WebGLCanvas{
     // all of the passes have been done, unbinds and deletes all textures and framebuffers, clears global
     // variables and resets the shader pass counter
     _tidyUp = (pseudolayer) => {
-        var shaderPassTracker = this.shaderPassTracker;
+        var canDelete = this.canDelete;
         const cleanUpGpuMemory = this._cleanUpGpuMemory;
 
         setTimeout(waitForResult);
 
         function waitForResult() {
-            if (shaderPassTracker.length === pseudolayer.shaderPasses) {
+            console.log(canDelete.length, pseudolayer.shaderPasses);
+            if (canDelete.length === pseudolayer.shaderPasses) {
                 cleanUpGpuMemory();
             } else {
                 setTimeout(waitForResult);
@@ -87,35 +99,18 @@ export class WebGLCanvas{
         this.gl.bindRenderbuffer(this.gl.RENDERBUFFER, null);
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
 
-        for (let x = 0; x < this.cleanupTracker.framebuffers.length; x++) {
-            const framebufferToDelete = this.cleanupTracker.framebuffers[x]
-            this.gl.deleteFramebuffer(framebufferToDelete.framebuffer);
+        for (const key of Object.keys(this.framebufferTracker)) {
+            this.gl.deleteFramebuffer(this.framebufferTracker[key].framebuffer);
         }
 
-        for (let x = 0; x < this.cleanupTracker.textures.length; x++) {
-            const textureToDelete = this.cleanupTracker.textures[x];
-            this.gl.deleteTexture(textureToDelete);
+        for (let x = 0; x < this.textureTracker.length; x++) {
+            this.gl.deleteTexture(this.textureTracker[x]);
         }
 
-        for (let x = 0; x < this.cleanupTracker.arrayBuffers.length; x++) {
-            const bufferToDelete = this.cleanupTracker.arrayBuffers[x];
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, bufferToDelete);
-            this.gl.bufferData(this.gl.ARRAY_BUFFER, 1, this.gl.STATIC_DRAW);
-            this.gl.deleteBuffer(bufferToDelete);
-        }
-
-        for (let x = 0; x < this.cleanupTracker.elementArrayBuffers.length; x++) {
-            const bufferToDelete = this.cleanupTracker.elementArrayBuffers[x];
-            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, bufferToDelete);
-            this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, 1, this.gl.STATIC_DRAW);
-            this.gl.deleteBuffer(bufferToDelete);
-        }
-
-        this.gl.flush();
         this.framebufferTracker = {};
-        this.cleanupTracker = {textures: [], framebuffers: [], arrayBuffers: [], elementArrayBuffers: []};
-        this.shaderPassTracker = [];
-        this.canvasReady = true;
+        this.textureTracker = [];
+        this.canDelete = [];
+        this.readToRender = true;
     }
 
     // renders a pseudo layer with the attached shader applied. reconstructs any child pseudolayers first, stores framebuffers for these
@@ -127,7 +122,7 @@ export class WebGLCanvas{
         const framebuffer = this._generatePseudoLayer(pseudolayer);
         // flip the output of the current operation
         this._runvFlipProgram(framebuffer.attachments[0]);
-        this._tidyUp(pseudolayer);
+        // this._tidyUp(pseudolayer);
     }
 
     // recurses through the child layers of a pseudolayer to reconstruct all input pseudolayers
@@ -153,6 +148,7 @@ export class WebGLCanvas{
 
     // generates a framebuffer that represents a pseudolayer
     _generatePseudoLayer = (pseudolayer) => {
+        // returns an array of framebuffers obejcts, so get first
         const framebuffer = this._createFramebuffers(1)[0];
         const renderInputs = {};
         const inputs = pseudolayer.inputs;
@@ -163,14 +159,16 @@ export class WebGLCanvas{
                 const textureId = this._generateTexture(inputs[key].container.querySelector("canvas"));
                 renderInputs[key] = textureId;
             } else {
+                // get the texture out of the framebuffer
                 renderInputs[key] = this.framebufferTracker[inputs[key].id].attachments[0];
             }
         }
+        console.log(framebuffer.framebuffer, 2)
         this._startRendering(
             renderInputs, 
             renderVariables,
             renderShader, 
-            framebuffer
+            framebuffer.framebuffer,
         );
         return framebuffer;
     }
@@ -186,28 +184,28 @@ export class WebGLCanvas{
     }
 
     _startRendering = (inputs, variables, programInfo, currentFramebuffer) => {
+        // console.log("=====")
+        // console.log(inputs)
+        // console.log(variables)
+        // console.log(programInfo)
+        // console.log(currentFramebuffer)
         const gl = this.gl;
-        var shaderPassTracker = this.shaderPassTracker;
-        var cleanupTracker = this.cleanupTracker;
-        requestAnimationFrame(render);
+        var canDelete = this.canDelete;
 
+        requestAnimationFrame(render);
         function render() {
             twgl.resizeCanvasToDisplaySize(gl.canvas);
             gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
             const quadVertices = twgl.primitives.createXYQuadBufferInfo(gl);
-            cleanupTracker.arrayBuffers.push(quadVertices.attribs.normal.buffer);
-            cleanupTracker.arrayBuffers.push(quadVertices.attribs.position.buffer);
-            cleanupTracker.arrayBuffers.push(quadVertices.attribs.texcoord.buffer);
-            cleanupTracker.elementArrayBuffers.push(quadVertices.indices);
             twgl.setBuffersAndAttributes(gl, programInfo, quadVertices);
 
             gl.useProgram(programInfo.program);
             twgl.setUniforms(programInfo, inputs);
             twgl.setUniforms(programInfo, variables);
+            // uniforms are bound, notify canvas that this has happened
+            // canDelete.push(true);
             twgl.bindFramebufferInfo(gl, currentFramebuffer);
-
-            shaderPassTracker.push(true);
             twgl.drawBufferInfo(gl, quadVertices, gl.TRIANGLES);
         }
     }
@@ -215,7 +213,7 @@ export class WebGLCanvas{
     generatePseudoLayer = (layer) => {
         return new PseudoLayer(
             "baseProgram",
-            {f_image: layer},
+            {b_image: layer},
             this.baseProgram,
             {},
         )
@@ -241,11 +239,11 @@ export class WebGLCanvas{
     }
 
     renderPseudoLayer = (pseudolayer, throttle) => {
-        if (!(this.canvasReady)) {
-            console.log("not ready to render, returning")
-            return;
-        }
-        this.canvasReady = false;
+        // if (!(this.readToRender)) {
+        //     console.log("not ready to render, returning")
+        //     return;
+        // }
+        // this.readToRender = false;
         this.stopRendering();
         // set maps used to generate pseudolayer to visible
         for (let x = 0; x < pseudolayer.layers.length; x++) {
