@@ -45,11 +45,11 @@ var ui = new Ui(webgl, con);
 var l1 = new LayerObject(testMapLayer1, testMapView);
 
 const p1 = webgl.generatePseudoLayer(l1);
-// const pp1 = con.rgbaManipulation({
-//     webgl: webgl, 
-//     rgbam_image: p1, 
-//     rgbam_multiplier: [1.0, 1.0, 1.0, 1.0],
-// });
+const pp1 = con.rgbaManipulation({
+    webgl: webgl, 
+    rgbam_image: p1, 
+    rgbam_multiplier: [2.0, 1.0, 1.0, 1.0],
+});
 // const pp3 = con.rgbaManipulation({
 //     webgl: webgl, 
 //     rgbam_image: p1, 
@@ -67,7 +67,7 @@ const p1 = webgl.generatePseudoLayer(l1);
 
 
 ui.addUiLayer(p1);
-// ui.addUiLayer(pp1);
+ui.addUiLayer(pp1);
 // ui.addUiLayer(pp3);
 
 

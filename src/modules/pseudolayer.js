@@ -9,6 +9,10 @@ export class PseudoLayer{
         this.maps = [];
         this.layers = [];
         this._getMaps(this);
+        // base number of shader passes for every layer is 1 (gets vertically flipped at the end).
+        // a pass is then done for every new program that is added
+        this.shaderPasses = 1;
+        this._getShaderPasses(this);
         this.maps.sort((x, y) => {return x.mapId - y.mapId});
         this.maps = this.maps.map(({ map }) => map);
         this._getLayers();
@@ -30,6 +34,18 @@ export class PseudoLayer{
         for (var x = 0; x < this.maps.length; x++) {
             const thisLayer = this.maps[x].getLayers().getArray()[0];
             this.layers.push(thisLayer);
+        }
+    }
+
+    _getShaderPasses = (thisLayer) => {
+        for (const key of Object.keys(thisLayer.inputs)) {
+            const nextLayer = thisLayer.inputs[key];
+            if (nextLayer.type === "layerObject") {
+                this.shaderPasses++;
+            } else {
+                this.shaderPasses++
+                this._getShaderPasses(nextLayer);
+            }
         }
     }
 }
