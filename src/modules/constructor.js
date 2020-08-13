@@ -30,8 +30,8 @@ export class Constructor{
             },
             shader: apply3x3KernelShader,
             variables: {
-                a3k_textureWidth: webgl.width,
-                a3k_textureHeight: webgl.height,
+                a3k_textureWidth: webgl.gl.canvas.width,
+                a3k_textureHeight: webgl.gl.canvas.height,
                 a3k_kernel: a3k_kernel,
                 a3k_kernelWeight: a3k_kernelWeight,
             },

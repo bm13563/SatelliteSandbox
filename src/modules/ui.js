@@ -80,6 +80,7 @@ export class Ui {
             document.getElementById(newActiveUiLayerId).classList.add("selected");
         } else {
             this.activeUiLayer = false;
+            this._webgl.clearCanvas();
         }
         // deletes the uiLayer from the DOM
         document.getElementById(uiLayerDeleteId).remove();

@@ -26953,7 +26953,9 @@
           layers: [_this.olLayer],
           view: _this.olView
         });
-        map.getView().setZoom(12); // layers are not requested until they are used -> saves requests
+        map.getView().setZoom(12); // render the map without animation - prevents artifacts and reduces gpu overhead
+
+        _this.olLayer.getSource().tileOptions.transition = 0; // layers are not requested until they are used -> saves requests
 
         _this.olLayer.setVisible(false);
 
@@ -27049,6 +27051,28 @@
       this._getLayers();
     };
 
+    var ShaderPassEvent = function ShaderPassEvent(callback) {
+      var _this = this;
+
+      _classCallCheck(this, ShaderPassEvent);
+
+      this.increment = function () {
+        _this._passes++;
+
+        _this._callback(_this._passes);
+      };
+
+      this.reset = function () {
+        _this._passes = 0;
+      };
+
+      this._passes = 0;
+      this._callback = callback;
+    }; // export class CanvasReadyEvent{
+    //     constructor(callback) {
+    //     }
+    // }
+
     // contains hard-coded shaders for rendering a pseudo layer "as is", and for flipping an image
     // also contains state that controls how often the canvas can be rendered to -> prevents rendering before current pseudolayer is rendered
     // uses twgl which makes everyone's life a million times easier. https://twgljs.org/docs/.
@@ -27107,17 +27131,15 @@
 
         var frameRender = pseudolayer.maps[pseudolayer.maps.length - 1].on("postrender", function () {
           // tries to render the pseudolayer. if the canvas is still in the previous render pass, will return
-          _this._renderPseudoLayer(pseudolayer);
+          // check if the canvas has finished passing all buffers from the previous frame to the gpu. if it hasn't, skip rendering this pseudolayer
+          if (_this._canvasReady) {
+            _this._canvasReady = false;
+
+            _this._renderPseudoLayer(pseudolayer);
+          }
         });
 
-        _this._canvasEvents.push(frameRender); // makes sure that something is always returned when the user stops an action
-
-
-        var sceneRender = pseudolayer.maps[pseudolayer.maps.length - 1].on("rendercomplete", function () {
-          _this._renderPseudoLayer(pseudolayer);
-        });
-
-        _this._canvasEvents.push(sceneRender);
+        _this._canvasEvents.push(frameRender);
       };
 
       this.deactivatePseudolayer = function () {
@@ -27135,47 +27157,20 @@
         for (var _x = 0; _x < _this._canvasEvents.length; _x++) {
           var currentEvent = _this._canvasEvents[_x];
           unByKey(currentEvent);
-        }
+        } // unbind all references to canvas events
 
-        _this._canvasEvents = []; // clear the canvas
 
+        _this._canvasEvents = [];
+      };
+
+      this.clearCanvas = function () {
+        // clear the canvas
         _this.gl.clear(_this.gl.COLOR_BUFFER_BIT);
       };
 
-      this._renderPseudoLayer = function (pseudolayer) {
-        // check if the canvas has finished passing all buffers from the previous frame to the gpu. if it hasn't, skip rendering this pseudolayer
-        // generally only hit when map is being updated very quickly, and final image is always rendered, so to the user always appears
-        // up to date
-        if (!_this._canvasReady) {
-          return;
-        }
-
-        console.log("========"); // set the canvas as unavailable for rendering
-
-        _this._canvasReady = false; // get all child pseudolayers
-
-        _this._recurseThroughChildLayers(pseudolayer, pseudolayer); // render the target pseudolayer
-
-
-        var framebuffer = _this._generatePseudoLayer(pseudolayer); // flip the output of the current operation
-
-
-        _this._runvFlipProgram(framebuffer.attachments[0]);
-
-        _this._tidyUp(pseudolayer);
-      };
-
-      this._tidyUp = function (pseudolayer) {
-        var shaderPassTracker = _this._shaderPassTracker;
-        var cleanUpGpuMemory = _this._cleanUpGpuMemory;
-        setTimeout(waitForResult);
-
-        function waitForResult() {
-          if (shaderPassTracker.length === pseudolayer.shaderPasses) {
-            cleanUpGpuMemory();
-          } else {
-            setTimeout(waitForResult);
-          }
+      this._checkIfShaderPassesFinished = function (shaderPasses) {
+        if (shaderPasses === _this._requiredShaderPasses) {
+          _this._cleanUpGpuMemory();
         }
       };
 
@@ -27244,10 +27239,24 @@
           _arrayBuffers: [],
           _elementArrayBuffers: []
         };
-        _this._shaderPassTracker = [];
+
+        _this._shaderPassEvent.reset();
+
         setTimeout(function () {
           _this._canvasReady = true;
         }, _this.frameLimiter);
+      };
+
+      this._renderPseudoLayer = function (pseudolayer) {
+        _this._requiredShaderPasses = pseudolayer.shaderPasses; // get all child pseudolayers
+
+        _this._recurseThroughChildLayers(pseudolayer, pseudolayer); // render the target pseudolayer
+
+
+        var framebuffer = _this._generatePseudoLayer(pseudolayer); // flip the output of the current operation
+
+
+        _this._runvFlipProgram(framebuffer.attachments[0]);
       };
 
       this._recurseThroughChildLayers = function (thisLayer, originalLayer) {
@@ -27299,8 +27308,7 @@
       };
 
       this._runvFlipProgram = function (framebufferTexture) {
-        _this.gl.bindFramebuffer(_this.gl.FRAMEBUFFER, null); // this.gl.useProgram(this._vFlipProgram.program);
-
+        _this.gl.bindFramebuffer(_this.gl.FRAMEBUFFER, null);
 
         _this._startRendering({
           f_image: framebufferTexture
@@ -27308,10 +27316,8 @@
       };
 
       this._startRendering = function (inputs, variables, programInfo, currentFramebuffer) {
-        console.log(inputs, variables, programInfo, currentFramebuffer);
         var gl = _this.gl;
-        var _shaderPassTracker = _this._shaderPassTracker;
-        var _cleanupTracker = _this._cleanupTracker;
+        var webglCanvas = _this;
         requestAnimationFrame(render);
 
         function render() {
@@ -27319,23 +27325,22 @@
           gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
           var quadVertices = primitives.createXYQuadBufferInfo(gl);
 
-          _cleanupTracker._arrayBuffers.push(quadVertices.attribs.normal.buffer);
+          webglCanvas._cleanupTracker._arrayBuffers.push(quadVertices.attribs.normal.buffer);
 
-          _cleanupTracker._arrayBuffers.push(quadVertices.attribs.position.buffer);
+          webglCanvas._cleanupTracker._arrayBuffers.push(quadVertices.attribs.position.buffer);
 
-          _cleanupTracker._arrayBuffers.push(quadVertices.attribs.texcoord.buffer);
+          webglCanvas._cleanupTracker._arrayBuffers.push(quadVertices.attribs.texcoord.buffer);
 
-          _cleanupTracker._elementArrayBuffers.push(quadVertices.indices);
+          webglCanvas._cleanupTracker._elementArrayBuffers.push(quadVertices.indices);
 
           setBuffersAndAttributes(gl, programInfo, quadVertices);
           gl.useProgram(programInfo.program);
           setUniforms(programInfo, inputs);
           setUniforms(programInfo, variables);
           bindFramebufferInfo(gl, currentFramebuffer);
-
-          _shaderPassTracker.push(true);
-
           drawBufferInfo(gl, quadVertices, gl.TRIANGLES);
+
+          webglCanvas._shaderPassEvent.increment();
         }
       };
 
@@ -27367,15 +27372,16 @@
         return shader;
       };
 
-      // restricts the framerate to a maximum of this value
-      this.frameLimiter = 1000 / 24; // whether the canvas is ready to rendered to. if false, pseudolayer will not be rendered, since the canvas is currently rendering a different
+      // restricts the framerate to a maximum of this value. will probably bounce back off canvas ready events
+      this.frameLimiter = 1000 / 60; // whether the canvas is ready to rendered to. if false, pseudolayer will not be rendered, since the canvas is currently rendering a different
       // pseudolayer. allows textures and framebuffers from current pseudolayer to be removed, preventing memory issues
 
       this._canvasReady = true; // tracks how many shader passes have been done while rendering this pseudolayer. each pseudolayer has a predefined number of shader passes
       // that need to be completed to render it. once this number is reached, we know all data that needs to has gone to the gpu, and we can
-      // start rendering a new layer
+      // start rendering a new layer. if updates with "set", will check how many shader passes have completed.
 
-      this._shaderPassTracker = []; // webgl context
+      this._requiredShaderPasses = 0;
+      this._shaderPassEvent = new ShaderPassEvent(this._checkIfShaderPassesFinished); // webgl context
 
       this.gl = getContext(document.getElementById(canvas)); // height and width of the webgl canvas
 
@@ -27467,6 +27473,8 @@
           document.getElementById(newActiveUiLayerId).classList.add("selected");
         } else {
           _this.activeUiLayer = false;
+
+          _this._webgl.clearCanvas();
         } // deletes the uiLayer from the DOM
 
 
@@ -27893,8 +27901,8 @@
           },
           shader: apply3x3KernelShader,
           variables: {
-            a3k_textureWidth: webgl.width,
-            a3k_textureHeight: webgl.height,
+            a3k_textureWidth: webgl.gl.canvas.width,
+            a3k_textureHeight: webgl.gl.canvas.height,
             a3k_kernel: a3k_kernel,
             a3k_kernelWeight: a3k_kernelWeight
           },

@@ -1,6 +1,7 @@
 import * as twgl from 'twgl.js';
 import { PseudoLayer } from './pseudolayer.js';
-import { unByKey } from 'ol/Observable';
+import {unByKey} from 'ol/Observable';
+import { ShaderPassEvent } from './events.js'
 
 // a class representing the canvas to which webgl should render
 // contains hard-coded shaders for rendering a pseudo layer "as is", and for flipping an image
@@ -8,15 +9,16 @@ import { unByKey } from 'ol/Observable';
 // uses twgl which makes everyone's life a million times easier. https://twgljs.org/docs/.
 export class WebGLCanvas{
     constructor(canvas) {
-        // restricts the framerate to a maximum of this value
-        this.frameLimiter = 1000/24;
+        // restricts the framerate to a maximum of this value. will probably bounce back off canvas ready events
+        this.frameLimiter = 1000/60;
         // whether the canvas is ready to rendered to. if false, pseudolayer will not be rendered, since the canvas is currently rendering a different
         // pseudolayer. allows textures and framebuffers from current pseudolayer to be removed, preventing memory issues
         this._canvasReady = true;
         // tracks how many shader passes have been done while rendering this pseudolayer. each pseudolayer has a predefined number of shader passes
         // that need to be completed to render it. once this number is reached, we know all data that needs to has gone to the gpu, and we can
-        // start rendering a new layer
-        this._shaderPassTracker = [];
+        // start rendering a new layer. if updates with "set", will check how many shader passes have completed.
+        this._requiredShaderPasses = 0;
+        this._shaderPassEvent = new ShaderPassEvent(this._checkIfShaderPassesFinished);
         // webgl context
         this.gl = twgl.getContext(document.getElementById(canvas));
         // height and width of the webgl canvas
@@ -89,15 +91,13 @@ export class WebGLCanvas{
         // attempts to render the pseudolayer. allows for smooth movement of the map
         let frameRender = pseudolayer.maps[pseudolayer.maps.length-1].on("postrender", () => {
             // tries to render the pseudolayer. if the canvas is still in the previous render pass, will return
-            this._renderPseudoLayer(pseudolayer);
+            // check if the canvas has finished passing all buffers from the previous frame to the gpu. if it hasn't, skip rendering this pseudolayer
+            if (this._canvasReady) {
+                this._canvasReady = false;
+                this._renderPseudoLayer(pseudolayer);
+            };
         });
         this._canvasEvents.push(frameRender);
-
-        // makes sure that something is always returned when the user stops an action
-        let sceneRender = pseudolayer.maps[pseudolayer.maps.length-1].on("rendercomplete", () => {
-            this._renderPseudoLayer(pseudolayer);
-        });
-        this._canvasEvents.push(sceneRender);
     }
 
     // should undo all of the state set up by the activatePseudolayer method
@@ -115,52 +115,20 @@ export class WebGLCanvas{
             let currentEvent = this._canvasEvents[x];
             unByKey(currentEvent);
         }
+        // unbind all references to canvas events
         this._canvasEvents = [];
+    }
+
+    clearCanvas = () => {
         // clear the canvas
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
     }
 
-        // renders a pseudo layer with the attached shader applied. reconstructs any child pseudolayers first, stores framebuffers for these
-    // children in the framebuffertracker, then uses the framebuffers to apply any processing
-    _renderPseudoLayer = (pseudolayer) => {
-        // check if the canvas has finished passing all buffers from the previous frame to the gpu. if it hasn't, skip rendering this pseudolayer
-        // generally only hit when map is being updated very quickly, and final image is always rendered, so to the user always appears
-        // up to date
-        if (!(this._canvasReady)) {
-            return;
+    // called by the _shaderPassEvent wheneve a shader pass is completed. checks if all passes are done
+    _checkIfShaderPassesFinished = (shaderPasses) => {
+        if (shaderPasses === this._requiredShaderPasses) {
+            this._cleanUpGpuMemory();
         }
-        console.log("========")
-        // set the canvas as unavailable for rendering
-        this._canvasReady = false;
-        // get all child pseudolayers
-        this._recurseThroughChildLayers(pseudolayer, pseudolayer);
-        // render the target pseudolayer
-        let framebuffer = this._generatePseudoLayer(pseudolayer);
-        // flip the output of the current operation
-        this._runvFlipProgram(framebuffer.attachments[0]);
-        this._tidyUp(pseudolayer);
-    }
-
-    // cant guarantee that webgl object will be garbage collected -> was having an issue where 
-    // if textures and framebuffers weren't unbound after draw call, they weren't being garbage collected
-    // which caused memory errors. next 2 functions are the solution to this. checks whether the shader has
-    // done all of it's passes (as asynchronous, need to check for this otherwise unbinding happens before
-    // some shader passses have finished, which means the textures and framebuffers cant be bound during draw call). once
-    // all of the passes have been done, unbinds and deletes all textures and framebuffers, clears global
-    // variables and sets the canvas as ready to render again
-    _tidyUp = (pseudolayer) => {
-        let shaderPassTracker = this._shaderPassTracker;
-        let cleanUpGpuMemory = this._cleanUpGpuMemory;
-
-        setTimeout(waitForResult);
-
-        function waitForResult() {
-            if (shaderPassTracker.length === pseudolayer.shaderPasses) {
-                cleanUpGpuMemory();
-            } else {
-                setTimeout(waitForResult);
-            }
-        } 
     }
 
     _cleanUpGpuMemory = () => {
@@ -206,12 +174,23 @@ export class WebGLCanvas{
 
         this._framebufferTracker = {};
         this._cleanupTracker = {_textures: [], _framebuffers: [], _renderbuffers: [], _arrayBuffers: [], _elementArrayBuffers: []};
-        this._shaderPassTracker = [];
+        this._shaderPassEvent.reset();
         setTimeout(() => {
             this._canvasReady = true;
         }, this.frameLimiter) 
     }
 
+    // renders a pseudo layer with the attached shader applied. reconstructs any child pseudolayers first, stores framebuffers for these
+    // children in the framebuffertracker, then uses the framebuffers to apply any processing
+    _renderPseudoLayer = (pseudolayer) => {
+        this._requiredShaderPasses = pseudolayer.shaderPasses;
+        // get all child pseudolayers
+        this._recurseThroughChildLayers(pseudolayer, pseudolayer);
+        // render the target pseudolayer
+        let framebuffer = this._generatePseudoLayer(pseudolayer);
+        // flip the output of the current operation
+        this._runvFlipProgram(framebuffer.attachments[0]);
+    }
 
     // recurses through the child layers of a pseudolayer to reconstruct all input pseudolayers
     // target pseudolayer needs to be passed, to ensure that the function doesn't try to build
@@ -268,10 +247,8 @@ export class WebGLCanvas{
     }
 
     _startRendering = (inputs, variables, programInfo, currentFramebuffer) => {
-        console.log(inputs, variables, programInfo, currentFramebuffer)
         let gl = this.gl;
-        let _shaderPassTracker = this._shaderPassTracker;
-        let _cleanupTracker = this._cleanupTracker;
+        let webglCanvas = this;
         requestAnimationFrame(render);
 
         function render() {
@@ -279,10 +256,10 @@ export class WebGLCanvas{
             gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
             const quadVertices = twgl.primitives.createXYQuadBufferInfo(gl);
-            _cleanupTracker._arrayBuffers.push(quadVertices.attribs.normal.buffer);
-            _cleanupTracker._arrayBuffers.push(quadVertices.attribs.position.buffer);
-            _cleanupTracker._arrayBuffers.push(quadVertices.attribs.texcoord.buffer);
-            _cleanupTracker._elementArrayBuffers.push(quadVertices.indices);
+            webglCanvas._cleanupTracker._arrayBuffers.push(quadVertices.attribs.normal.buffer);
+            webglCanvas._cleanupTracker._arrayBuffers.push(quadVertices.attribs.position.buffer);
+            webglCanvas._cleanupTracker._arrayBuffers.push(quadVertices.attribs.texcoord.buffer);
+            webglCanvas._cleanupTracker._elementArrayBuffers.push(quadVertices.indices);
             twgl.setBuffersAndAttributes(gl, programInfo, quadVertices);
 
             gl.useProgram(programInfo.program);
@@ -290,8 +267,8 @@ export class WebGLCanvas{
             twgl.setUniforms(programInfo, variables);
             twgl.bindFramebufferInfo(gl, currentFramebuffer);
 
-            _shaderPassTracker.push(true);
             twgl.drawBufferInfo(gl, quadVertices, gl.TRIANGLES);
+            webglCanvas._shaderPassEvent.increment();
         }
     }
 
