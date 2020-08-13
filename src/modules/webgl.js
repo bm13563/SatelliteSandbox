@@ -18,7 +18,7 @@ export class WebGLCanvas{
         this.baseProgram = twgl.createProgramInfo(this.gl, [baseVertexShader, baseFragmentShader]);
         this.vFlipProgram = twgl.createProgramInfo(this.gl, [vFlipVertexShader, baseFragmentShader]);
         this.framebufferTracker = {};
-        this.cleanupTracker = {textures: [], framebuffers: [], arrayBuffers: [], elementArrayBuffers: []};
+        this.cleanupTracker = {textures: [], framebuffers: [], renderbuffers: [], arrayBuffers: [], elementArrayBuffers: []};
         this.shaderPassTracker = [];
         this.canvasReady = true;
         this.mapsUsed = [];
@@ -42,6 +42,8 @@ export class WebGLCanvas{
             // adding the framebuffer object texture to the textures cleanup collection seems to prevent
             // the gpu memory leak
             this.cleanupTracker.textures.push(fbo.attachments[0]);
+            // doesnt seem to have an effect, but for completeness
+            this.cleanupTracker.renderbuffers.push(fbo.attachments[1]);
         }
         return framebuffers;
     }
@@ -70,7 +72,6 @@ export class WebGLCanvas{
         // attempts to render the pseudolayer
         this.currentEvent = pseudolayer.maps[pseudolayer.maps.length-1].on("postrender", () => {
             // tries to render the pseudolayer. if the canvas is still in the previous render pass, will return
-            console.log("fire")
             this._renderPseudoLayer(pseudolayer);
         });
     }
@@ -105,7 +106,6 @@ export class WebGLCanvas{
             console.log("not ready to render, returning")
             return;
         }
-        console.log("we're off")
         // set the canvas as unavailable for rendering
         this.canvasReady = false;
         // get all child pseudolayers
@@ -156,6 +156,11 @@ export class WebGLCanvas{
             this.gl.deleteFramebuffer(framebufferToDelete.framebuffer);
         }
 
+        for (let x = 0; x < this.cleanupTracker.renderbuffers.length; x++) {
+            let renderBufferToDelete = this.cleanupTracker.renderbuffers[x]
+            this.gl.deleteRenderbuffer(renderBufferToDelete);
+        }
+
         for (let x = 0; x < this.cleanupTracker.textures.length; x++) {
             let textureToDelete = this.cleanupTracker.textures[x];
             this.gl.deleteTexture(textureToDelete);
@@ -175,12 +180,10 @@ export class WebGLCanvas{
             this.gl.deleteBuffer(bufferToDelete);
         }
 
-        this.gl.finish();
         this.framebufferTracker = {};
-        this.cleanupTracker = {textures: [], framebuffers: [], arrayBuffers: [], elementArrayBuffers: []};
+        this.cleanupTracker = {textures: [], framebuffers: [], renderbuffers: [], arrayBuffers: [], elementArrayBuffers: []};
         this.shaderPassTracker = [];
         this.canvasReady = true;
-        console.log("cleaned")
     }
 
 

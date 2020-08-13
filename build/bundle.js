@@ -27070,12 +27070,15 @@
         for (var x = 0; x < number; x++) {
           var fbo = createFramebufferInfo(gl);
           framebuffers.push(fbo);
+          console.log(fbo);
 
           _this.cleanupTracker.framebuffers.push(fbo); // adding the framebuffer object texture to the textures cleanup collection seems to prevent
           // the gpu memory leak
 
 
           _this.cleanupTracker.textures.push(fbo.attachments[0]);
+
+          _this.cleanupTracker.renderbuffers.push(fbo.attachments[1]);
         }
 
         return framebuffers;
@@ -27197,14 +27200,20 @@
           _this.gl.deleteFramebuffer(framebufferToDelete.framebuffer);
         }
 
-        for (var _x = 0; _x < _this.cleanupTracker.textures.length; _x++) {
-          var textureToDelete = _this.cleanupTracker.textures[_x];
+        for (var _x = 0; _x < _this.cleanupTracker.renderbuffers.length; _x++) {
+          var renderBufferToDelete = _this.cleanupTracker.renderbuffers[_x];
+
+          _this.gl.deleteRenderbuffer(renderBufferToDelete);
+        }
+
+        for (var _x2 = 0; _x2 < _this.cleanupTracker.textures.length; _x2++) {
+          var textureToDelete = _this.cleanupTracker.textures[_x2];
 
           _this.gl.deleteTexture(textureToDelete);
         }
 
-        for (var _x2 = 0; _x2 < _this.cleanupTracker.arrayBuffers.length; _x2++) {
-          var bufferToDelete = _this.cleanupTracker.arrayBuffers[_x2];
+        for (var _x3 = 0; _x3 < _this.cleanupTracker.arrayBuffers.length; _x3++) {
+          var bufferToDelete = _this.cleanupTracker.arrayBuffers[_x3];
 
           _this.gl.bindBuffer(_this.gl.ARRAY_BUFFER, bufferToDelete);
 
@@ -27213,8 +27222,8 @@
           _this.gl.deleteBuffer(bufferToDelete);
         }
 
-        for (var _x3 = 0; _x3 < _this.cleanupTracker.elementArrayBuffers.length; _x3++) {
-          var _bufferToDelete = _this.cleanupTracker.elementArrayBuffers[_x3];
+        for (var _x4 = 0; _x4 < _this.cleanupTracker.elementArrayBuffers.length; _x4++) {
+          var _bufferToDelete = _this.cleanupTracker.elementArrayBuffers[_x4];
 
           _this.gl.bindBuffer(_this.gl.ELEMENT_ARRAY_BUFFER, _bufferToDelete);
 
@@ -27223,12 +27232,11 @@
           _this.gl.deleteBuffer(_bufferToDelete);
         }
 
-        _this.gl.finish();
-
         _this.framebufferTracker = {};
         _this.cleanupTracker = {
           textures: [],
           framebuffers: [],
+          renderbuffers: [],
           arrayBuffers: [],
           elementArrayBuffers: []
         };
@@ -27360,6 +27368,7 @@
       this.cleanupTracker = {
         textures: [],
         framebuffers: [],
+        renderbuffers: [],
         arrayBuffers: [],
         elementArrayBuffers: []
       };
@@ -27991,7 +28000,8 @@
       webgl: webgl,
       rgbam_image: p1,
       rgbam_multiplier: [2.0, 1.0, 1.0, 1.0]
-    }); // const pp3 = con.rgbaManipulation({
+    }); // webgl.activatePseudolayer(pp1, 5);
+    // const pp3 = con.rgbaManipulation({
     //     webgl: webgl, 
     //     rgbam_image: p1, 
     //     rgbam_multiplier: [1.5, 1.5, 1.5, 1.5],

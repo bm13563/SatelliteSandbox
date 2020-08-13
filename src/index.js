@@ -50,6 +50,7 @@ const pp1 = con.rgbaManipulation({
     rgbam_image: p1, 
     rgbam_multiplier: [2.0, 1.0, 1.0, 1.0],
 });
+// webgl.activatePseudolayer(pp1, 5);
 // const pp3 = con.rgbaManipulation({
 //     webgl: webgl, 
 //     rgbam_image: p1, 
@@ -82,7 +83,6 @@ function test() {
         webgl.activatePseudolayer(pp1, 5);
         test();   
     }, 1000)
-
 }
 
 test();
