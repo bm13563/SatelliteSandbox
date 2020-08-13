@@ -143,7 +143,7 @@ export class Ui {
         if (this.activeUiLayer) {
             // render the pseudolayer of the active uiLayer
             const pseudoLayerToRender = this.activeUiLayer.pseudolayer;
-            this._webgl.renderPseudoLayer(pseudoLayerToRender, 5);
+            this._webgl.activatePseudolayer(pseudoLayerToRender);
         } else if (this._uiLayersOrder.length > 0) {
             // if it's the first layer to be added, render and set as active
             const uiLayerIdToActivate = this._uiLayersOrder[0];
@@ -151,10 +151,10 @@ export class Ui {
             const pseudoLayerToRender = uiLayerToActivate.pseudolayer;
             document.getElementById(uiLayerIdToActivate).classList.add("selected");
             this.activeUiLayer = uiLayerToActivate;
-            this._webgl.renderPseudoLayer(pseudoLayerToRender, 5);
+            this._webgl.activatePseudolayer(pseudoLayerToRender);
         } else {
             // otherwise stop rendering
-            this._webgl.stopRendering();
+            this._webgl.activatePseudolayer();
         }
     }
 

@@ -27049,9 +27049,9 @@
       this._getLayers();
     };
 
-    // contains hard-coded "final shaders" to render an unaltered image from a framebuffer, always used for the final shader pass
-    // a framebuffer is always used -> even if a single shader is being applied, still goes through a framebuffer, then through final shaders
-    // framebuffer tracker is essentially a global variable, used for reconstructing and using pseudolayers in further processing
+    // contains hard-coded shaders for rendering a pseudo layer "as is", and for flipping an image
+    // also contains state that controls how often the canvas can be rendered to -> prevents rendering before current pseudolayer is rendered
+    // uses twgl which makes everyone's life a million times easier. https://twgljs.org/docs/.
 
     var WebGLCanvas = function WebGLCanvas(canvas) {
       var _this = this;
@@ -27059,26 +27059,24 @@
       _classCallCheck(this, WebGLCanvas);
 
       this._compileShaders = function (fragmentShader) {
-        var gl = _this.gl;
-        return createProgramInfo(gl, [_this.baseVertexShader, fragmentShader]);
+        return createProgramInfo(_this.gl, [_this._baseVertexShader, fragmentShader]);
       };
 
       this._createFramebuffers = function (number) {
-        var gl = _this.gl;
         var framebuffers = [];
 
         for (var x = 0; x < number; x++) {
-          var fbo = createFramebufferInfo(gl);
+          var fbo = createFramebufferInfo(_this.gl);
           framebuffers.push(fbo);
-          console.log(fbo);
 
-          _this.cleanupTracker.framebuffers.push(fbo); // adding the framebuffer object texture to the textures cleanup collection seems to prevent
+          _this._cleanupTracker._framebuffers.push(fbo); // adding the framebuffer object texture to the textures cleanup collection seems to prevent
           // the gpu memory leak
 
 
-          _this.cleanupTracker.textures.push(fbo.attachments[0]);
+          _this._cleanupTracker._textures.push(fbo.attachments[0]); // doesnt seem to have an effect, but for completeness
 
-          _this.cleanupTracker.renderbuffers.push(fbo.attachments[1]);
+
+          _this._cleanupTracker._renderbuffers.push(fbo.attachments[1]);
         }
 
         return framebuffers;
@@ -27089,7 +27087,7 @@
           src: source
         });
 
-        _this.cleanupTracker.textures.push(texture);
+        _this._cleanupTracker._textures.push(texture);
 
         return texture;
       };
@@ -27102,53 +27100,59 @@
         for (var x = 0; x < pseudolayer.layers.length; x++) {
           pseudolayer.layers[x].setVisible(true);
 
-          _this.mapsUsed.push(pseudolayer.layers[x]);
-        } // sets the current event handlers. from this point until renderPseudoLayer is called again, every frame update
-        // attempts to render the pseudolayer
+          _this._mapsUsed.push(pseudolayer.layers[x]);
+        } // sets the current event handlers. from this point until activatePseudolayer is called again, every frame update
+        // attempts to render the pseudolayer. allows for smooth movement of the map
 
 
-        _this.currentEvent = pseudolayer.maps[pseudolayer.maps.length - 1].on("postrender", function () {
+        var frameRender = pseudolayer.maps[pseudolayer.maps.length - 1].on("postrender", function () {
           // tries to render the pseudolayer. if the canvas is still in the previous render pass, will return
-          console.log("fire");
-
           _this._renderPseudoLayer(pseudolayer);
         });
+
+        _this._canvasEvents.push(frameRender); // makes sure that something is always returned when the user stops an action
+
+
+        var sceneRender = pseudolayer.maps[pseudolayer.maps.length - 1].on("rendercomplete", function () {
+          _this._renderPseudoLayer(pseudolayer);
+        });
+
+        _this._canvasEvents.push(sceneRender);
       };
 
       this.deactivatePseudolayer = function () {
         // set maps previously used to generate pseudolayer to invisible -> prevent unnecessary tile calls
-        if (_this.mapsUsed.length > 0) {
-          for (var x = 0; x < _this.mapsUsed.length; x++) {
-            _this.mapsUsed[x].setVisible(false);
+        if (_this._mapsUsed.length > 0) {
+          for (var x = 0; x < _this._mapsUsed.length; x++) {
+            _this._mapsUsed[x].setVisible(false);
           } // empties map array to be written to by the next pseudolayer
 
 
-          _this.mapsUsed = [];
+          _this._mapsUsed = [];
         } // remove the current event handler if it exists
 
 
-        if (_this.currentEvent) {
-          _this.frameTracker = 0;
-          unByKey(_this.currentEvent);
-          _this.currentEvent = false;
-        } // clear the canvas
+        for (var _x = 0; _x < _this._canvasEvents.length; _x++) {
+          var currentEvent = _this._canvasEvents[_x];
+          unByKey(currentEvent);
+        }
 
+        _this._canvasEvents = []; // clear the canvas
 
         _this.gl.clear(_this.gl.COLOR_BUFFER_BIT);
       };
 
       this._renderPseudoLayer = function (pseudolayer) {
-        // check if the canvas has finished passing all buffers from the previous frame to the gpu. if it hasn't, skip this rendering
-        // frame. only happens when the map is updated extremely rapidly. can potentially cause an issue where the last action isn't
-        // seen but edge case. may look for a workaround
-        if (!_this.canvasReady) {
-          console.log("not ready to render, returning");
+        // check if the canvas has finished passing all buffers from the previous frame to the gpu. if it hasn't, skip rendering this pseudolayer
+        // generally only hit when map is being updated very quickly, and final image is always rendered, so to the user always appears
+        // up to date
+        if (!_this._canvasReady) {
           return;
         }
 
-        console.log("we're off"); // set the canvas as unavailable for rendering
+        console.log("========"); // set the canvas as unavailable for rendering
 
-        _this.canvasReady = false; // get all child pseudolayers
+        _this._canvasReady = false; // get all child pseudolayers
 
         _this._recurseThroughChildLayers(pseudolayer, pseudolayer); // render the target pseudolayer
 
@@ -27162,7 +27166,7 @@
       };
 
       this._tidyUp = function (pseudolayer) {
-        var shaderPassTracker = _this.shaderPassTracker;
+        var shaderPassTracker = _this._shaderPassTracker;
         var cleanUpGpuMemory = _this._cleanUpGpuMemory;
         setTimeout(waitForResult);
 
@@ -27194,26 +27198,26 @@
 
         _this.gl.bindFramebuffer(_this.gl.FRAMEBUFFER, null);
 
-        for (var x = 0; x < _this.cleanupTracker.framebuffers.length; x++) {
-          var framebufferToDelete = _this.cleanupTracker.framebuffers[x];
+        for (var x = 0; x < _this._cleanupTracker._framebuffers.length; x++) {
+          var framebufferToDelete = _this._cleanupTracker._framebuffers[x];
 
           _this.gl.deleteFramebuffer(framebufferToDelete.framebuffer);
         }
 
-        for (var _x = 0; _x < _this.cleanupTracker.renderbuffers.length; _x++) {
-          var renderBufferToDelete = _this.cleanupTracker.renderbuffers[_x];
+        for (var _x2 = 0; _x2 < _this._cleanupTracker._renderbuffers.length; _x2++) {
+          var renderBufferToDelete = _this._cleanupTracker._renderbuffers[_x2];
 
           _this.gl.deleteRenderbuffer(renderBufferToDelete);
         }
 
-        for (var _x2 = 0; _x2 < _this.cleanupTracker.textures.length; _x2++) {
-          var textureToDelete = _this.cleanupTracker.textures[_x2];
+        for (var _x3 = 0; _x3 < _this._cleanupTracker._textures.length; _x3++) {
+          var textureToDelete = _this._cleanupTracker._textures[_x3];
 
           _this.gl.deleteTexture(textureToDelete);
         }
 
-        for (var _x3 = 0; _x3 < _this.cleanupTracker.arrayBuffers.length; _x3++) {
-          var bufferToDelete = _this.cleanupTracker.arrayBuffers[_x3];
+        for (var _x4 = 0; _x4 < _this._cleanupTracker._arrayBuffers.length; _x4++) {
+          var bufferToDelete = _this._cleanupTracker._arrayBuffers[_x4];
 
           _this.gl.bindBuffer(_this.gl.ARRAY_BUFFER, bufferToDelete);
 
@@ -27222,8 +27226,8 @@
           _this.gl.deleteBuffer(bufferToDelete);
         }
 
-        for (var _x4 = 0; _x4 < _this.cleanupTracker.elementArrayBuffers.length; _x4++) {
-          var _bufferToDelete = _this.cleanupTracker.elementArrayBuffers[_x4];
+        for (var _x5 = 0; _x5 < _this._cleanupTracker._elementArrayBuffers.length; _x5++) {
+          var _bufferToDelete = _this._cleanupTracker._elementArrayBuffers[_x5];
 
           _this.gl.bindBuffer(_this.gl.ELEMENT_ARRAY_BUFFER, _bufferToDelete);
 
@@ -27232,17 +27236,18 @@
           _this.gl.deleteBuffer(_bufferToDelete);
         }
 
-        _this.framebufferTracker = {};
-        _this.cleanupTracker = {
-          textures: [],
-          framebuffers: [],
-          renderbuffers: [],
-          arrayBuffers: [],
-          elementArrayBuffers: []
+        _this._framebufferTracker = {};
+        _this._cleanupTracker = {
+          _textures: [],
+          _framebuffers: [],
+          _renderbuffers: [],
+          _arrayBuffers: [],
+          _elementArrayBuffers: []
         };
-        _this.shaderPassTracker = [];
-        _this.canvasReady = true;
-        console.log("cleaned");
+        _this._shaderPassTracker = [];
+        setTimeout(function () {
+          _this._canvasReady = true;
+        }, _this.frameLimiter);
       };
 
       this._recurseThroughChildLayers = function (thisLayer, originalLayer) {
@@ -27254,7 +27259,7 @@
             if (!(thisLayer.id === originalLayer.id)) {
               var framebuffer = _this._generatePseudoLayer(thisLayer);
 
-              _this.framebufferTracker[thisLayer.id] = framebuffer;
+              _this._framebufferTracker[thisLayer.id] = framebuffer;
             }
           } else {
             _this._recurseThroughChildLayers(nextLayer, originalLayer);
@@ -27262,7 +27267,7 @@
             if (!(thisLayer.id === originalLayer.id)) {
               var _framebuffer = _this._generatePseudoLayer(thisLayer);
 
-              _this.framebufferTracker[thisLayer.id] = _framebuffer;
+              _this._framebufferTracker[thisLayer.id] = _framebuffer;
             }
           }
         }
@@ -27284,7 +27289,7 @@
 
             renderInputs[key] = textureId;
           } else {
-            renderInputs[key] = _this.framebufferTracker[inputs[key].id].attachments[0];
+            renderInputs[key] = _this._framebufferTracker[inputs[key].id].attachments[0];
           }
         }
 
@@ -27294,35 +27299,42 @@
       };
 
       this._runvFlipProgram = function (framebufferTexture) {
-        _this.gl.bindFramebuffer(_this.gl.FRAMEBUFFER, null);
+        _this.gl.bindFramebuffer(_this.gl.FRAMEBUFFER, null); // this.gl.useProgram(this._vFlipProgram.program);
 
-        _this.gl.useProgram(_this.vFlipProgram.program);
 
         _this._startRendering({
           f_image: framebufferTexture
-        }, {}, _this.vFlipProgram);
+        }, {}, _this._vFlipProgram);
       };
 
       this._startRendering = function (inputs, variables, programInfo, currentFramebuffer) {
+        console.log(inputs, variables, programInfo, currentFramebuffer);
         var gl = _this.gl;
-        var shaderPassTracker = _this.shaderPassTracker;
-        var cleanupTracker = _this.cleanupTracker;
+        var _shaderPassTracker = _this._shaderPassTracker;
+        var _cleanupTracker = _this._cleanupTracker;
         requestAnimationFrame(render);
 
         function render() {
           resizeCanvasToDisplaySize(gl.canvas);
           gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
           var quadVertices = primitives.createXYQuadBufferInfo(gl);
-          cleanupTracker.arrayBuffers.push(quadVertices.attribs.normal.buffer);
-          cleanupTracker.arrayBuffers.push(quadVertices.attribs.position.buffer);
-          cleanupTracker.arrayBuffers.push(quadVertices.attribs.texcoord.buffer);
-          cleanupTracker.elementArrayBuffers.push(quadVertices.indices);
+
+          _cleanupTracker._arrayBuffers.push(quadVertices.attribs.normal.buffer);
+
+          _cleanupTracker._arrayBuffers.push(quadVertices.attribs.position.buffer);
+
+          _cleanupTracker._arrayBuffers.push(quadVertices.attribs.texcoord.buffer);
+
+          _cleanupTracker._elementArrayBuffers.push(quadVertices.indices);
+
           setBuffersAndAttributes(gl, programInfo, quadVertices);
           gl.useProgram(programInfo.program);
           setUniforms(programInfo, inputs);
           setUniforms(programInfo, variables);
           bindFramebufferInfo(gl, currentFramebuffer);
-          shaderPassTracker.push(true);
+
+          _shaderPassTracker.push(true);
+
           drawBufferInfo(gl, quadVertices, gl.TRIANGLES);
         }
       };
@@ -27330,7 +27342,7 @@
       this.generatePseudoLayer = function (layer) {
         return new PseudoLayer("baseProgram", {
           f_image: layer
-        }, _this.baseProgram, {});
+        }, _this._baseProgram, {});
       };
 
       this.processPseudoLayer = function (args) {
@@ -27355,27 +27367,46 @@
         return shader;
       };
 
-      this.gl = getContext(document.getElementById(canvas));
-      this.width = this.gl.canvas.width;
-      this.height = this.gl.canvas.height;
+      // restricts the framerate to a maximum of this value
+      this.frameLimiter = 1000 / 24; // whether the canvas is ready to rendered to. if false, pseudolayer will not be rendered, since the canvas is currently rendering a different
+      // pseudolayer. allows textures and framebuffers from current pseudolayer to be removed, preventing memory issues
+
+      this._canvasReady = true; // tracks how many shader passes have been done while rendering this pseudolayer. each pseudolayer has a predefined number of shader passes
+      // that need to be completed to render it. once this number is reached, we know all data that needs to has gone to the gpu, and we can
+      // start rendering a new layer
+
+      this._shaderPassTracker = []; // webgl context
+
+      this.gl = getContext(document.getElementById(canvas)); // height and width of the webgl canvas
+
+      this._width = this.gl.canvas.width;
+      this._height = this.gl.canvas.height; // base vertex shader, with position and texture quads. stored for use in other shader programs, as these only require fragment shader
+
       var baseVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
-      var vFlipVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
-      var baseFragmentShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D f_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(f_image, o_texCoord);\r\n}";
-      this.baseVertexShader = baseVertexShader;
-      this.baseProgram = createProgramInfo(this.gl, [baseVertexShader, baseFragmentShader]);
-      this.vFlipProgram = createProgramInfo(this.gl, [vFlipVertexShader, baseFragmentShader]);
-      this.framebufferTracker = {};
-      this.cleanupTracker = {
-        textures: [],
-        framebuffers: [],
-        renderbuffers: [],
-        arrayBuffers: [],
-        elementArrayBuffers: []
-      };
-      this.shaderPassTracker = [];
-      this.canvasReady = true;
-      this.mapsUsed = [];
-      this.currentEvent = false;
+      this._baseVertexShader = baseVertexShader; // flips the output, for converting from texture coordinates to clip coordinates
+
+      var vFlipVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}"; // base fragment shader, for rendering a pseudolayer "as is"
+
+      var baseFragmentShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D f_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(f_image, o_texCoord);\r\n}"; // the base program. pre-compiled as used for every pseudolayer
+
+      this._baseProgram = createProgramInfo(this.gl, [baseVertexShader, baseFragmentShader]); // the vertical flip program. pre-compiled as used for every pseudolayer
+
+      this._vFlipProgram = createProgramInfo(this.gl, [vFlipVertexShader, baseFragmentShader]); // key = id of the pseudolayer, value = framebuffer containing the pseudolayer. allows multiple effects to be stacked
+
+      this._framebufferTracker = {}; // all textures, framebuffers, renderbuffers, arraybuffers and elementarraybuffers relating to each pseudolayer. allows these to be deleted once
+      // a pseudolayer has been rendered, preventing memory issues.
+
+      this._cleanupTracker = {
+        _textures: [],
+        _framebuffers: [],
+        _renderbuffers: [],
+        _arrayBuffers: [],
+        _elementArrayBuffers: []
+      }; // the base openlayers maps for each layer. allows these to be made visible when needed
+
+      this._mapsUsed = []; // the current events bound to the exiting pseudolayer
+
+      this._canvasEvents = [];
     } // compiles webgl shaders from string
     ;
 
@@ -27501,7 +27532,7 @@
           // render the pseudolayer of the active uiLayer
           var pseudoLayerToRender = _this.activeUiLayer.pseudolayer;
 
-          _this._webgl.renderPseudoLayer(pseudoLayerToRender, 5);
+          _this._webgl.activatePseudolayer(pseudoLayerToRender);
         } else if (_this._uiLayersOrder.length > 0) {
           // if it's the first layer to be added, render and set as active
           var uiLayerIdToActivate = _this._uiLayersOrder[0];
@@ -27510,10 +27541,10 @@
           document.getElementById(uiLayerIdToActivate).classList.add("selected");
           _this.activeUiLayer = uiLayerToActivate;
 
-          _this._webgl.renderPseudoLayer(_pseudoLayerToRender, 5);
+          _this._webgl.activatePseudolayer(_pseudoLayerToRender);
         } else {
           // otherwise stop rendering
-          _this._webgl.stopRendering();
+          _this._webgl.activatePseudolayer();
         }
       };
 
@@ -27999,7 +28030,7 @@
     var pp1 = con.rgbaManipulation({
       webgl: webgl,
       rgbam_image: p1,
-      rgbam_multiplier: [2.0, 1.0, 1.0, 1.0]
+      rgbam_multiplier: [1.5, 1.5, 1.5, 1.0]
     }); // webgl.activatePseudolayer(pp1, 5);
     // const pp3 = con.rgbaManipulation({
     //     webgl: webgl, 
@@ -28018,23 +28049,22 @@
     //     const r = Math.random() * 2.5;
     //     webgl.renderPseudoLayer(pp1, 5);
     // }
+    // function test() {
+    //     setTimeout(() => {
+    //         console.log("run")
+    //         const r = Math.random() * 2.5;
+    //         const pp1 = con.rgbaManipulation({
+    //             webgl: webgl, 
+    //             rgbam_image: p1, 
+    //             rgbam_multiplier: [r, 1.0, 1.0, 1.0],
+    //         });
+    //         webgl.activatePseudolayer(pp1, 5);
+    //         test();   
+    //     }, 1000)
+    // }
+    // test();
 
-    function test() {
-      setTimeout(function () {
-        console.log("run");
-        var r = Math.random() * 2.5;
-        var pp1 = con.rgbaManipulation({
-          webgl: webgl,
-          rgbam_image: p1,
-          rgbam_multiplier: [r, 1.0, 1.0, 1.0]
-        });
-        webgl.activatePseudolayer(pp1, 5);
-        test();
-      }, 1000);
-    }
-
-    test(); // ui.addUiLayer(pp1);
-    // ui.addUiLayer(pp1);
+    ui.addUiLayer(p1); // ui.addUiLayer(pp1);
     // ui.addUiLayer(pp3);
     // const pp1 = con.rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);
     // const pp2 = con.apply3x3Kernel(webgl, pp1, [-1, -1, -1, -1, 16, -1, -1, -1, -1], 8);

@@ -48,7 +48,7 @@ const p1 = webgl.generatePseudoLayer(l1);
 const pp1 = con.rgbaManipulation({
     webgl: webgl, 
     rgbam_image: p1, 
-    rgbam_multiplier: [2.0, 1.0, 1.0, 1.0],
+    rgbam_multiplier: [1.5, 1.5, 1.5, 1.0],
 });
 // webgl.activatePseudolayer(pp1, 5);
 // const pp3 = con.rgbaManipulation({
@@ -71,25 +71,25 @@ const pp1 = con.rgbaManipulation({
 //     webgl.renderPseudoLayer(pp1, 5);
 // }
 
-function test() {
-    setTimeout(() => {
-        console.log("run")
-        const r = Math.random() * 2.5;
-        const pp1 = con.rgbaManipulation({
-            webgl: webgl, 
-            rgbam_image: p1, 
-            rgbam_multiplier: [r, 1.0, 1.0, 1.0],
-        });
-        webgl.activatePseudolayer(pp1, 5);
-        test();   
-    }, 1000)
-}
+// function test() {
+//     setTimeout(() => {
+//         console.log("run")
+//         const r = Math.random() * 2.5;
+//         const pp1 = con.rgbaManipulation({
+//             webgl: webgl, 
+//             rgbam_image: p1, 
+//             rgbam_multiplier: [r, 1.0, 1.0, 1.0],
+//         });
+//         webgl.activatePseudolayer(pp1, 5);
+//         test();   
+//     }, 1000)
+// }
 
-test();
+// test();
 
 
 
-// ui.addUiLayer(pp1);
+ui.addUiLayer(p1);
 // ui.addUiLayer(pp1);
 // ui.addUiLayer(pp3);
 
