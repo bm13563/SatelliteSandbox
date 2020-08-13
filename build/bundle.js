@@ -27071,7 +27071,11 @@
           var fbo = createFramebufferInfo(gl);
           framebuffers.push(fbo);
 
-          _this.cleanupTracker.framebuffers.push(fbo);
+          _this.cleanupTracker.framebuffers.push(fbo); // adding the framebuffer object texture to the textures cleanup collection seems to prevent
+          // the gpu memory leak
+
+
+          _this.cleanupTracker.textures.push(fbo.attachments[0]);
         }
 
         return framebuffers;
@@ -27087,14 +27091,79 @@
         return texture;
       };
 
+      this.activatePseudolayer = function (pseudolayer) {
+        // remove the maps used to render the previous pseudolayer and their handlers
+        _this.deactivatePseudolayer(); // set maps used to generate pseudolayer to visible. also fires the postrender event
+
+
+        for (var x = 0; x < pseudolayer.layers.length; x++) {
+          pseudolayer.layers[x].setVisible(true);
+
+          _this.mapsUsed.push(pseudolayer.layers[x]);
+        } // sets the current event handlers. from this point until renderPseudoLayer is called again, every frame update
+        // attempts to render the pseudolayer
+
+
+        _this.currentEvent = pseudolayer.maps[pseudolayer.maps.length - 1].on("postrender", function () {
+          // tries to render the pseudolayer. if the canvas is still in the previous render pass, will return
+          console.log("fire");
+
+          _this._renderPseudoLayer(pseudolayer);
+        });
+      };
+
+      this.deactivatePseudolayer = function () {
+        // set maps previously used to generate pseudolayer to invisible -> prevent unnecessary tile calls
+        if (_this.mapsUsed.length > 0) {
+          for (var x = 0; x < _this.mapsUsed.length; x++) {
+            _this.mapsUsed[x].setVisible(false);
+          } // empties map array to be written to by the next pseudolayer
+
+
+          _this.mapsUsed = [];
+        } // remove the current event handler if it exists
+
+
+        if (_this.currentEvent) {
+          _this.frameTracker = 0;
+          unByKey(_this.currentEvent);
+          _this.currentEvent = false;
+        } // clear the canvas
+
+
+        _this.gl.clear(_this.gl.COLOR_BUFFER_BIT);
+      };
+
+      this._renderPseudoLayer = function (pseudolayer) {
+        // check if the canvas has finished passing all buffers from the previous frame to the gpu. if it hasn't, skip this rendering
+        // frame. only happens when the map is updated extremely rapidly. can potentially cause an issue where the last action isn't
+        // seen but edge case. may look for a workaround
+        if (!_this.canvasReady) {
+          console.log("not ready to render, returning");
+          return;
+        }
+
+        console.log("we're off"); // set the canvas as unavailable for rendering
+
+        _this.canvasReady = false; // get all child pseudolayers
+
+        _this._recurseThroughChildLayers(pseudolayer, pseudolayer); // render the target pseudolayer
+
+
+        var framebuffer = _this._generatePseudoLayer(pseudolayer); // flip the output of the current operation
+
+
+        _this._runvFlipProgram(framebuffer.attachments[0]);
+
+        _this._tidyUp(pseudolayer);
+      };
+
       this._tidyUp = function (pseudolayer) {
         var shaderPassTracker = _this.shaderPassTracker;
         var cleanUpGpuMemory = _this._cleanUpGpuMemory;
         setTimeout(waitForResult);
 
         function waitForResult() {
-          console.log(shaderPassTracker.length, pseudolayer.shaderPasses);
-
           if (shaderPassTracker.length === pseudolayer.shaderPasses) {
             cleanUpGpuMemory();
           } else {
@@ -27136,7 +27205,6 @@
 
         for (var _x2 = 0; _x2 < _this.cleanupTracker.arrayBuffers.length; _x2++) {
           var bufferToDelete = _this.cleanupTracker.arrayBuffers[_x2];
-          console.log(bufferToDelete);
 
           _this.gl.bindBuffer(_this.gl.ARRAY_BUFFER, bufferToDelete);
 
@@ -27147,7 +27215,6 @@
 
         for (var _x3 = 0; _x3 < _this.cleanupTracker.elementArrayBuffers.length; _x3++) {
           var _bufferToDelete = _this.cleanupTracker.elementArrayBuffers[_x3];
-          console.log(_bufferToDelete);
 
           _this.gl.bindBuffer(_this.gl.ELEMENT_ARRAY_BUFFER, _bufferToDelete);
 
@@ -27156,7 +27223,7 @@
           _this.gl.deleteBuffer(_bufferToDelete);
         }
 
-        _this.gl.flush();
+        _this.gl.finish();
 
         _this.framebufferTracker = {};
         _this.cleanupTracker = {
@@ -27167,19 +27234,7 @@
         };
         _this.shaderPassTracker = [];
         _this.canvasReady = true;
-      };
-
-      this._renderPseudoLayer = function (pseudolayer) {
-        // get all child pseudolayers
-        _this._recurseThroughChildLayers(pseudolayer, pseudolayer); // render the target pseudolayer
-
-
-        var framebuffer = _this._generatePseudoLayer(pseudolayer); // flip the output of the current operation
-
-
-        _this._runvFlipProgram(framebuffer.attachments[0]);
-
-        _this._tidyUp(pseudolayer);
+        console.log("cleaned");
       };
 
       this._recurseThroughChildLayers = function (thisLayer, originalLayer) {
@@ -27292,53 +27347,6 @@
         return shader;
       };
 
-      this.renderPseudoLayer = function (pseudolayer, throttle) {
-        if (!_this.canvasReady) {
-          console.log("not ready to render, returning");
-          return;
-        }
-
-        _this.canvasReady = false;
-
-        _this.stopRendering(); // set maps used to generate pseudolayer to visible
-
-
-        for (var x = 0; x < pseudolayer.layers.length; x++) {
-          pseudolayer.layers[x].setVisible(true);
-
-          _this.mapsUsed.push(pseudolayer.layers[x]);
-        } // sets the current event handler
-
-
-        _this.currentEvent = pseudolayer.maps[pseudolayer.maps.length - 1].on("postrender", function () {
-          if (_this.frameTracker % throttle === 0) {
-            _this._renderPseudoLayer(pseudolayer);
-          }
-
-          _this.frameTracker++;
-        });
-      };
-
-      this.stopRendering = function () {
-        // set maps previously used to generate pseudolayer to invisible -> prevent unnecessary tile calls
-        if (_this.mapsUsed.length > 0) {
-          for (var x = 0; x < _this.mapsUsed.length; x++) {
-            _this.mapsUsed[x].setVisible(false);
-          }
-
-          _this.mapsUsed = [];
-        } // remove the current event handler if it exists
-
-
-        if (_this.currentEvent) {
-          _this.frameTracker = 0;
-          unByKey(_this.currentEvent);
-          _this.currentEvent = false;
-        }
-
-        _this.gl.clear(_this.gl.COLOR_BUFFER_BIT);
-      };
-
       this.gl = getContext(document.getElementById(canvas));
       this.width = this.gl.canvas.width;
       this.height = this.gl.canvas.height;
@@ -27357,7 +27365,6 @@
       };
       this.shaderPassTracker = [];
       this.canvasReady = true;
-      this.frameTracker = 0;
       this.mapsUsed = [];
       this.currentEvent = false;
     } // compiles webgl shaders from string
@@ -27997,9 +28004,28 @@
     //     sl2_weight: 1.0,
     //     sl_multiplier: 2.0,
     // })
+    // for (let x = 0; x < 1000; x++) {
+    //     const r = Math.random() * 2.5;
+    //     webgl.renderPseudoLayer(pp1, 5);
+    // }
 
-    ui.addUiLayer(p1);
-    ui.addUiLayer(pp1); // ui.addUiLayer(pp3);
+    function test() {
+      setTimeout(function () {
+        console.log("run");
+        var r = Math.random() * 2.5;
+        var pp1 = con.rgbaManipulation({
+          webgl: webgl,
+          rgbam_image: p1,
+          rgbam_multiplier: [r, 1.0, 1.0, 1.0]
+        });
+        webgl.activatePseudolayer(pp1, 5);
+        test();
+      }, 1000);
+    }
+
+    test(); // ui.addUiLayer(pp1);
+    // ui.addUiLayer(pp1);
+    // ui.addUiLayer(pp3);
     // const pp1 = con.rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);
     // const pp2 = con.apply3x3Kernel(webgl, pp1, [-1, -1, -1, -1, 16, -1, -1, -1, -1], 8);
     // const pp3 = con.rgbPercentageFiltering(webgl, p1, [1.0, 1.0, 1.0], [0.0, 0.0, 0.0, 1.0], ">");

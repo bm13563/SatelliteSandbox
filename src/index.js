@@ -65,9 +65,32 @@ const pp1 = con.rgbaManipulation({
 //     sl_multiplier: 2.0,
 // })
 
+// for (let x = 0; x < 1000; x++) {
+//     const r = Math.random() * 2.5;
+//     webgl.renderPseudoLayer(pp1, 5);
+// }
 
-ui.addUiLayer(p1);
-ui.addUiLayer(pp1);
+function test() {
+    setTimeout(() => {
+        console.log("run")
+        const r = Math.random() * 2.5;
+        const pp1 = con.rgbaManipulation({
+            webgl: webgl, 
+            rgbam_image: p1, 
+            rgbam_multiplier: [r, 1.0, 1.0, 1.0],
+        });
+        webgl.activatePseudolayer(pp1, 5);
+        test();   
+    }, 1000)
+
+}
+
+test();
+
+
+
+// ui.addUiLayer(pp1);
+// ui.addUiLayer(pp1);
 // ui.addUiLayer(pp3);
 
 
