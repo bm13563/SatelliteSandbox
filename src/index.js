@@ -50,6 +50,25 @@ const pp1 = con.rgbaManipulation({
     rgbam_image: p1, 
     rgbam_multiplier: [1.5, 1.5, 1.5, 1.0],
 });
+const pp2 = con.rgbPercentageFiltering({
+    webgl: webgl,
+    rgbfp_image: pp1,
+    rgbfp_filter: [0.38, 0.35, 0.35],
+    rgbfp_removed: [0.0, 0.0, 0.0, 1.0],
+    rgbfpd1_remove: ">",
+})
+const pp3 = con.sobelEdgeDetection({
+    webgl: webgl,
+    sed_image: p1,
+})
+const pp4 = con.greyscale({
+    webgl: webgl,
+    gs_image: pp2,
+})
+const pp5 = con.sobelEdgeDetection({
+    webgl: webgl,
+    sed_image: pp4,
+})
 // webgl.activatePseudolayer(pp1, 5);
 // const pp3 = con.rgbaManipulation({
 //     webgl: webgl, 

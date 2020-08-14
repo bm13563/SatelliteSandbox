@@ -42,6 +42,7 @@ export class Ui {
             "rgbFiltering": this.rgbFilteringGui,
             "rgbPercentageFiltering": this.rgbPercentageFilteringGui,
             "apply3x3Kernel": this.apply3x3KernelGui,
+            "sobelEdgeDetection": this.sobelEdgeDetection,
         }
     }
 
@@ -472,6 +473,28 @@ export class Ui {
                 a3k_image: targetPseudolayer, 
                 a3k_kernel: state.a3k_kernel, 
                 a3k_kernelWeight: state.a3k_kernelWeight
+            });
+            this.updateUiLayer(targetUiLayer, pseudolayer);
+        }
+    }
+
+    sobelEdgeDetection = () => {
+        const targetUiLayer = this.activeUiLayer;
+        const targetPseudolayer = this.restoreGuiState(targetUiLayer);
+
+        const html = `<div id="sobelEdgeDetection" class="inner_gui">
+                          <p class="gui_title">Apply sobel edge detection</p>
+                          <input id="apply_sobel" type="button" value="Apply">
+                          <br><br>
+                      </div>`
+        const gui = this._addGuiToDOM(html);
+        this.activeGui = gui;
+
+        document.getElementById("apply_sobel").onclick = () => {
+            const state = targetUiLayer.state.sobelEdgeDetection;
+            const pseudolayer = this._constructor.sobelEdgeDetection({
+                webgl: this._webgl, 
+                sed_image: targetPseudolayer, 
             });
             this.updateUiLayer(targetUiLayer, pseudolayer);
         }

@@ -27373,7 +27373,7 @@
       };
 
       // restricts the framerate to a maximum of this value. will probably bounce back off canvas ready events
-      this.frameLimiter = 1000 / 60; // whether the canvas is ready to rendered to. if false, pseudolayer will not be rendered, since the canvas is currently rendering a different
+      this.frameLimiter = 1000 / 100; // whether the canvas is ready to rendered to. if false, pseudolayer will not be rendered, since the canvas is currently rendering a different
       // pseudolayer. allows textures and framebuffers from current pseudolayer to be removed, preventing memory issues
 
       this._canvasReady = true; // tracks how many shader passes have been done while rendering this pseudolayer. each pseudolayer has a predefined number of shader passes
@@ -27828,6 +27828,29 @@
         };
       };
 
+      this.sobelEdgeDetection = function () {
+        var targetUiLayer = _this.activeUiLayer;
+
+        var targetPseudolayer = _this.restoreGuiState(targetUiLayer);
+
+        var html = "<div id=\"sobelEdgeDetection\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Apply sobel edge detection</p>\n                          <input id=\"apply_sobel\" type=\"button\" value=\"Apply\">\n                          <br><br>\n                      </div>";
+
+        var gui = _this._addGuiToDOM(html);
+
+        _this.activeGui = gui;
+
+        document.getElementById("apply_sobel").onclick = function () {
+          var state = targetUiLayer.state.sobelEdgeDetection;
+
+          var pseudolayer = _this._constructor.sobelEdgeDetection({
+            webgl: _this._webgl,
+            sed_image: targetPseudolayer
+          });
+
+          _this.updateUiLayer(targetUiLayer, pseudolayer);
+        };
+      };
+
       // the WebGLCanvas object
       this._webgl = webgl; // constructors for the shader programs
 
@@ -27848,7 +27871,8 @@
         "rgbaManipulation": this.rgbaManipulationGui,
         "rgbFiltering": this.rgbFilteringGui,
         "rgbPercentageFiltering": this.rgbPercentageFilteringGui,
-        "apply3x3Kernel": this.apply3x3KernelGui
+        "apply3x3Kernel": this.apply3x3KernelGui,
+        "sobelEdgeDetection": this.sobelEdgeDetection
       };
     } // add a pseudolayer to the ui, generating a new uiLayer. this uiLayer is added to the end 
     // of the existing uiLayers
@@ -27863,6 +27887,10 @@
     var stackLayers = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D sl1_image;\r\nuniform sampler2D sl2_image;\r\nuniform float sl1_weight;\r\nuniform float sl2_weight;\r\nuniform float sl_multiplier;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 sl1_texture = texture(sl1_image, o_texCoord) * sl1_weight;\r\n    vec4 sl2_texture = texture(sl2_image, o_texCoord) * sl2_weight;\r\n    vec4 sum_texture = sl1_texture + sl2_texture;\r\n    o_colour = vec4((sum_texture / sl_multiplier).rgb, 1);\r\n}";
 
     var apply3x3KernelShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nuniform sampler2D a3k_image;\r\nuniform float a3k_textureWidth;\r\nuniform float a3k_textureHeight;\r\nuniform float a3k_kernel[9];\r\nuniform float a3k_kernelWeight;\r\n\r\nin vec2 o_texCoord;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   vec2 onePixel = vec2(1.0 / a3k_textureWidth, 1.0 / a3k_textureHeight);\r\n   vec4 colorSum =\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1, -1)) * a3k_kernel[0] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0, -1)) * a3k_kernel[1] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1, -1)) * a3k_kernel[2] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  0)) * a3k_kernel[3] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  0)) * a3k_kernel[4] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  0)) * a3k_kernel[5] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  1)) * a3k_kernel[6] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  1)) * a3k_kernel[7] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  1)) * a3k_kernel[8] ;\r\n   o_colour = vec4((colorSum / a3k_kernelWeight).rgb, 1);\r\n}";
+
+    var sobelEdgeDetection = "#version 300 es\r\nprecision mediump float;\r\n\r\nuniform sampler2D sed_image;\r\nuniform float sed_textureWidth;\r\nuniform float sed_textureHeight;\r\n\r\nin vec2 o_texCoord;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec2 onePixel = vec2(1.0 / sed_textureWidth, 1.0 / sed_textureHeight);\r\n\r\n    float tl = texture(sed_image, o_texCoord + onePixel * vec2(-1, -1)).r;\r\n    float tm = texture(sed_image, o_texCoord + onePixel * vec2( 0, -1)).r;\r\n    float tr = texture(sed_image, o_texCoord + onePixel * vec2( 1, -1)).r;\r\n    float ml = texture(sed_image, o_texCoord + onePixel * vec2(-1,  0)).r;\r\n    float mm = texture(sed_image, o_texCoord + onePixel * vec2( 0,  0)).r;\r\n    float mr =texture (sed_image, o_texCoord + onePixel * vec2( 1,  0)).r;\r\n    float bl = texture(sed_image, o_texCoord + onePixel * vec2(-1,  1)).r;\r\n    float bm = texture(sed_image, o_texCoord + onePixel * vec2( 0,  1)).r;\r\n    float br = texture(sed_image, o_texCoord + onePixel * vec2( 1,  1)).r;\r\n\r\n    float[9] x_kernel = float[9](1.0, 0.0, -1.0, 2.0, 0.0, -2.0, 1.0, 0.0, -1.0);\r\n\r\n    float dx =\r\n        tl * x_kernel[0] + \r\n        tm * x_kernel[1] + \r\n        tr * x_kernel[2] + \r\n        ml * x_kernel[3] + \r\n        mm * x_kernel[4] + \r\n        mr * x_kernel[5] + \r\n        bl * x_kernel[6] + \r\n        bm * x_kernel[7] + \r\n        br * x_kernel[8] ;\r\n\r\n    float[9] y_kernel = float[9](-1.0, -2.0, -1.0, 0.0, 0.0, 0.0, 1.0, 2.0, 1.0);\r\n\r\n    float dy =\r\n        tl * y_kernel[0] + \r\n        tm * y_kernel[1] + \r\n        tr * y_kernel[2] + \r\n        ml * y_kernel[3] + \r\n        mm * y_kernel[4] + \r\n        mr * y_kernel[5] + \r\n        bl * y_kernel[6] + \r\n        bm * y_kernel[7] + \r\n        br * y_kernel[8] ;\r\n\r\n    float mag = length(vec2(dx, dy));\r\n    o_colour = vec4(vec3(mag), 1.0);\r\n}";
+
+    var greyscale = "#version 300 es\r\nprecision mediump float;\r\n\r\nuniform sampler2D gs_image;\r\n\r\nin vec2 o_texCoord;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 color = texture(gs_image, o_texCoord);\r\n    float grey = dot(color.rgb, vec3(0.299, 0.587, 0.114));\r\n    o_colour = vec4(grey, grey, grey, color.a);\r\n}";
 
     var Constructor = function Constructor() {
       _classCallCheck(this, Constructor);
@@ -28007,6 +28035,43 @@
         });
         return pseudolayer;
       };
+
+      this.sobelEdgeDetection = function () {
+        var _ref7 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+            webgl = _ref7.webgl,
+            sed_image = _ref7.sed_image;
+
+        var pseudolayer = webgl.processPseudoLayer({
+          shaderName: "sobelEdgeDetection",
+          inputs: {
+            sed_image: sed_image
+          },
+          shader: sobelEdgeDetection,
+          variables: {
+            sed_textureWidth: webgl.gl.canvas.width,
+            sed_textureHeight: webgl.gl.canvas.height
+          },
+          dynamics: {}
+        });
+        return pseudolayer;
+      };
+
+      this.greyscale = function () {
+        var _ref8 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+            webgl = _ref8.webgl,
+            gs_image = _ref8.gs_image;
+
+        var pseudolayer = webgl.processPseudoLayer({
+          shaderName: "greyscale",
+          inputs: {
+            sed_image: gs_image
+          },
+          shader: greyscale,
+          variables: {},
+          dynamics: {}
+        });
+        return pseudolayer;
+      };
     };
 
     var testMapView = new View({
@@ -28039,6 +28104,25 @@
       webgl: webgl,
       rgbam_image: p1,
       rgbam_multiplier: [1.5, 1.5, 1.5, 1.0]
+    });
+    var pp2 = con.rgbPercentageFiltering({
+      webgl: webgl,
+      rgbfp_image: pp1,
+      rgbfp_filter: [0.38, 0.35, 0.35],
+      rgbfp_removed: [0.0, 0.0, 0.0, 1.0],
+      rgbfpd1_remove: ">"
+    });
+    var pp3 = con.sobelEdgeDetection({
+      webgl: webgl,
+      sed_image: p1
+    });
+    var pp4 = con.greyscale({
+      webgl: webgl,
+      gs_image: pp2
+    });
+    var pp5 = con.sobelEdgeDetection({
+      webgl: webgl,
+      sed_image: pp4
     }); // webgl.activatePseudolayer(pp1, 5);
     // const pp3 = con.rgbaManipulation({
     //     webgl: webgl, 

@@ -10,7 +10,7 @@ import { ShaderPassEvent } from './events.js'
 export class WebGLCanvas{
     constructor(canvas) {
         // restricts the framerate to a maximum of this value. will probably bounce back off canvas ready events
-        this.frameLimiter = 1000/60;
+        this.frameLimiter = 1000/100;
         // whether the canvas is ready to rendered to. if false, pseudolayer will not be rendered, since the canvas is currently rendering a different
         // pseudolayer. allows textures and framebuffers from current pseudolayer to be removed, preventing memory issues
         this._canvasReady = true;

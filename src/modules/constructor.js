@@ -3,6 +3,8 @@ import rgbFilteringShader from '../shaders/processing/rgbFiltering.shader';
 import rgbPercentageFilteringShader from '../shaders/processing/rgbPercentageFiltering.shader';
 import stackLayers from '../shaders/processing/stackLayers.shader';
 import apply3x3KernelShader from '../shaders/processing/apply3x3Kernel.shader';
+import sobelEdgeDetection from '../shaders/processing/sobelEdgeDetection.shader';
+import greyscale from '../shaders/processing/greyscale.shader';
 
 export class Constructor{
     // takes in a pseudolayer and a vec4 (float 0-1)
@@ -108,6 +110,35 @@ export class Constructor{
                 sl2_weight: sl2_weight,
                 sl_multiplier: sl_multiplier,
             },
+            dynamics: {}
+        })
+        return pseudolayer;
+    }
+
+    sobelEdgeDetection = ({webgl, sed_image}={}) => {
+        const pseudolayer = webgl.processPseudoLayer({
+            shaderName: "sobelEdgeDetection",
+            inputs: {
+                sed_image: sed_image,
+            },
+            shader: sobelEdgeDetection,
+            variables: {
+                sed_textureWidth: webgl.gl.canvas.width,
+                sed_textureHeight: webgl.gl.canvas.height,
+            },
+            dynamics: {}
+        })
+        return pseudolayer;
+    }
+
+    greyscale = ({webgl, gs_image}={}) => {
+        const pseudolayer = webgl.processPseudoLayer({
+            shaderName: "greyscale",
+            inputs: {
+                sed_image: gs_image,
+            },
+            shader: greyscale,
+            variables: {},
             dynamics: {}
         })
         return pseudolayer;
