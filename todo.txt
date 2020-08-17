@@ -29,5 +29,6 @@
     was textures attached to framebuffer not being deleted DONE
 26. refactor webgl.js
 27. work out what flickering is on render -> due to openlayers animations. removing transitions when setting up the layer removes artifacts. DONE
-28. custom event for rendering when canvas is ready
-29. still worried about minor memory leak, to review
+28. custom event for rendering when canvas is ready -> may not be necessary, to review
+29. still worried about minor memory leak, to review -> monitor but doesn;t seem to be a  problem
+30. fix bug with UI state

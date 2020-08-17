@@ -186,17 +186,28 @@ export class Ui {
 
     // function that renders the current pseudolayer based on the state stored in the guis that have been used
     // allows the same pseudolayer to be edited by multiple shader programs
-    restoreGuiState = (uiLayer) => {
-        var targetPseudolayer = uiLayer.originalPseudolayer;
-        for (const key of Object.keys(uiLayer.state)) {
-            var inputArguments = uiLayer.state[key];
-            // get function out of original object before deep copying the rest of the object
-            const functionName = inputArguments.stateFunction;
-            // deep copy the state variables -> prevents issues with mutation when state is changed by the guis
-            var inputArguments = JSON.parse(JSON.stringify(inputArguments));
-            inputArguments[inputArguments["inputName"]] = targetPseudolayer;
-            inputArguments["webgl"] = this._webgl;
-            targetPseudolayer = functionName(inputArguments);
+    restoreGuiState = (uiLayer, thisGui) => {
+        let guiOrder = {};
+        let targetPseudolayer = uiLayer.originalPseudolayer;
+        // order the arguments so processing is applied in the correct order
+        for (let key of Object.keys(uiLayer.state)) {
+            let processingPosition = uiLayer.state[key].guiOrder;
+            if (key === thisGui) {
+                guiOrder[processingPosition] = false;
+            } else {
+                guiOrder[processingPosition] = uiLayer.state[key];
+            }
+        }
+        for (let x = 0; x < Object.keys(guiOrder).length; x++){
+            var inputArguments = guiOrder[x];
+            if (inputArguments) {
+                const functionName = inputArguments.stateFunction;
+                // deep copy the state variables -> prevents issues with mutation when state is changed by the guis
+                var inputArguments = JSON.parse(JSON.stringify(inputArguments));
+                inputArguments[inputArguments["inputName"]] = targetPseudolayer;
+                inputArguments["webgl"] = this._webgl;
+                targetPseudolayer = functionName(inputArguments);
+            }
         }
         return targetPseudolayer;
     }
@@ -207,7 +218,8 @@ export class Ui {
     rgbaManipulationGui = () => {
         const targetUiLayer = this.activeUiLayer;
 
-        // check if the ui layer has been changed by this gui before -> if so, restore these values
+        // check if the ui layer has been changed by this gui before -> if so, restore these values to populate gui
+        // also need to record the number of this gui, so that processing can be re-applied in order
         if ("rgbaManipulation" in targetUiLayer.state) {
             var rgbam_multiplier = targetUiLayer.state.rgbaManipulation.rgbam_multiplier;
         } else {
@@ -215,14 +227,15 @@ export class Ui {
             targetUiLayer.state["rgbaManipulation"] = {
                 "rgbam_multiplier": rgbam_multiplier,
                 "inputName": "rgbam_image",
+                // the function to be called when rebuilding the layer
                 "stateFunction": this._constructor.rgbaManipulation,
+                // the order in which processing should be re-applied when constructing the layer
+                "guiOrder": Object.keys(targetUiLayer.state).length,
             }
         }
 
-        // this needs to be called after state is declared
-        // rebuilds the pseudolayer with the state stored in all of the guis that have been used
-        const targetPseudolayer = this.restoreGuiState(targetUiLayer);
-        this.updateUiLayer(targetUiLayer, targetPseudolayer);
+        // we now need to re-construct the target pseudolayer from it's state, maintaining order
+        const targetPseudolayer = this.restoreGuiState(targetUiLayer, "rgbaManipulation");
 
         // generate gui -> can be unstyled, as will resize to fit generic gui container, or can be styled in guis.css
         const html = `<div id="rgbaManipulation" class="inner_gui">
@@ -243,6 +256,7 @@ export class Ui {
                 const state = targetUiLayer.state.rgbaManipulation;
                 const thisSlider = document.getElementById(sliderId);
                 state.rgbam_multiplier[index] = thisSlider.value/100;
+
                 document.getElementById(valueId).innerHTML = thisSlider.value/100;
                 let pseudolayer = ui._constructor.rgbaManipulation({
                     webgl: ui._webgl, 
@@ -275,10 +289,11 @@ export class Ui {
                 "rgbfd1_remove": rgbfd1_remove,
                 "inputName": "rgbf_image",
                 "stateFunction": this._constructor.rgbFiltering,
+                "guiOrder": Object.keys(targetUiLayer.state).length,
             }
         }
 
-        const targetPseudolayer = this.restoreGuiState(targetUiLayer);
+        const targetPseudolayer = this.restoreGuiState(targetUiLayer, "rgbFiltering");
 
         const html = `<div id="rgbFiltering" class="inner_gui">
                           <p class="gui_title">Filter RGB</p>
@@ -329,7 +344,7 @@ export class Ui {
                 rgbf_image: targetPseudolayer, 
                 rgbf_filter: state.rgbf_filter, 
                 rgbf_removed: state.rgbf_removed, 
-                rgbfd1_remove: state.rgbfd1_remove
+                rgbfd1_remove: state.rgbfd1_remove,
             });
             this.updateUiLayer(targetUiLayer, pseudolayer);
         }
@@ -352,10 +367,11 @@ export class Ui {
                 "rgbfpd1_remove": rgbfpd1_remove,
                 "inputName": "rgbfp_image",
                 "stateFunction": this._constructor.rgbPercentageFiltering,
+                "guiOrder": Object.keys(targetUiLayer.state).length,
             }
         }
 
-        const targetPseudolayer = this.restoreGuiState(targetUiLayer);
+        const targetPseudolayer = this.restoreGuiState(targetUiLayer, "rgbPercentageFiltering");
 
         const html = `<div id="rgbPercentageFiltering" class="inner_gui">
                           <p class="gui_title">Filter RGB by %</p>
@@ -426,10 +442,11 @@ export class Ui {
                 "a3k_kernelWeight": a3k_kernelWeight,
                 "inputName": "a3k_image",
                 "stateFunction": this._constructor.apply3x3Kernel,
+                "guiOrder": Object.keys(targetUiLayer.state).length,
             }
         }
         
-        const targetPseudolayer = this.restoreGuiState(targetUiLayer);
+        const targetPseudolayer = this.restoreGuiState(targetUiLayer, "apply3x3Kernel");
 
         const html = `<div id="apply3x3Kernel" class="inner_gui">
                         <p class="gui_title">Apply 3x3 kernel</p>
@@ -467,7 +484,7 @@ export class Ui {
                 const kernelInputIndex = parseInt(kernelInput.dataset.index);
                 state.a3k_kernel[kernelInputIndex] = parseInt(kernelInput.innerHTML);
             }
-            state.a3k_kernelWeight = document.getElementById("kernel_multiplier").value;
+            state.a3k_kernelWeight = parseInt(document.getElementById("kernel_multiplier").value);
             const pseudolayer = this._constructor.apply3x3Kernel({
                 webgl: this._webgl, 
                 a3k_image: targetPseudolayer, 
@@ -480,7 +497,7 @@ export class Ui {
 
     sobelEdgeDetection = () => {
         const targetUiLayer = this.activeUiLayer;
-        const targetPseudolayer = this.restoreGuiState(targetUiLayer);
+        const targetPseudolayer = this.restoreGuiState(targetUiLayer, "apply_sobel");
 
         const html = `<div id="sobelEdgeDetection" class="inner_gui">
                           <p class="gui_title">Apply sobel edge detection</p>

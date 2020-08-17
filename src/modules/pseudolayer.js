@@ -48,4 +48,10 @@ export class PseudoLayer{
             }
         }
     }
+
+    updateVariables = (variables) => {
+        for (let key of Object.keys(variables)) {
+            this.variables[key] = variables[key];
+        }
+    }
 }

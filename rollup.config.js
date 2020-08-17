@@ -33,7 +33,7 @@ export default [{
     ],
     onwarn: function(warning, superOnWarn) {
         if (warning.code === 'THIS_IS_UNDEFINED') {
-        return;
+            return;
         }
         superOnWarn(warning);
     },

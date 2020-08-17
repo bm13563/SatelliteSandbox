@@ -33,6 +33,7 @@
     "rollup-plugin-css-only": "^2.1.0",
     "rollup-plugin-string": "^3.0.0",
     "rollup-plugin-terser": "^6.1.0",
-    "twgl.js": "^4.15.2"
+    "twgl.js": "^4.15.2",
+    "webgl-lint": "^1.6.0"
   }
 }

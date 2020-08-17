@@ -1,4 +1,5 @@
 import * as twgl from 'twgl.js';
+import * as wLint from 'webgl-lint';
 import { PseudoLayer } from './pseudolayer.js';
 import {unByKey} from 'ol/Observable';
 import { ShaderPassEvent } from './events.js'
@@ -21,6 +22,8 @@ export class WebGLCanvas{
         this._shaderPassEvent = new ShaderPassEvent(this._checkIfShaderPassesFinished);
         // webgl context
         this.gl = twgl.getContext(document.getElementById(canvas));
+        // webgl lint for more descriptive webgl errors
+        this._lint = this.gl.getExtension('GMAN_debug_helper');
         // height and width of the webgl canvas
         this._width = this.gl.canvas.width;
         this._height = this.gl.canvas.height;
