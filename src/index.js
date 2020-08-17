@@ -31,22 +31,30 @@ const testWMS = new XYZ({
     crossOrigin: "anonymous",
 });
 
-// const testWMS = new TileWMS({
-//     url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
-//     params: {
-//         'LAYERS': "FALSE_COLOR", 
-//         'TILED': true, 
-//         'FORMAT': 'image/png',
-//         'showLogo': false,
-//         'CRS': "EPSG:3857",
-//         'TIME': "2018-03-29/2018-05-29",
-//     },
-//     attribution: "test",
-//     crossOrigin: "anonymous",
-// });
+const testWMS2 = new TileWMS({
+    url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
+    params: {
+        'LAYERS': "TRUE_COLOR", 
+        'TILED': true, 
+        'FORMAT': 'image/png',
+        'showLogo': false,
+        'CRS': "EPSG:3857",
+        'TIME': "2018-03-29/2018-05-29",
+    },
+    attribution: "test",
+    crossOrigin: "anonymous",
+});
 
 const testMapLayer1 = new TileLayer({
     source: testWMS,
+    visible: true,
+    title: "Sentinel testing",
+    opacity: 1,
+    minZoom: 1,
+});
+
+const testMapLayer2 = new TileLayer({
+    source: testWMS2,
     visible: true,
     title: "Sentinel testing",
     opacity: 1,
@@ -57,32 +65,34 @@ var webgl = new WebGLCanvas("canvas_map");
 var con = new Constructor();
 var ui = new Ui(webgl, con);
 var l1 = new LayerObject(testMapLayer1, testMapView);
+var l2 = new LayerObject(testMapLayer2, testMapView);
 
 const p1 = webgl.generatePseudoLayer(l1);
-const pp1 = con.rgbaManipulation({
-    webgl: webgl, 
-    rgbam_image: p1, 
-    rgbam_multiplier: [1.5, 1.5, 1.5, 1.0],
-});
-const pp2 = con.rgbPercentageFiltering({
-    webgl: webgl,
-    rgbfp_image: pp1,
-    rgbfp_filter: [0.38, 0.35, 0.35],
-    rgbfp_removed: [0.0, 0.0, 0.0, 1.0],
-    rgbfpd1_remove: ">",
-})
-const pp3 = con.sobelEdgeDetection({
-    webgl: webgl,
-    sed_image: p1,
-})
-const pp4 = con.greyscale({
-    webgl: webgl,
-    gs_image: pp2,
-})
-const pp5 = con.sobelEdgeDetection({
-    webgl: webgl,
-    sed_image: pp4,
-})
+const p2 = webgl.generatePseudoLayer(l2);
+// const pp1 = con.rgbaManipulation({
+//     webgl: webgl, 
+//     rgbam_image: p1, 
+//     rgbam_multiplier: [1.5, 1.5, 1.5, 1.0],
+// });
+// const pp2 = con.rgbPercentageFiltering({
+//     webgl: webgl,
+//     rgbfp_image: pp1,
+//     rgbfp_filter: [0.38, 0.35, 0.35],
+//     rgbfp_removed: [0.0, 0.0, 0.0, 1.0],
+//     rgbfpd1_remove: ">",
+// })
+// const pp3 = con.sobelEdgeDetection({
+//     webgl: webgl,
+//     sed_image: p1,
+// })
+// const pp4 = con.greyscale({
+//     webgl: webgl,
+//     gs_image: pp2,
+// })
+// const pp5 = con.sobelEdgeDetection({
+//     webgl: webgl,
+//     sed_image: pp4,
+// })
 // webgl.activatePseudolayer(pp1, 5);
 // const pp3 = con.rgbaManipulation({
 //     webgl: webgl, 
@@ -90,14 +100,14 @@ const pp5 = con.sobelEdgeDetection({
 //     rgbam_multiplier: [1.5, 1.5, 1.5, 1.5],
 // });
 
-// const pp2 = con.stackLayers({
-//     webgl: webgl,
-//     sl1_image: p1,
-//     sl2_image: pp1,
-//     sl1_weight: 1.5,
-//     sl2_weight: 1.0,
-//     sl_multiplier: 2.0,
-// })
+const pp2 = con.stackLayers({
+    webgl: webgl,
+    sl1_image: p1,
+    sl2_image: p2,
+    sl1_weight: 1.0,
+    sl2_weight: 1.0,
+    sl_multiplier: 2.0,
+})
 
 // for (let x = 0; x < 1000; x++) {
 //     const r = Math.random() * 2.5;
@@ -121,8 +131,9 @@ const pp5 = con.sobelEdgeDetection({
 // test();
 
 
-
+ui.addUiLayer(p2);
 ui.addUiLayer(p1);
+ui.addUiLayer(pp2);
 // ui.addUiLayer(pp1);
 // ui.addUiLayer(pp3);
 

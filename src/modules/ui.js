@@ -184,20 +184,27 @@ export class Ui {
         // event listeners *should* be garbage collected
     }
 
-    // function that renders the current pseudolayer based on the state stored in the guis that have been used
-    // allows the same pseudolayer to be edited by multiple shader programs
+    // this function reconstructs a pseudolayer from it's state, ignoring the state of the current gui. this is so that
+    // when the parameters are changed by the gui, they are relative to the original pseudolayer, rather than any 
+    // processing that has already been applied
     restoreGuiState = (uiLayer, thisGui) => {
         let guiOrder = {};
         let targetPseudolayer = uiLayer.originalPseudolayer;
-        // order the arguments so processing is applied in the correct order
+        // save the order of the guis as the key, and the inputs as the values. then can loop through 1 - gui.length
+        // and apply effects in the correct order
         for (let key of Object.keys(uiLayer.state)) {
             let processingPosition = uiLayer.state[key].guiOrder;
+            // ignore any state set by the current gui. e.g if the function is called when opening the rgbaManipulation gui,
+            // ignore any previous rgbaManipulation state when reconstructing the pseudolayer. this is so that any rgbaManipulation
+            // processing is original to the original colours of the layer -> i.e if the layer has already been change to r = 1.5,
+            // we don't want any future colouring to be stacked on top of that
             if (key === thisGui) {
                 guiOrder[processingPosition] = false;
             } else {
                 guiOrder[processingPosition] = uiLayer.state[key];
             }
         }
+        // loop through guis in the order that effects have been applied, and re-apply all of the effects from the state
         for (let x = 0; x < Object.keys(guiOrder).length; x++){
             var inputArguments = guiOrder[x];
             if (inputArguments) {
@@ -206,6 +213,8 @@ export class Ui {
                 var inputArguments = JSON.parse(JSON.stringify(inputArguments));
                 inputArguments[inputArguments["inputName"]] = targetPseudolayer;
                 inputArguments["webgl"] = this._webgl;
+                // set the target pseudolayer as the pseudolayer that has just been built -> means next effects are stacked
+                // on top of this pseudolayer
                 targetPseudolayer = functionName(inputArguments);
             }
         }

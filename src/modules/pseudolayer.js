@@ -8,11 +8,11 @@ export class PseudoLayer{
         this.variables = variables;
         this.maps = [];
         this.layers = [];
-        this._getMaps(this);
         // base number of shader passes for every layer is 1 (gets vertically flipped at the end).
         // a pass is then done for every new program that is added
         this.shaderPasses = 1;
         this._getShaderPasses(this);
+        this._getMaps(this);
         this.maps.sort((x, y) => {return x.mapId - y.mapId});
         this.maps = this.maps.map(({ map }) => map);
         this._getLayers();
@@ -38,6 +38,11 @@ export class PseudoLayer{
     }
 
     _getShaderPasses = (thisLayer) => {
+        // if there are multiple inputs to a single program, decrease the difference between the number of inputs
+        // and the number of programs (1). necessary because this function counts the number of inputs, in order
+        // to recurse through the whole pseudolayer
+        var inputNumber = Object.keys(thisLayer.inputs).length;
+        this.shaderPasses = this.shaderPasses + (1 - inputNumber);
         for (const key of Object.keys(thisLayer.inputs)) {
             const nextLayer = thisLayer.inputs[key];
             if (nextLayer.type === "layerObject") {
