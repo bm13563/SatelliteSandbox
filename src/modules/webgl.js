@@ -2,7 +2,7 @@ import * as twgl from 'twgl.js';
 import * as wLint from 'webgl-lint';
 import { PseudoLayer } from './pseudolayer.js';
 import {unByKey} from 'ol/Observable';
-import { ShaderPassEvent, CanvasReadyEvent } from './events.js'
+import { ShadersReadyEvent, LayersReadyEvent, MapsReadyEvent } from './events.js'
 
 // a class representing the canvas to which webgl should render
 // contains hard-coded shaders for rendering a pseudo layer "as is", and for flipping an image
@@ -10,15 +10,11 @@ import { ShaderPassEvent, CanvasReadyEvent } from './events.js'
 // uses twgl which makes everyone's life a million times easier. https://twgljs.org/docs/.
 export class WebGLCanvas{
     constructor(canvas) {
-        // whether the canvas is ready to rendered to. if false, pseudolayer will not be rendered, since the canvas is currently rendering a different
-        // pseudolayer. allows textures and framebuffers from current pseudolayer to be removed, preventing memory issues
-        this._canvasReady = false;
-        // tracks how many shader passes have been done while rendering this pseudolayer. each pseudolayer has a predefined number of shader passes
-        // that need to be completed to render it. once this number is reached, we know all data that needs to has gone to the gpu, and we can
-        // start rendering a new layer. if updates with "set", will check how many shader passes have completed.
-        this._requiredShaderPasses = 0;
-        this._shaderPassEvent = new ShaderPassEvent(this._checkIfShaderPassesFinished);
-        this._mapsReadyEvent = new MapsReadyEvent(this.setCanvasReady);
+        // these events check whether the canvas is ready to be rendered to. the shadersReady event fires every frame, once the texture has been
+        // passed to the gpu and cleaned up. the layers and maps events fire whenever the pseudolayer is changed
+        this._shadersReadyEvent = new ShadersReadyEvent(this._cleanUpGpuMemory);
+        this._layersReadyEvent = new LayersReadyEvent()
+        this._mapsReadyEvent = new MapsReadyEvent();
         // webgl context
         this.gl = twgl.getContext(document.getElementById(canvas));
         // webgl lint for more descriptive webgl errors
@@ -48,13 +44,18 @@ export class WebGLCanvas{
         this._canvasEvents = [];
     }
 
-    // for overwriting/ changing state of canvas from event functions
-    setCanvasReady = () => {
-        this._canvasReady = true;
+    // canvas is only ready if all ready events are true
+    _isCanvasReady = () => {
+        if (this._shadersReadyEvent.shadersReady && this._layersReadyEvent.layersReady && this._mapsReadyEvent.mapsReady) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
-    setCanvasNotReady = () => {
-        this._canvasReady = false;
+    // quick way to check which events are ready, for debugging
+    _checkWhatsReady = () => {
+        console.log("shaders ready:", this._shadersReadyEvent.shadersReady, "layers ready:", this._layersReadyEvent.layersReady, "maps ready:", this._mapsReadyEvent.mapsReady, "canvas ready:", (this._shadersReadyEvent.shadersReady && this._layersReadyEvent.layersReady && this._mapsReadyEvent.mapsReady));
     }
 
     // compiles webgl shaders from string
@@ -91,22 +92,23 @@ export class WebGLCanvas{
     // openlayers canvas. this canvas is then used as a texture input for the base pseudolayer, and processing is added
     // on top of that
     activatePseudolayer = (pseudolayer) => {
+        console.log("fire")
         // remove the maps used to render the previous pseudolayer and their handlers
         this.deactivatePseudolayer();
-        // set maps used to generate pseudolayer to visible. also fires the postrender event
-        for (let x = 0; x < pseudolayer.layers.length; x++) {
-            pseudolayer.layers[x].setVisible(true);
-            this._layersUsed.push(pseudolayer.layers[x]);
-        }
-        // fires once all map canvases are present on the DOM. calls setCanvasReady, which allows rendering during the next event
-        this._mapsReadyEvent.wait(pseudolayer.maps);
+        // set up the shader ready event for this pseudolayer
+        this._shadersReadyEvent.log(pseudolayer.shaderPasses);
+        // set up the layers ready event for this pseudolayer
+        this._layersReadyEvent.wait(pseudolayer.layers);
+        // set up the maps ready event for this pseudolayer
+        this._mapsReadyEvent.wait(pseudolayer.maps);        
         // sets the current event handler, on the first map. from this point until activatePseudolayer is called again, every frame update
         // attempts to render the pseudolayer. allows for smooth movement of the map
         let frameRender = pseudolayer.maps[0].on("postrender", () => {
+            this._checkWhatsReady();
             // tries to render the pseudolayer. if the canvas is still in the previous render pass, will return
             // check if the canvas has finished passing all buffers from the previous frame to the gpu. if it hasn't, skip rendering this pseudolayer
-            if (this._canvasReady) {
-                this.setCanvasNotReady();
+            if (this._isCanvasReady()) {
+                this._shadersReadyEvent.notReady();
                 this._renderPseudoLayer(pseudolayer);
             };
         });
@@ -115,14 +117,10 @@ export class WebGLCanvas{
 
     // should undo all of the state set up by the activatePseudolayer method
     deactivatePseudolayer = () => {
-        // set maps previously used to generate pseudolayer to invisible -> prevent unnecessary tile calls
-        if (this._layersUsed.length > 0) {
-            for (let x = 0; x < this._layersUsed.length; x++) {
-                this._layersUsed[x].setVisible(false);
-            }
-            // empties map array to be written to by the next pseudolayer
-            this._layersUsed = [];
-        }
+        // reset the layers used for the previous pseudolayer
+        this._layersReadyEvent.notReady();
+        // reset the maps used for the previous pseudolayer
+        this._mapsReadyEvent.notReady();
         // remove the current event handler if it exists
         for (let x = 0; x < this._canvasEvents.length; x++) {
             let currentEvent = this._canvasEvents[x];
@@ -130,20 +128,11 @@ export class WebGLCanvas{
         }
         // unbind all references to canvas events
         this._canvasEvents = [];
-        // set the canvas as not ready to render
-        this.setCanvasNotReady();
     }
 
     clearCanvas = () => {
         // clear the canvas
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-    }
-
-    // called by the _shaderPassEvent wheneve a shader pass is completed. checks if all passes are done
-    _checkIfShaderPassesFinished = (shaderPasses) => {
-        if (shaderPasses === this._requiredShaderPasses) {
-            this._cleanUpGpuMemory();
-        }
     }
 
     _cleanUpGpuMemory = () => {
@@ -189,14 +178,13 @@ export class WebGLCanvas{
 
         this._framebufferTracker = {};
         this._cleanupTracker = {_textures: [], _framebuffers: [], _renderbuffers: [], _arrayBuffers: [], _elementArrayBuffers: []};
-        this._shaderPassEvent.reset();
-        this.setCanvasReady();
+        this._shadersReadyEvent.ready();
+        // this.setCanvasReady();
     }
 
     // renders a pseudo layer with the attached shader applied. reconstructs any child pseudolayers first, stores framebuffers for these
     // children in the framebuffertracker, then uses the framebuffers to apply any processing
     _renderPseudoLayer = (pseudolayer) => {
-        this._requiredShaderPasses = pseudolayer.shaderPasses;
         // get all child pseudolayers
         this._recurseThroughChildLayers(pseudolayer, pseudolayer);
         // render the target pseudolayer
@@ -281,7 +269,7 @@ export class WebGLCanvas{
             twgl.bindFramebufferInfo(gl, currentFramebuffer);
 
             twgl.drawBufferInfo(gl, quadVertices, gl.TRIANGLES);
-            webglCanvas._shaderPassEvent.increment();
+            webglCanvas._shadersReadyEvent.increment();
         }
     }
 

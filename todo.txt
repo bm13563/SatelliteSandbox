@@ -31,4 +31,6 @@
 27. work out what flickering is on render -> due to openlayers animations. removing transitions when setting up the layer removes artifacts. DONE
 28. custom event for rendering when canvas is ready -> may not be necessary, to review
 29. still worried about minor memory leak, to review -> monitor but doesn;t seem to be a  problem
-30. fix bug with UI state
+30. fix bug with UI state DONE
+31. seperate out "canvasReady" into "layersReady", "mapsReady" and "shadersReady" events. canvasReady only true if all of the others are true. DONE
+32. fix ui bugs caused by 31 -> seems to be that when a second effect is applied, on the first render pass the first effect changes

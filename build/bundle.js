@@ -30762,54 +30762,77 @@ needs ${sizeNeeded} bytes for draw but buffer is only ${bufferSize} bytes`);
       this._getLayers();
     };
 
-    var ShaderPassEvent = function ShaderPassEvent(callback) {
+    // this is updated every frame
+
+    var ShadersReadyEvent = function ShadersReadyEvent(callback) {
       var _this = this;
 
-      _classCallCheck(this, ShaderPassEvent);
+      _classCallCheck(this, ShadersReadyEvent);
+
+      this.log = function (passes) {
+        _this._expectedPasses = passes;
+      };
 
       this.increment = function () {
         _this._passes++;
 
-        _this._callback(_this._passes);
+        _this.check(_this._passes);
       };
 
-      this.reset = function () {
-        _this._passes = 0;
+      this.check = function () {
+        if (_this._passes === _this._expectedPasses) {
+          _this._passes = 0;
+
+          _this._callback();
+        }
       };
 
+      this.ready = function () {
+        _this.shadersReady = true;
+      };
+
+      this.notReady = function () {
+        _this.shadersReady = false;
+      };
+
+      this.shadersReady = true;
       this._passes = 0;
+      this._expectedPasses = 0;
       this._callback = callback;
-    }; // alows rendering of multiple maps (inputs) by preventing the canvas from rendering until all maps
-    // are on the DOM
+    } // set the number of expected passes. should happen when a pseudolayer is activated
+    ; // alows rendering of multiple maps (inputs) by preventing the canvas from rendering until all maps
+    // are on the DOM. this is updated every new pseudolayer
 
-    var CanvasReadyEvent = function CanvasReadyEvent(callback) {
+    var MapsReadyEvent = function MapsReadyEvent(callback) {
       var _this2 = this;
 
-      _classCallCheck(this, CanvasReadyEvent);
+      _classCallCheck(this, MapsReadyEvent);
 
       this.wait = function (maps) {
-        _this2._maps = maps;
-        _this2._expectedMaps = maps.length;
+        if (_this2._finishedMaps) {
+          _this2._finishedMaps = false;
+          _this2._maps = maps;
+          _this2._expectedNumberMapsReady = _this2._maps.length;
 
-        var _loop = function _loop(x) {
-          var event = maps[x].once("postrender", function () {
-            var thisMap = maps[x];
-            _this2._mapsReady++;
+          var _loop = function _loop(x) {
+            var event = maps[x].once("postrender", function () {
+              _this2._numberMapsReady++;
 
-            _this2._events.push(event);
+              _this2._events.push(event);
 
-            _this2.check();
-          });
-        };
+              _this2.check();
+            });
+          };
 
-        for (var x = 0; x < maps.length; x++) {
-          _loop(x);
+          for (var x = 0; x < maps.length; x++) {
+            _loop(x);
+          }
         }
       };
 
       this.check = function () {
-        if (_this2._mapsReady === _this2._expectedMaps) {
-          _this2._mapsReady = 0;
+        if (_this2._numberMapsReady === _this2._expectedNumberMapsReady) {
+          _this2._numberMapsReady = 0; // unbind the event handlers set above
 
           for (var x = 0; x < _this2._events.length; x++) {
             var currentEvent = _this2._events[x];
@@ -30817,7 +30840,7 @@ needs ${sizeNeeded} bytes for draw but buffer is only ${bufferSize} bytes`);
           }
 
           _this2._events = [];
-          _this2._expectedMaps = 1;
+          _this2._expectedNumberMapsReady = 0; // request a render animation -> starts the tiles loading in
 
           for (var _x = 0; _x < _this2._maps.length; _x++) {
             var thisMap = _this2._maps[_x];
@@ -30825,17 +30848,66 @@ needs ${sizeNeeded} bytes for draw but buffer is only ${bufferSize} bytes`);
           }
 
           _this2._maps = [];
-
-          _this2._callback();
+          _this2._finishedMaps = true;
+          _this2.mapsReady = true;
         }
       };
 
+      this.ready = function () {
+        _this2.mapsReady = true;
+      };
+
+      this.notReady = function () {
+        _this2.mapsReady = false;
+      };
+
+      this.mapsReady = false; // private variable that stops the mapsReadys event from being updated while it is rendering
+      // the current maps
+
+      this._finishedMaps = true;
+      this._numberMapsReady = 0;
+      this._expectedNumberMapsReady = 0;
       this._callback = callback;
-      this._mapsReady = 0;
       this._events = [];
       this._maps = [];
-      this._expectedMaps = 1;
-    };
+    }; // checks that the necessary layers are visible on the map. this is updated every new pseudolayer
+
+    var LayersReadyEvent = function LayersReadyEvent() {
+      var _this3 = this;
+
+      _classCallCheck(this, LayersReadyEvent);
+
+      this.wait = function (layers) {
+        for (var x = 0; x < layers.length; x++) {
+          layers[x].setVisible(true);
+
+          _this3._layersUsed.push(layers[x]);
+        }
+
+        _this3.layersReady = true;
+      };
+
+      this.ready = function () {
+        _this3.layersReady = true;
+      };
+
+      this.notReady = function () {
+        if (_this3._layersUsed.length > 0) {
+          for (var x = 0; x < _this3._layersUsed.length; x++) {
+            _this3._layersUsed[x].setVisible(false);
+          } // empties map array to be written to by the next pseudolayer
+
+
+          _this3._layersUsed = [];
+        }
+
+        _this3.layersReady = false;
+      };
+
+      this.layersReady = false;
+      this._layersUsed = [];
+    } // thankfully this is synchronous
+    ;
 
     // contains hard-coded shaders for rendering a pseudo layer "as is", and for flipping an image
     // also contains state that controls how often the canvas can be rendered to -> prevents rendering before current pseudolayer is rendered
@@ -30846,12 +30918,16 @@ needs ${sizeNeeded} bytes for draw but buffer is only ${bufferSize} bytes`);
 
       _classCallCheck(this, WebGLCanvas);
 
-      this.setCanvasReady = function () {
-        _this._canvasReady = true;
+      this._isCanvasReady = function () {
+        if (_this._shadersReadyEvent.shadersReady && _this._layersReadyEvent.layersReady && _this._mapsReadyEvent.mapsReady) {
+          return true;
+        } else {
+          return false;
+        }
       };
 
-      this.setCanvasNotReady = function () {
-        _this._canvasReady = false;
+      this._checkWhatsReady = function () {
+        console.log("shaders ready:", _this._shadersReadyEvent.shadersReady, "layers ready:", _this._layersReadyEvent.layersReady, "maps ready:", _this._mapsReadyEvent.mapsReady, "canvas ready:", _this._shadersReadyEvent.shadersReady && _this._layersReadyEvent.layersReady && _this._mapsReadyEvent.mapsReady);
       };
 
       this._compileShaders = function (fragmentShader) {
@@ -30889,26 +30965,28 @@ needs ${sizeNeeded} bytes for draw but buffer is only ${bufferSize} bytes`);
       };
 
       this.activatePseudolayer = function (pseudolayer) {
-        // remove the maps used to render the previous pseudolayer and their handlers
-        _this.deactivatePseudolayer(); // set maps used to generate pseudolayer to visible. also fires the postrender event
+        console.log("fire"); // remove the maps used to render the previous pseudolayer and their handlers
+
+        _this.deactivatePseudolayer(); // set up the shader ready event for this pseudolayer
 
 
-        for (var x = 0; x < pseudolayer.layers.length; x++) {
-          pseudolayer.layers[x].setVisible(true);
-
-          _this._layersUsed.push(pseudolayer.layers[x]);
-        } // fires once all map canvases are present on the DOM. calls setCanvasReady, which allows rendering during the next event
+        _this._shadersReadyEvent.log(pseudolayer.shaderPasses); // set up the layers ready event for this pseudolayer
 
 
-        _this._canvasReadyEvent.wait(pseudolayer.maps); // sets the current event handlers. from this point until activatePseudolayer is called again, every frame update
+        _this._layersReadyEvent.wait(pseudolayer.layers); // set up the maps ready event for this pseudolayer
+
+
+        _this._mapsReadyEvent.wait(pseudolayer.maps); // sets the current event handler, on the first map. from this point until activatePseudolayer is called again, every frame update
         // attempts to render the pseudolayer. allows for smooth movement of the map
 
 
         var frameRender = pseudolayer.maps[0].on("postrender", function () {
-          // tries to render the pseudolayer. if the canvas is still in the previous render pass, will return
+          _this._checkWhatsReady(); // tries to render the pseudolayer. if the canvas is still in the previous render pass, will return
           // check if the canvas has finished passing all buffers from the previous frame to the gpu. if it hasn't, skip rendering this pseudolayer
-          if (_this._canvasReady) {
-            _this.setCanvasNotReady();
+
+
+          if (_this._isCanvasReady()) {
+            _this._shadersReadyEvent.notReady();
 
             _this._renderPseudoLayer(pseudolayer);
           }
@@ -30918,37 +30996,25 @@ needs ${sizeNeeded} bytes for draw but buffer is only ${bufferSize} bytes`);
       };
 
       this.deactivatePseudolayer = function () {
-        // set maps previously used to generate pseudolayer to invisible -> prevent unnecessary tile calls
-        if (_this._layersUsed.length > 0) {
-          for (var x = 0; x < _this._layersUsed.length; x++) {
-            _this._layersUsed[x].setVisible(false);
-          } // empties map array to be written to by the next pseudolayer
+        // reset the layers used for the previous pseudolayer
+        _this._layersReadyEvent.notReady(); // reset the maps used for the previous pseudolayer
 
 
-          _this._layersUsed = [];
-        } // remove the current event handler if it exists
+        _this._mapsReadyEvent.notReady(); // remove the current event handler if it exists
 
 
-        for (var _x = 0; _x < _this._canvasEvents.length; _x++) {
-          var currentEvent = _this._canvasEvents[_x];
+        for (var x = 0; x < _this._canvasEvents.length; x++) {
+          var currentEvent = _this._canvasEvents[x];
           unByKey(currentEvent);
         } // unbind all references to canvas events
 
 
-        _this._canvasEvents = []; // set the canvas as not ready to render
-
-        _this.setCanvasNotReady();
+        _this._canvasEvents = [];
       };
 
       this.clearCanvas = function () {
         // clear the canvas
         _this.gl.clear(_this.gl.COLOR_BUFFER_BIT);
-      };
-
-      this._checkIfShaderPassesFinished = function (shaderPasses) {
-        if (shaderPasses === _this._requiredShaderPasses) {
-          _this._cleanUpGpuMemory();
-        }
       };
 
       this._cleanUpGpuMemory = function () {
@@ -30976,20 +31042,20 @@ needs ${sizeNeeded} bytes for draw but buffer is only ${bufferSize} bytes`);
           _this.gl.deleteFramebuffer(framebufferToDelete.framebuffer);
         }
 
-        for (var _x2 = 0; _x2 < _this._cleanupTracker._renderbuffers.length; _x2++) {
-          var renderBufferToDelete = _this._cleanupTracker._renderbuffers[_x2];
+        for (var _x = 0; _x < _this._cleanupTracker._renderbuffers.length; _x++) {
+          var renderBufferToDelete = _this._cleanupTracker._renderbuffers[_x];
 
           _this.gl.deleteRenderbuffer(renderBufferToDelete);
         }
 
-        for (var _x3 = 0; _x3 < _this._cleanupTracker._textures.length; _x3++) {
-          var textureToDelete = _this._cleanupTracker._textures[_x3];
+        for (var _x2 = 0; _x2 < _this._cleanupTracker._textures.length; _x2++) {
+          var textureToDelete = _this._cleanupTracker._textures[_x2];
 
           _this.gl.deleteTexture(textureToDelete);
         }
 
-        for (var _x4 = 0; _x4 < _this._cleanupTracker._arrayBuffers.length; _x4++) {
-          var bufferToDelete = _this._cleanupTracker._arrayBuffers[_x4];
+        for (var _x3 = 0; _x3 < _this._cleanupTracker._arrayBuffers.length; _x3++) {
+          var bufferToDelete = _this._cleanupTracker._arrayBuffers[_x3];
 
           _this.gl.bindBuffer(_this.gl.ARRAY_BUFFER, bufferToDelete);
 
@@ -30998,8 +31064,8 @@ needs ${sizeNeeded} bytes for draw but buffer is only ${bufferSize} bytes`);
           _this.gl.deleteBuffer(bufferToDelete);
         }
 
-        for (var _x5 = 0; _x5 < _this._cleanupTracker._elementArrayBuffers.length; _x5++) {
-          var _bufferToDelete = _this._cleanupTracker._elementArrayBuffers[_x5];
+        for (var _x4 = 0; _x4 < _this._cleanupTracker._elementArrayBuffers.length; _x4++) {
+          var _bufferToDelete = _this._cleanupTracker._elementArrayBuffers[_x4];
 
           _this.gl.bindBuffer(_this.gl.ELEMENT_ARRAY_BUFFER, _bufferToDelete);
 
@@ -31017,14 +31083,12 @@ needs ${sizeNeeded} bytes for draw but buffer is only ${bufferSize} bytes`);
           _elementArrayBuffers: []
         };
 
-        _this._shaderPassEvent.reset();
+        _this._shadersReadyEvent.ready(); // this.setCanvasReady();
 
-        _this.setCanvasReady();
       };
 
       this._renderPseudoLayer = function (pseudolayer) {
-        _this._requiredShaderPasses = pseudolayer.shaderPasses; // get all child pseudolayers
-
+        // get all child pseudolayers
         _this._recurseThroughChildLayers(pseudolayer, pseudolayer); // render the target pseudolayer
 
 
@@ -31115,7 +31179,7 @@ needs ${sizeNeeded} bytes for draw but buffer is only ${bufferSize} bytes`);
           bindFramebufferInfo(gl, currentFramebuffer);
           drawBufferInfo(gl, quadVertices, gl.TRIANGLES);
 
-          webglCanvas._shaderPassEvent.increment();
+          webglCanvas._shadersReadyEvent.increment();
         }
       };
 
@@ -31147,15 +31211,11 @@ needs ${sizeNeeded} bytes for draw but buffer is only ${bufferSize} bytes`);
         return shader;
       };
 
-      // whether the canvas is ready to rendered to. if false, pseudolayer will not be rendered, since the canvas is currently rendering a different
-      // pseudolayer. allows textures and framebuffers from current pseudolayer to be removed, preventing memory issues
-      this._canvasReady = false; // tracks how many shader passes have been done while rendering this pseudolayer. each pseudolayer has a predefined number of shader passes
-      // that need to be completed to render it. once this number is reached, we know all data that needs to has gone to the gpu, and we can
-      // start rendering a new layer. if updates with "set", will check how many shader passes have completed.
-
-      this._requiredShaderPasses = 0;
-      this._shaderPassEvent = new ShaderPassEvent(this._checkIfShaderPassesFinished);
-      this._canvasReadyEvent = new CanvasReadyEvent(this.setCanvasReady); // webgl context
+      // these events check whether the canvas is ready to be rendered to. the shadersReady event fires every frame, once the texture has been
+      // passed to the gpu and cleaned up. the layers and maps events fire whenever the pseudolayer is changed
+      this._shadersReadyEvent = new ShadersReadyEvent(this._cleanUpGpuMemory);
+      this._layersReadyEvent = new LayersReadyEvent();
+      this._mapsReadyEvent = new MapsReadyEvent(); // webgl context
 
       this.gl = getContext(document.getElementById(canvas)); // webgl lint for more descriptive webgl errors
 
@@ -31189,7 +31249,7 @@ needs ${sizeNeeded} bytes for draw but buffer is only ${bufferSize} bytes`);
       this._layersUsed = []; // the current events bound to the exiting pseudolayer
 
       this._canvasEvents = [];
-    } // for overwriting/ changing state of canvas from event functions
+    } // canvas is only ready if all ready events are true
     ;
 
     var UiLayer = function UiLayer(pseudolayer, layerNumber) {
