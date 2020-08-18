@@ -1,5 +1,6 @@
 import * as twgl from 'twgl.js';
-import * as wLint from 'webgl-lint';
+// useful for debugging -> obvs shouldnt be used in production
+// import * as wLint from 'webgl-lint';
 import { PseudoLayer } from './pseudolayer.js';
 import {unByKey} from 'ol/Observable';
 import { ShadersReadyEvent, LayersReadyEvent, MapsReadyEvent } from './events.js'
@@ -17,8 +18,6 @@ export class WebGLCanvas{
         this._mapsReadyEvent = new MapsReadyEvent();
         // webgl context
         this.gl = twgl.getContext(document.getElementById(canvas));
-        // webgl lint for more descriptive webgl errors
-        this._lint = this.gl.getExtension('GMAN_debug_helper');
         // height and width of the webgl canvas
         this._width = this.gl.canvas.width;
         this._height = this.gl.canvas.height;
@@ -92,7 +91,6 @@ export class WebGLCanvas{
     // openlayers canvas. this canvas is then used as a texture input for the base pseudolayer, and processing is added
     // on top of that
     activatePseudolayer = (pseudolayer) => {
-        console.log("fire")
         // remove the maps used to render the previous pseudolayer and their handlers
         this.deactivatePseudolayer();
         // set up the shader ready event for this pseudolayer
@@ -179,7 +177,6 @@ export class WebGLCanvas{
         this._framebufferTracker = {};
         this._cleanupTracker = {_textures: [], _framebuffers: [], _renderbuffers: [], _arrayBuffers: [], _elementArrayBuffers: []};
         this._shadersReadyEvent.ready();
-        // this.setCanvasReady();
     }
 
     // renders a pseudo layer with the attached shader applied. reconstructs any child pseudolayers first, stores framebuffers for these
