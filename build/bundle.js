@@ -27922,7 +27922,7 @@
         document.getElementById("operator").onchange = function () {
           var state = targetUiLayer.state.rgbPercentageFiltering;
           var thisInput = document.getElementById("operator");
-          state.operator = thisInput.value;
+          state.rgbfpd1_remove = thisInput.value;
 
           var pseudolayer = _this._constructor.rgbPercentageFiltering({
             webgl: _this._webgl,

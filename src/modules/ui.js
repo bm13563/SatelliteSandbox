@@ -425,7 +425,7 @@ export class Ui {
         document.getElementById("operator").onchange = () => {
             const state = targetUiLayer.state.rgbPercentageFiltering;
             const thisInput = document.getElementById("operator");
-            state.operator = thisInput.value;
+            state.rgbfpd1_remove = thisInput.value;
             const pseudolayer = this._constructor.rgbPercentageFiltering({
                 webgl: this._webgl, 
                 rgbfp_image: targetPseudolayer, 

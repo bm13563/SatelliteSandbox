@@ -1,0 +1,11 @@
+long term ideas dump
+
+- visualise wms in 3d using band values (for visualising DEMs)
+- pre-train ML models that output kernels/ functions and write these into aerial
+- export/ import pseudolayer as JSON -> allows json of a pseudolayer to be c + p'd then sent to someone else,
+  who can apply the exact same processing by importing the pseudolayer
+- processing history of pseudolayer -> allows user to see the exact processing steps that were taken to get to 
+  the pseudolayer
+- export canvas image (as georeferenced tif??)
+- vectorise canvas -> export features as geojson? this would be huge as would allow use of OL's vector processing
+
