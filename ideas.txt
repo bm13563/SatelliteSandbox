@@ -8,4 +8,5 @@ long term ideas dump
   the pseudolayer
 - export canvas image (as georeferenced tif??)
 - vectorise canvas -> export features as geojson? this would be huge as would allow use of OL's vector processing
+- allow users to write their own shaders and submit them
 

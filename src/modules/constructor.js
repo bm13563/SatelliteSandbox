@@ -5,6 +5,7 @@ import stackLayers from '../shaders/processing/stackLayers.shader';
 import apply3x3KernelShader from '../shaders/processing/apply3x3Kernel.shader';
 import sobelEdgeDetection from '../shaders/processing/sobelEdgeDetection.shader';
 import greyscale from '../shaders/processing/greyscale.shader';
+import calculateNDWI from '../shaders/processing/calculateNDWI.shader';
 
 export class Constructor{
     // takes in a pseudolayer and a vec4 (float 0-1)
@@ -139,7 +140,20 @@ export class Constructor{
             },
             shader: greyscale,
             variables: {},
-            dynamics: {}
+            dynamics: {},
+        })
+        return pseudolayer;
+    }
+
+    calculateNDWI = ({webgl, cndwi_image}={}) => {
+        const pseudolayer = webgl.processPseudoLayer({
+            shaderName: "calculateNDWI",
+            inputs: {
+                cndwi_image: cndwi_image,
+            },
+            shader: calculateNDWI,
+            variables: {},
+            dynamics: {},
         })
         return pseudolayer;
     }

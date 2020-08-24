@@ -16,34 +16,34 @@ import {Constructor} from './modules/constructor.js';
 
 
 const testMapView = new View({
-    center: [-19529.660727, 6643944.717062],
+    center: [27288.019098, 6575113.173091],
     zoom: 7,
 })
 
-const testWMS = new XYZ({
-    url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
-    params: {
-        'TILED': true, 
-        'FORMAT': 'image/png',
-        attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community',
-    },
-    attribution: "test",
-    crossOrigin: "anonymous",
-});
-
-// const testWMS2 = new TileWMS({
-//     url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
+// const testWMS = new XYZ({
+//     url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
 //     params: {
-//         'LAYERS': "TRUE_COLOR", 
 //         'TILED': true, 
 //         'FORMAT': 'image/png',
-//         'showLogo': false,
-//         'CRS': "EPSG:3857",
-//         'TIME': "2018-03-29/2018-05-29",
+//         attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community',
 //     },
 //     attribution: "test",
 //     crossOrigin: "anonymous",
 // });
+
+const testWMS = new TileWMS({
+    url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
+    params: {
+        'LAYERS': "FALSE_COLOR", 
+        'TILED': true, 
+        'FORMAT': 'image/png',
+        'showLogo': false,
+        'CRS': "EPSG:3857",
+        'TIME': "2018-03-29/2018-05-29",
+    },
+    attribution: "test",
+    crossOrigin: "anonymous",
+});
 
 const testMapLayer1 = new TileLayer({
     source: testWMS,
@@ -53,21 +53,24 @@ const testMapLayer1 = new TileLayer({
     minZoom: 1,
 });
 
-// const testMapLayer2 = new TileLayer({
-//     source: testWMS2,
-//     visible: true,
-//     title: "Sentinel testing",
-//     opacity: 1,
-//     minZoom: 1,
-// });
-
 var webgl = new WebGLCanvas("canvas_map");
 var con = new Constructor();
 var ui = new Ui(webgl, con);
 var l1 = new LayerObject(testMapLayer1, testMapView);
-// var l2 = new LayerObject(testMapLayer2, testMapView);
 
 const p1 = webgl.generatePseudoLayer(l1);
+// const p2 = webgl.generatePseudoLayer(l2);
+
+const pp1 = con.calculateNDWI({
+    webgl: webgl,
+    cndwi_image: p1,
+})
+
+ui.addUiLayer(p1);
+ui.addUiLayer(pp1);
+
+
+
 // const p2 = webgl.generatePseudoLayer(l2);
 // const pp1 = con.rgbaManipulation({
 //     webgl: webgl, 
@@ -130,7 +133,7 @@ const p1 = webgl.generatePseudoLayer(l1);
 
 // test();
 
-ui.addUiLayer(p1);
+
 
 
 // const pp1 = con.rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);

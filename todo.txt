@@ -34,3 +34,4 @@
 30. fix bug with UI state DONE
 31. seperate out "canvasReady" into "layersReady", "mapsReady" and "shadersReady" events. canvasReady only true if all of the others are true. DONE
 32. fix ui bugs caused by 31 -> seems to be that when a second effect is applied, on the first render pass the first effect changes
+33. easy band manipulation - e.g dynamicly calculateNDWI without specific shader
