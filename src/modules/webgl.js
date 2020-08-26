@@ -101,7 +101,7 @@ export class WebGLCanvas{
         this._mapsReadyEvent.wait(pseudolayer.maps);        
         // sets the current event handler, on the first map. from this point until activatePseudolayer is called again, every frame update
         // attempts to render the pseudolayer. allows for smooth movement of the map
-        let frameRender = pseudolayer.maps[0].on("postrender", () => {
+        let frameRender = pseudolayer.maps[pseudolayer.maps.length-1].on("postrender", () => {
             this._checkWhatsReady();
             // tries to render the pseudolayer. if the canvas is still in the previous render pass, will return
             // check if the canvas has finished passing all buffers from the previous frame to the gpu. if it hasn't, skip rendering this pseudolayer
@@ -194,6 +194,10 @@ export class WebGLCanvas{
     // target pseudolayer needs to be passed, to ensure that the function doesn't try to build
     // the target pseudolayer before the child pseudolayers are completed
     _recurseThroughChildLayers = (thisLayer, originalLayer) => {
+        // if a pseudolayer has multiple inputs, we don't want to run the shader until all of the inputs have
+        // been generated. therefore, we don't run the current pseudolayer until inputCount = numberInputs
+        let numberInputs = Object.keys(thisLayer.inputs).length;
+        let inputCount = 1;
         for (let key of Object.keys(thisLayer.inputs)) {
             let nextLayer = thisLayer.inputs[key];
             if (nextLayer.type === "layerObject") {
@@ -203,11 +207,12 @@ export class WebGLCanvas{
                 }
             } else {
                 this._recurseThroughChildLayers(nextLayer, originalLayer);
-                if (!(thisLayer.id === originalLayer.id)) {
+                if (!(thisLayer.id === originalLayer.id) && (numberInputs === inputCount)) {
                     let framebuffer = this._generatePseudoLayer(thisLayer);
                     this._framebufferTracker[thisLayer.id] = framebuffer;
                 }
             }
+            inputCount++;
         }
     }
 

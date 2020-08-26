@@ -27727,7 +27727,7 @@
         // attempts to render the pseudolayer. allows for smooth movement of the map
 
 
-        var frameRender = pseudolayer.maps[0].on("postrender", function () {
+        var frameRender = pseudolayer.maps[pseudolayer.maps.length - 1].on("postrender", function () {
           _this._checkWhatsReady(); // tries to render the pseudolayer. if the canvas is still in the previous render pass, will return
           // check if the canvas has finished passing all buffers from the previous frame to the gpu. if it hasn't, skip rendering this pseudolayer
 
@@ -27845,6 +27845,11 @@
       };
 
       this._recurseThroughChildLayers = function (thisLayer, originalLayer) {
+        // if a pseudolayer has multiple inputs, we don't want to run the shader until all of the inputs have
+        // been generated. therefore, we don't run the current pseudolayer until inputCount = numberInputs
+        var numberInputs = Object.keys(thisLayer.inputs).length;
+        var inputCount = 1;
+
         for (var _i = 0, _Object$keys = Object.keys(thisLayer.inputs); _i < _Object$keys.length; _i++) {
           var key = _Object$keys[_i];
           var nextLayer = thisLayer.inputs[key];
@@ -27858,12 +27863,14 @@
           } else {
             _this._recurseThroughChildLayers(nextLayer, originalLayer);
 
-            if (!(thisLayer.id === originalLayer.id)) {
+            if (!(thisLayer.id === originalLayer.id) && numberInputs === inputCount) {
               var _framebuffer = _this._generatePseudoLayer(thisLayer);
 
               _this._framebufferTracker[thisLayer.id] = _framebuffer;
             }
           }
+
+          inputCount++;
         }
       };
 
@@ -28000,7 +28007,9 @@
       _classCallCheck(this, UiLayer);
 
       // same id as the pseudolayer, can be used to get the DOM element, the pseudolayer or the uiLayer by id. 
-      this.id = pseudolayer.id; // the pseudolayer that is rendered -> updated every time a parameter is updated. reset to originalPseudolayer on reset.
+      this.id = pseudolayer.id; // the name of the pseudolayer on the ui;
+
+      this.name = "Test layer ".concat(layerNumber); // the pseudolayer that is rendered -> updated every time a parameter is updated. reset to originalPseudolayer on reset.
 
       this.pseudolayer = pseudolayer; // the original layer -> should never change
 
@@ -28009,7 +28018,7 @@
 
       this.state = {}; // html required to add the layer to the layer panel of the ui
 
-      var html = "<div class=\"layer\" id=\"".concat(this.id, "\" data-id=\"").concat(this.id, "\">\n                        <button class=\"delete_layer\" data-id=\"").concat(this.id, "\">&#10060</button>\n                        <span id=\"Test layer ").concat(layerNumber, "\" class=\"layer_text\" data-id=\"").concat(this.id, "\">Test layer ").concat(layerNumber, "</span>\n                     </div>");
+      var html = "<div class=\"layer\" id=\"".concat(this.id, "\" data-id=\"").concat(this.id, "\">\n                        <button class=\"delete_layer\" data-id=\"").concat(this.id, "\">&#10060</button>\n                        <span id=\"Test layer ").concat(layerNumber, "\" class=\"layer_text\" data-id=\"").concat(this.id, "\">").concat(this.name, "</span>\n                     </div>");
       this.html = document.createElement("div");
       this.html.innerHTML = html;
     };
@@ -28183,8 +28192,14 @@
           if (inputArguments) {
             var functionName = inputArguments.stateFunction; // deep copy the state variables -> prevents issues with mutation when state is changed by the guis
 
-            var inputArguments = JSON.parse(JSON.stringify(inputArguments));
-            inputArguments[inputArguments["inputName"]] = targetPseudolayer;
+            var inputArguments = JSON.parse(JSON.stringify(inputArguments)); // can be multiple inputs, so need to loop through. therefore inputs must be given as an array
+
+            var inputLayers = inputArguments["inputName"];
+
+            for (x = 0; x < inputLayers.length; x++) {
+              inputArguments[inputLayers[x]] = targetPseudolayer;
+            }
+
             inputArguments["webgl"] = _this._webgl; // set the target pseudolayer as the pseudolayer that has just been built -> means next effects are stacked
             // on top of this pseudolayer
 
@@ -28205,7 +28220,8 @@
           var rgbam_multiplier = [1.0, 1.0, 1.0, 1.0];
           targetUiLayer.state["rgbaManipulation"] = {
             "rgbam_multiplier": rgbam_multiplier,
-            "inputName": "rgbam_image",
+            // must be given as an array, as can be multiple inputs to a shader
+            "inputName": ["rgbam_image"],
             // the function to be called when rebuilding the layer
             "stateFunction": _this._constructor.rgbaManipulation,
             // the order in which processing should be re-applied when constructing the layer
@@ -28214,8 +28230,9 @@
         } // we now need to re-construct the target pseudolayer from it's state, maintaining order
 
 
-        var targetPseudolayer = _this.restoreGuiState(targetUiLayer, "rgbaManipulation"); // generate gui -> can be unstyled, as will resize to fit generic gui container, or can be styled in guis.css
+        var targetPseudolayer = _this.restoreGuiState(targetUiLayer, "rgbaManipulation");
 
+        console.log(targetPseudolayer); // generate gui -> can be unstyled, as will resize to fit generic gui container, or can be styled in guis.css
 
         var html = "<div id=\"rgbaManipulation\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Multiply RGBA</p>\n                          <p class=\"gui_text\">Red: <span id=\"red_value\">".concat(rgbam_multiplier[0], "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"300\" value=\"").concat(rgbam_multiplier[0] * 100, "\" class=\"gui_slider\" id=\"red_slider\">\n                          <p class=\"gui_text\">Green: <span id=\"green_value\">").concat(rgbam_multiplier[1], "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"300\" value=\"").concat(rgbam_multiplier[1] * 100, "\" class=\"gui_slider\" id=\"green_slider\">\n                          <p class=\"gui_text\">Blue: <span id=\"blue_value\">").concat(rgbam_multiplier[2], "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"300\" value=\"").concat(rgbam_multiplier[2] * 100, "\" class=\"gui_slider\" id=\"blue_slider\">\n                      </div>");
 
@@ -28260,7 +28277,7 @@
             "rgbf_filter": rgbf_filter,
             "rgbf_removed": rgbf_removed,
             "rgbfd1_remove": rgbfd1_remove,
-            "inputName": "rgbf_image",
+            "inputName": ["rgbf_image"],
             "stateFunction": _this._constructor.rgbFiltering,
             "guiOrder": Object.keys(targetUiLayer.state).length
           };
@@ -28329,7 +28346,7 @@
             "rgbfp_filter": rgbfp_filter,
             "rgbfp_removed": rgbfp_removed,
             "rgbfpd1_remove": rgbfpd1_remove,
-            "inputName": "rgbfp_image",
+            "inputName": ["rgbfp_image"],
             "stateFunction": _this._constructor.rgbPercentageFiltering,
             "guiOrder": Object.keys(targetUiLayer.state).length
           };
@@ -28395,7 +28412,7 @@
           targetUiLayer.state["apply3x3Kernel"] = {
             "a3k_kernel": a3k_kernel,
             "a3k_kernelWeight": a3k_kernelWeight,
-            "inputName": "a3k_image",
+            "inputName": ["a3k_image"],
             "stateFunction": _this._constructor.apply3x3Kernel,
             "guiOrder": Object.keys(targetUiLayer.state).length
           };
@@ -28435,7 +28452,15 @@
       this.sobelEdgeDetection = function () {
         var targetUiLayer = _this.activeUiLayer;
 
-        var targetPseudolayer = _this.restoreGuiState(targetUiLayer, "apply_sobel");
+        if (!("sobelEdgeDetection" in targetUiLayer.state)) {
+          targetUiLayer.state["sobelEdgeDetection"] = {
+            "inputName": ["sed_image"],
+            "stateFunction": _this._constructor.sobelEdgeDetection,
+            "guiOrder": Object.keys(targetUiLayer.state).length
+          };
+        }
+
+        var targetPseudolayer = _this.restoreGuiState(targetUiLayer, "sobelEdgeDetection");
 
         var html = "<div id=\"sobelEdgeDetection\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Apply sobel edge detection</p>\n                          <input id=\"apply_sobel\" type=\"button\" value=\"Apply\">\n                          <br><br>\n                      </div>";
 
@@ -28444,11 +28469,104 @@
         _this.activeGui = gui;
 
         document.getElementById("apply_sobel").onclick = function () {
-          var state = targetUiLayer.state.sobelEdgeDetection;
-
           var pseudolayer = _this._constructor.sobelEdgeDetection({
             webgl: _this._webgl,
             sed_image: targetPseudolayer
+          });
+
+          _this.updateUiLayer(targetUiLayer, pseudolayer);
+        };
+      };
+
+      this.greyscale = function () {
+        var targetUiLayer = _this.activeUiLayer;
+
+        if (!("greyscale" in targetUiLayer.state)) {
+          targetUiLayer.state["greyscale"] = {
+            "inputName": ["gs_image"],
+            "stateFunction": _this._constructor.greyscale,
+            "guiOrder": Object.keys(targetUiLayer.state).length
+          };
+        }
+
+        var targetPseudolayer = _this.restoreGuiState(targetUiLayer, "greyscale");
+
+        var html = "<div id=\"greyscale\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Apply greyscale</p>\n                          <input id=\"apply_greyscale\" type=\"button\" value=\"Apply\">\n                          <br><br>\n                      </div>";
+
+        var gui = _this._addGuiToDOM(html);
+
+        _this.activeGui = gui;
+
+        document.getElementById("apply_greyscale").onclick = function () {
+          var pseudolayer = _this._constructor.greyscale({
+            webgl: _this._webgl,
+            gs_image: targetPseudolayer
+          });
+
+          _this.updateUiLayer(targetUiLayer, pseudolayer);
+        };
+      };
+
+      this.stackLayers = function () {
+        var targetUiLayer = _this.activeUiLayer;
+
+        if ("stackLayers" in targetUiLayer.state) {
+          var sl1_weight = targetUiLayer.state.stackLayers.sl1_weight;
+          var sl2_weight = targetUiLayer.state.stackLayers.sl2_weight;
+          var sl_multiplier = targetUiLayer.state.stackLayers.sl_multiplier;
+        } else {
+          var sl1_weight = 1.0;
+          var sl2_weight = 1.0;
+          var sl_multiplier = 2.0;
+          targetUiLayer.state["stackLayers"] = {
+            "sl1_weight": sl1_weight,
+            "sl2_weight": sl2_weight,
+            "sl_multiplier": sl_multiplier,
+            "inputName": ["sl1_image", "sl2_image"],
+            "stateFunction": _this._constructor.stackLayers,
+            "guiOrder": Object.keys(targetUiLayer.state).length
+          };
+        } // the first target layer -> the current active layer
+
+
+        var targetPseudolayer1 = _this.restoreGuiState(targetUiLayer, "stackLayers"); // get all of the available layers for the second layer dropdown
+
+
+        var layerOptions = "";
+
+        for (var _i2 = 0, _Object$keys2 = Object.keys(_this._uiLayers); _i2 < _Object$keys2.length; _i2++) {
+          var key = _Object$keys2[_i2];
+          var uiLayer = _this._uiLayers[key];
+          layerOptions += "<option id=".concat(uiLayer.id, ">").concat(uiLayer.name, "</option>");
+        }
+
+        var html = "<div id=\"rgbaManipulation\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Stack layers</p>\n                          <p class=\"gui_text\">This layer weight:</p>\n                          <input id=\"layer1_weight\" type=\"number\" min=\"1\" max=\"5\" value=\"".concat(sl1_weight, "\">\n                          <p class=\"gui_text\">Layer 2 input:</p>\n                          <select id=\"layer2_dropdown\">\n                              ").concat(layerOptions, "\n                          </select>\n                          <p class=\"gui_text\">Layer 2 weight:</p>\n                          <input id=\"layer2_weight\" type=\"number\" min=\"1\" max=\"5\" value=\"").concat(sl2_weight, "\">\n                          <p class=\"gui_text\">Multiplier:</p>\n                          <input id=\"stack_layers_multiplier\" type=\"number\" min=\"1\" max=\"5\" value=\"").concat(sl_multiplier, "\">\n                          <br><br>\n                          <input id=\"apply_stack_layers\" type=\"button\" value=\"Apply\">\n                          <br><br>\n                      </div>");
+
+        var gui = _this._addGuiToDOM(html);
+
+        _this.activeGui = gui;
+
+        document.getElementById("apply_stack_layers").onclick = function () {
+          var state = targetUiLayer.state.stackLayers; // first we need to reconstruct the selected ui layer
+
+          var selectElement = document.getElementById("layer2_dropdown");
+          var selectedElementId = selectElement[selectElement.selectedIndex].id;
+          var layer2 = _this._uiLayers[selectedElementId];
+
+          var targetPseudolayer2 = _this.restoreGuiState(layer2, "stackLayers"); // then get input values
+
+
+          state.sl1_weight = parseInt(document.getElementById("layer1_weight").value);
+          state.sl2_weight = parseInt(document.getElementById("layer2_weight").value);
+          state.sl_multiplier = parseInt(document.getElementById("stack_layers_multiplier").value);
+
+          var pseudolayer = _this._constructor.stackLayers({
+            webgl: _this._webgl,
+            sl1_image: targetPseudolayer1,
+            sl2_image: targetPseudolayer2,
+            sl1_weight: state.sl1_weight,
+            sl2_weight: state.sl2_weight,
+            sl_multiplier: state.sl_multiplier
           });
 
           _this.updateUiLayer(targetUiLayer, pseudolayer);
@@ -28476,7 +28594,9 @@
         "rgbFiltering": this.rgbFilteringGui,
         "rgbPercentageFiltering": this.rgbPercentageFilteringGui,
         "apply3x3Kernel": this.apply3x3KernelGui,
-        "sobelEdgeDetection": this.sobelEdgeDetection
+        "sobelEdgeDetection": this.sobelEdgeDetection,
+        "greyscale": this.greyscale,
+        "stackLayers": this.stackLayers
       };
     } // add a pseudolayer to the ui, generating a new uiLayer. this uiLayer is added to the end 
     // of the existing uiLayers
@@ -28719,7 +28839,20 @@
         'FORMAT': 'image/png',
         'showLogo': false,
         'CRS': "EPSG:3857",
-        'TIME': "2018-03-29/2018-05-29"
+        'TIME': "2020-06-26/2020-07-26"
+      },
+      attribution: "test",
+      crossOrigin: "anonymous"
+    });
+    var testWMS2 = new TileWMS({
+      url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
+      params: {
+        'LAYERS': "FALSE_COLOR",
+        'TILED': true,
+        'FORMAT': 'image/png',
+        'showLogo': false,
+        'CRS': "EPSG:3857",
+        'TIME': "2020-07-26/2020-08-26"
       },
       attribution: "test",
       crossOrigin: "anonymous"
@@ -28731,17 +28864,26 @@
       opacity: 1,
       minZoom: 1
     });
+    var testMapLayer2 = new TileLayer({
+      source: testWMS2,
+      visible: true,
+      title: "Sentinel testing",
+      opacity: 1,
+      minZoom: 1
+    });
     var webgl = new WebGLCanvas("canvas_map");
     var con = new Constructor();
     var ui = new Ui(webgl, con);
     var l1 = new LayerObject(testMapLayer1, testMapView);
-    var p1 = webgl.generatePseudoLayer(l1); // const p2 = webgl.generatePseudoLayer(l2);
-
+    var l2 = new LayerObject(testMapLayer2, testMapView);
+    var p1 = webgl.generatePseudoLayer(l1);
+    var p2 = webgl.generatePseudoLayer(l2);
     var pp1 = con.calculateNDWI({
       webgl: webgl,
       cndwi_image: p1
     });
     ui.addUiLayer(p1);
+    ui.addUiLayer(p2);
     ui.addUiLayer(pp1); // const p2 = webgl.generatePseudoLayer(l2);
     // const pp1 = con.rgbaManipulation({
     //     webgl: webgl, 
@@ -28845,9 +28987,10 @@
       if (newLayer && newLayer.id === "new_layer") {
         var pseudolayer = ui.activeUiLayer.pseudolayer; // generate a new pseudolayer before adding a new layer, just in case the old pseudolayer is the same
         // as the new pseudolayer
+        // var pseudolayer = webgl.generatePseudoLayer(pseudolayer);
 
-        var pseudolayer = webgl.generatePseudoLayer(pseudolayer);
         ui.addUiLayer(pseudolayer);
+        console.log(pseudolayer);
       }
     }); // reset a ui layer
 

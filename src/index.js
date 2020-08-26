@@ -39,7 +39,21 @@ const testWMS = new TileWMS({
         'FORMAT': 'image/png',
         'showLogo': false,
         'CRS': "EPSG:3857",
-        'TIME': "2018-03-29/2018-05-29",
+        'TIME': "2020-06-26/2020-07-26",
+    },
+    attribution: "test",
+    crossOrigin: "anonymous",
+});
+
+const testWMS2 = new TileWMS({
+    url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
+    params: {
+        'LAYERS': "FALSE_COLOR", 
+        'TILED': true, 
+        'FORMAT': 'image/png',
+        'showLogo': false,
+        'CRS': "EPSG:3857",
+        'TIME': "2020-07-26/2020-08-26",
     },
     attribution: "test",
     crossOrigin: "anonymous",
@@ -53,13 +67,22 @@ const testMapLayer1 = new TileLayer({
     minZoom: 1,
 });
 
+const testMapLayer2 = new TileLayer({
+    source: testWMS2,
+    visible: true,
+    title: "Sentinel testing",
+    opacity: 1,
+    minZoom: 1,
+});
+
 var webgl = new WebGLCanvas("canvas_map");
 var con = new Constructor();
 var ui = new Ui(webgl, con);
 var l1 = new LayerObject(testMapLayer1, testMapView);
+var l2 = new LayerObject(testMapLayer2, testMapView);
 
 const p1 = webgl.generatePseudoLayer(l1);
-// const p2 = webgl.generatePseudoLayer(l2);
+const p2 = webgl.generatePseudoLayer(l2);
 
 const pp1 = con.calculateNDWI({
     webgl: webgl,
@@ -67,6 +90,7 @@ const pp1 = con.calculateNDWI({
 })
 
 ui.addUiLayer(p1);
+ui.addUiLayer(p2);
 ui.addUiLayer(pp1);
 
 
@@ -186,8 +210,9 @@ document.addEventListener('click', (e) => {
         var pseudolayer = ui.activeUiLayer.pseudolayer;
         // generate a new pseudolayer before adding a new layer, just in case the old pseudolayer is the same
         // as the new pseudolayer
-        var pseudolayer = webgl.generatePseudoLayer(pseudolayer);
+        // var pseudolayer = webgl.generatePseudoLayer(pseudolayer);
         ui.addUiLayer(pseudolayer);
+        console.log(pseudolayer)
     }
 });
 

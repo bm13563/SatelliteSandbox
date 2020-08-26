@@ -9,4 +9,5 @@ long term ideas dump
 - export canvas image (as georeferenced tif??)
 - vectorise canvas -> export features as geojson? this would be huge as would allow use of OL's vector processing
 - allow users to write their own shaders and submit them
+- virtual wms - allow tiles to be selected for specific areas from multiple sources, seemlessly changing source when reaching a specific area 
 
