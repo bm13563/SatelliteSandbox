@@ -33,5 +33,8 @@
 29. still worried about minor memory leak, to review -> monitor but doesn;t seem to be a  problem
 30. fix bug with UI state DONE
 31. seperate out "canvasReady" into "layersReady", "mapsReady" and "shadersReady" events. canvasReady only true if all of the others are true. DONE
-32. fix ui bugs caused by 31 -> seems to be that when a second effect is applied, on the first render pass the first effect changes
+32. fix ui bugs caused by 31 -> seems to be that when a second effect is applied, on the first render pass the first effect changes DONE
 33. build band calculators -> single and multiple layers
+34. rewrite/ re-comment restoreGuiState function in ui
+35. rework ui (AGAIN)
+

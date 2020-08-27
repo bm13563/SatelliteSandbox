@@ -212,7 +212,6 @@ document.addEventListener('click', (e) => {
         // as the new pseudolayer
         // var pseudolayer = webgl.generatePseudoLayer(pseudolayer);
         ui.addUiLayer(pseudolayer);
-        console.log(pseudolayer)
     }
 });
 

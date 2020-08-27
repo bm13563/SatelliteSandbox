@@ -1,3 +1,5 @@
+import * as utils from './utils.js';
+
 export class UiLayer{
     constructor(pseudolayer, layerNumber) {
         // same id as the pseudolayer, can be used to get the DOM element, the pseudolayer or the uiLayer by id. 
@@ -188,11 +190,11 @@ export class Ui {
         // event listeners *should* be garbage collected
     }
 
+    // TODO refactor and better commenting
     // this function reconstructs a pseudolayer from it's state, ignoring the state of the current gui. this is so that
     // when the parameters are changed by the gui, they are relative to the original pseudolayer, rather than any 
     // processing that has already been applied
     restoreGuiState = (uiLayer, thisGui) => {
-        console.log("called")
         let guiOrder = {};
         let targetPseudolayer = uiLayer.originalPseudolayer;
         // save the order of the guis as the key, and the inputs as the values. then can loop through 1 - gui.length
@@ -211,26 +213,27 @@ export class Ui {
         }
         // loop through guis in the order that effects have been applied, and re-apply all of the effects from the state
         for (let x = 0; x < Object.keys(guiOrder).length; x++){
-            var inputArguments = guiOrder[x];
-            if (inputArguments) {
-                console.log("built something", inputArguments)
-                // store the function name and pseudolayers outside of the object, since these can't (and don't need to be) deep copied
-                const functionName = inputArguments.stateFunction;
-                const inputPseudolayers = inputArguments.inputName;
-                delete inputArguments.stateFunction;
-                delete inputArguments.inputName;
-                // deep copy the state variables -> prevents issues with mutation when state is changed by the guis
-                var inputArguments = JSON.parse(JSON.stringify(inputArguments));
-                // update the input arguments with the input pseudolayers
-                for (let key of Object.keys(inputPseudolayers)) {
-                    inputArguments[key] = inputPseudolayers[key];
+            var pseudolayerParameters = guiOrder[x];
+            if (pseudolayerParameters) {
+                // break dependencies -> shallow copy, remove functions and objects, deep copy. needs improving
+                pseudolayerParameters = {...pseudolayerParameters};
+                const functionName = pseudolayerParameters.stateFunction;
+                const otherPseudolayers = pseudolayerParameters.otherInputs;
+                delete pseudolayerParameters.stateFunction;
+                delete pseudolayerParameters.otherInputs;
+                var pseudolayerParameters = JSON.parse(JSON.stringify(pseudolayerParameters));
+                // add this pseudolayer and webgl arguments to constructor
+                pseudolayerParameters[pseudolayerParameters["thisInput"]] = targetPseudolayer;
+                pseudolayerParameters["webgl"] = this._webgl;
+                // update any other inputs. skip if there are no other inputs
+                if (!(otherPseudolayers === undefined)) {
+                    for (let key of Object.keys(otherPseudolayers)) {
+                        pseudolayerParameters[key] = otherPseudolayers[key];
+                    }
                 }
-                console.log(inputPseudolayers)
-                console.log(inputArguments)
-                // inputArguments["webgl"] = this._webgl;
                 // set the target pseudolayer as the pseudolayer that has just been built -> means next effects are stacked
                 // on top of this pseudolayer
-                targetPseudolayer = functionName(inputArguments);
+                targetPseudolayer = functionName(pseudolayerParameters);
             }
         }
         return targetPseudolayer;
@@ -248,7 +251,7 @@ export class Ui {
             var rgbam_multiplier = targetUiLayer.state.rgbaManipulation.rgbam_multiplier;
         } else {
             // store the position of this gui process - allows us to reconstruct the layer in the correct order
-            var thisGuiNumber = targetUiLayer.state.guiOrder;
+            var thisGuiNumber = Object.keys(targetUiLayer.state).length;
             var rgbam_multiplier = [1.0, 1.0, 1.0, 1.0];
         }
 
@@ -287,11 +290,10 @@ export class Ui {
                 // update the state of the layer
                 targetUiLayer.state["rgbaManipulation"] = {
                     "rgbam_multiplier": rgbam_multiplier,
-                    "inputName": {
-                        "rgbam_image": pseudolayer
-                    },
+                    "thisInput": "rgbam_image",
+                    "otherInputs": {},
                     // the function to be called when rebuilding the layer
-                    "stateFunction": this._constructor.rgbaManipulation,
+                    "stateFunction": ui._constructor.rgbaManipulation,
                     // the order in which processing should be re-applied when constructing the layer
                     "guiOrder": thisGuiNumber,
                 }
@@ -357,10 +359,9 @@ export class Ui {
                     "rgbf_filter": rgbf_filter,
                     "rgbf_removed": rgbf_removed,
                     "rgbfd1_remove": rgbfd1_remove,
-                    "inputName": {
-                        "rgbf_image": targetPseudolayer
-                    },
-                    "stateFunction": this._constructor.rgbFiltering,
+                    "thisInput": "rgbf_image",
+                    "otherInputs": {},
+                    "stateFunction": ui._constructor.rgbFiltering,
                     "guiOrder": thisGuiNumber,
                 }
             }
@@ -372,9 +373,9 @@ export class Ui {
 
         // event listener on operator to use
         document.getElementById("operator").onchange = () => {
-            rgbf_filter[0] = document.getElementById("red_slider").value/255;
-            rgbf_filter[1] = document.getElementById("green_slider").value/255;
-            rgbf_filter[2] = document.getElementById("blue_slider").value/255;
+            rgbf_filter[0] = document.getElementById("red_slider").value/100;
+            rgbf_filter[1] = document.getElementById("green_slider").value/100;
+            rgbf_filter[2] = document.getElementById("blue_slider").value/100;
             rgbfd1_remove = document.getElementById("operator").value;
             let pseudolayer = ui._constructor.rgbFiltering({
                 webgl: ui._webgl, 
@@ -389,9 +390,8 @@ export class Ui {
                 "rgbf_filter": rgbf_filter,
                 "rgbf_removed": rgbf_removed,
                 "rgbfd1_remove": rgbfd1_remove,
-                "inputName": {
-                    "rgbf_image": targetPseudolayer
-                },
+                "thisInput": "rgbf_image",
+                "otherInputs": {},
                 "stateFunction": this._constructor.rgbFiltering,
                 "guiOrder": thisGuiNumber,
             }
@@ -434,9 +434,9 @@ export class Ui {
 
         function addSliderEvent(sliderId, valueId, targetUiLayer, targetPseudolayer, ui) {
             document.getElementById(sliderId).oninput = () => {
-                rgbfp_filter[0] = document.getElementById("red_slider").value/255;
-                rgbfp_filter[1] = document.getElementById("green_slider").value/255;
-                rgbfp_filter[2] = document.getElementById("blue_slider").value/255;
+                rgbfp_filter[0] = document.getElementById("red_slider").value/100;
+                rgbfp_filter[1] = document.getElementById("green_slider").value/100;
+                rgbfp_filter[2] = document.getElementById("blue_slider").value/100;
                 rgbfpd1_remove = document.getElementById("operator").value;
                 document.getElementById(valueId).innerHTML = document.getElementById(sliderId).value + "%";
                 const pseudolayer = ui._constructor.rgbPercentageFiltering({
@@ -452,10 +452,9 @@ export class Ui {
                     "rgbfp_filter": rgbfp_filter,
                     "rgbfp_removed": rgbfp_removed,
                     "rgbfpd1_remove": rgbfpd1_remove,
-                    "inputName": {
-                        "rgbfp_image": targetPseudolayer
-                    },
-                    "stateFunction": this._constructor.rgbPercentageFiltering,
+                    "thisInput": "rgbfp_image",
+                    "otherInputs": {},
+                    "stateFunction": ui._constructor.rgbPercentageFiltering,
                     "guiOrder": thisGuiNumber,
                 }
             }
@@ -467,16 +466,16 @@ export class Ui {
 
         // event listener on operator to use
         document.getElementById("operator").onchange = () => {
-            rgbfp_filter[0] = document.getElementById("red_slider").value/255;
-            rgbfp_filter[1] = document.getElementById("green_slider").value/255;
-            rgbfp_filter[2] = document.getElementById("blue_slider").value/255;
+            rgbfp_filter[0] = document.getElementById("red_slider").value/100;
+            rgbfp_filter[1] = document.getElementById("green_slider").value/100;
+            rgbfp_filter[2] = document.getElementById("blue_slider").value/100;
             rgbfpd1_remove = document.getElementById("operator").value;
             const pseudolayer = this._constructor.rgbPercentageFiltering({
                 webgl: this._webgl, 
                 rgbfp_image: targetPseudolayer, 
-                rgbfp_filter: state.rgbfp_filter, 
-                rgbfp_removed: state.rgbfp_removed, 
-                rgbfpd1_remove: state.rgbfpd1_remove
+                rgbfp_filter: rgbfp_filter, 
+                rgbfp_removed: rgbfp_removed, 
+                rgbfpd1_remove: rgbfpd1_remove
             });
             this.updateUiLayer(targetUiLayer, pseudolayer);
 
@@ -484,9 +483,8 @@ export class Ui {
                 "rgbfp_filter": rgbfp_filter,
                 "rgbfp_removed": rgbfp_removed,
                 "rgbfpd1_remove": rgbfpd1_remove,
-                "inputName": {
-                    "rgbfp_image": targetPseudolayer
-                },
+                "thisInput": "rgbfp_image",
+                "otherInputs": {},
                 "stateFunction": this._constructor.rgbPercentageFiltering,
                 "guiOrder": thisGuiNumber,
             }
@@ -554,9 +552,8 @@ export class Ui {
             targetUiLayer.state["apply3x3Kernel"] = {
                 "a3k_kernel": a3k_kernel,
                 "a3k_kernelWeight": a3k_kernelWeight,
-                "inputName": {
-                    "a3k_image": targetPseudolayer
-                },
+                "thisInput": "a3k_image",
+                "otherInputs": {},
                 "stateFunction": this._constructor.apply3x3Kernel,
                 "guiOrder": thisGuiNumber,
             }
@@ -589,9 +586,8 @@ export class Ui {
             this.updateUiLayer(targetUiLayer, pseudolayer);
 
             targetUiLayer.state["sobelEdgeDetection"] = {
-                "inputName": {
-                    "sed_image": targetPseudolayer
-                },
+                "thisInput": "sed_image",
+                "otherInputs": {},
                 "stateFunction": this._constructor.sobelEdgeDetection,
                 "guiOrder": thisGuiNumber,
             }
@@ -624,9 +620,8 @@ export class Ui {
             this.updateUiLayer(targetUiLayer, pseudolayer);
 
             targetUiLayer.state["greyscale"] = {
-                "inputName": {
-                    "gs_image": targetPseudolayer
-                },
+                "thisInput": "gs_image",
+                "otherInputs": {},
                 "stateFunction": this._constructor.greyscale,
                 "guiOrder": thisGuiNumber,
             }
@@ -703,9 +698,9 @@ export class Ui {
                 "sl1_weight": sl1_weight,
                 "sl2_weight": sl2_weight,
                 "sl_multiplier": sl_multiplier,
-                "inputName": {
-                    "sl1_image": targetPseudolayer1, 
-                    "sl2_image": targetPseudolayer2,
+                "thisInput": "sl1_image",
+                "otherInputs": {
+                    "sl2_image": targetPseudolayer2
                 },
                 "stateFunction": this._constructor.stackLayers,
                 "guiOrder": thisGuiNumber,
