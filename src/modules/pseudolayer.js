@@ -54,9 +54,12 @@ export class PseudoLayer{
         }
     }
 
-    updateVariables = (variables) => {
-        for (let key of Object.keys(variables)) {
-            this.variables[key] = variables[key];
-        }
+    updateVariable = (variable, value) => {
+        this.variables[variable] = value;
+    }
+
+    // generally called if the dynamics are updated from webgl class
+    updateShader = (shader) => {
+        this.shader = shader;
     }
 }

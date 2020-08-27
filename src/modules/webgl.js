@@ -302,4 +302,11 @@ export class WebGLCanvas{
         }
         return shader;
     }
+
+    // used to update the shader of a specific pseudolayer to accomodate new dynamic values
+    updateDynamics = (newDynamics, pseudolayer) => {
+        let dynamicShader = this._addDynamicsToShader(pseudolayer.shader, newDynamics);
+        let compiledShader = this._compileShaders(dynamicShader);
+        pseudolayer.updateShader(compiledShader);
+    }
 }
