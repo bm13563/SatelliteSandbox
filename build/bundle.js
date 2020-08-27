@@ -28167,6 +28167,7 @@
       };
 
       this.restoreGuiState = function (uiLayer, thisGui) {
+        console.log("called");
         var guiOrder = {};
         var targetPseudolayer = uiLayer.originalPseudolayer; // save the order of the guis as the key, and the inputs as the values. then can loop through 1 - gui.length
         // and apply effects in the correct order
@@ -28190,20 +28191,19 @@
           var inputArguments = guiOrder[x];
 
           if (inputArguments) {
-            var functionName = inputArguments.stateFunction; // deep copy the state variables -> prevents issues with mutation when state is changed by the guis
+            console.log("built something", inputArguments);
+            var functionName = inputArguments.stateFunction;
+            var inputPseudolayers = inputArguments.inputName;
+            delete inputArguments.stateFunction;
+            delete inputArguments.inputName; // deep copy the state variables -> prevents issues with mutation when state is changed by the guis
 
             var inputArguments = JSON.parse(JSON.stringify(inputArguments)); // can be multiple inputs, so need to loop through. therefore inputs must be given as an array
 
-            var inputLayers = inputArguments["inputName"];
-
-            for (x = 0; x < inputLayers.length; x++) {
-              inputArguments[inputLayers[x]] = targetPseudolayer;
-            }
-
-            inputArguments["webgl"] = _this._webgl; // set the target pseudolayer as the pseudolayer that has just been built -> means next effects are stacked
+            console.log(inputPseudolayers);
+            console.log(inputArguments); // inputArguments["webgl"] = this._webgl;
+            // set the target pseudolayer as the pseudolayer that has just been built -> means next effects are stacked
             // on top of this pseudolayer
-
-            targetPseudolayer = functionName(inputArguments);
+            // targetPseudolayer = functionName(inputArguments);
           }
         }
 
@@ -28215,24 +28215,17 @@
         // also need to record the number of this gui, so that processing can be re-applied in order
 
         if ("rgbaManipulation" in targetUiLayer.state) {
+          var thisGuiNumber = targetUiLayer.state.guiOrder;
           var rgbam_multiplier = targetUiLayer.state.rgbaManipulation.rgbam_multiplier;
         } else {
+          // store the position of this gui process - allows us to reconstruct the layer in the correct order
+          var thisGuiNumber = targetUiLayer.state.guiOrder;
           var rgbam_multiplier = [1.0, 1.0, 1.0, 1.0];
-          targetUiLayer.state["rgbaManipulation"] = {
-            "rgbam_multiplier": rgbam_multiplier,
-            // must be given as an array, as can be multiple inputs to a shader
-            "inputName": ["rgbam_image"],
-            // the function to be called when rebuilding the layer
-            "stateFunction": _this._constructor.rgbaManipulation,
-            // the order in which processing should be re-applied when constructing the layer
-            "guiOrder": Object.keys(targetUiLayer.state).length
-          };
         } // we now need to re-construct the target pseudolayer from it's state, maintaining order
 
 
-        var targetPseudolayer = _this.restoreGuiState(targetUiLayer, "rgbaManipulation");
+        var targetPseudolayer = _this.restoreGuiState(targetUiLayer, "rgbaManipulation"); // generate gui -> can be unstyled, as will resize to fit generic gui container, or can be styled in guis.css
 
-        console.log(targetPseudolayer); // generate gui -> can be unstyled, as will resize to fit generic gui container, or can be styled in guis.css
 
         var html = "<div id=\"rgbaManipulation\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Multiply RGBA</p>\n                          <p class=\"gui_text\">Red: <span id=\"red_value\">".concat(rgbam_multiplier[0], "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"300\" value=\"").concat(rgbam_multiplier[0] * 100, "\" class=\"gui_slider\" id=\"red_slider\">\n                          <p class=\"gui_text\">Green: <span id=\"green_value\">").concat(rgbam_multiplier[1], "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"300\" value=\"").concat(rgbam_multiplier[1] * 100, "\" class=\"gui_slider\" id=\"green_slider\">\n                          <p class=\"gui_text\">Blue: <span id=\"blue_value\">").concat(rgbam_multiplier[2], "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"300\" value=\"").concat(rgbam_multiplier[2] * 100, "\" class=\"gui_slider\" id=\"blue_slider\">\n                      </div>");
 
@@ -28240,47 +28233,56 @@
 
         _this.activeGui = gui; // add event handlers -> these should be garbage collected when the gui is removed
 
-        function addSliderEvent(sliderId, valueId, index, targetUiLayer, targetPseudolayer, ui) {
+        function addSliderEvent(sliderId, valueId, targetUiLayer, targetPseudolayer, ui) {
+          var _this2 = this;
+
           document.getElementById(sliderId).oninput = function () {
-            var state = targetUiLayer.state.rgbaManipulation;
-            var thisSlider = document.getElementById(sliderId);
-            state.rgbam_multiplier[index] = thisSlider.value / 100;
-            document.getElementById(valueId).innerHTML = thisSlider.value / 100;
+            // get the input values from the sliders
+            rgbam_multiplier[0] = document.getElementById("red_slider").value / 100;
+            rgbam_multiplier[1] = document.getElementById("green_slider").value / 100;
+            rgbam_multiplier[2] = document.getElementById("blue_slider").value / 100; // update the text for the gui
+
+            document.getElementById(valueId).innerHTML = document.getElementById(sliderId).value / 100;
 
             var pseudolayer = ui._constructor.rgbaManipulation({
               webgl: ui._webgl,
               rgbam_image: targetPseudolayer,
-              rgbam_multiplier: state.rgbam_multiplier
+              rgbam_multiplier: rgbam_multiplier
             });
 
-            ui.updateUiLayer(targetUiLayer, pseudolayer);
+            ui.updateUiLayer(targetUiLayer, pseudolayer); // update the state of the layer
+
+            targetUiLayer.state["rgbaManipulation"] = {
+              "rgbam_multiplier": rgbam_multiplier,
+              "inputName": {
+                "rgbam_image": pseudolayer
+              },
+              // the function to be called when rebuilding the layer
+              "stateFunction": _this2._constructor.rgbaManipulation,
+              // the order in which processing should be re-applied when constructing the layer
+              "guiOrder": thisGuiNumber
+            };
           };
         }
 
-        addSliderEvent("red_slider", "red_value", 0, targetUiLayer, targetPseudolayer, _this);
-        addSliderEvent("green_slider", "green_value", 1, targetUiLayer, targetPseudolayer, _this);
-        addSliderEvent("blue_slider", "blue_value", 2, targetUiLayer, targetPseudolayer, _this);
+        addSliderEvent("red_slider", "red_value", targetUiLayer, targetPseudolayer, _this);
+        addSliderEvent("green_slider", "green_value", targetUiLayer, targetPseudolayer, _this);
+        addSliderEvent("blue_slider", "blue_value", targetUiLayer, targetPseudolayer, _this);
       };
 
       this.rgbFilteringGui = function () {
         var targetUiLayer = _this.activeUiLayer;
 
         if ("rgbFiltering" in targetUiLayer.state) {
+          var thisGuiNumber = targetUiLayer.state.guiOrder;
           var rgbf_filter = targetUiLayer.state.rgbFiltering.rgbf_filter;
           var rgbf_removed = targetUiLayer.state.rgbFiltering.rgbf_removed;
           var rgbfd1_remove = targetUiLayer.state.rgbFiltering.rgbfd1_remove;
         } else {
+          var thisGuiNumber = Object.keys(targetUiLayer.state).length;
           var rgbf_filter = [1.0, 1.0, 1.0];
           var rgbf_removed = [0.0, 0.0, 0.0, 1.0];
           var rgbfd1_remove = ">";
-          targetUiLayer.state["rgbFiltering"] = {
-            "rgbf_filter": rgbf_filter,
-            "rgbf_removed": rgbf_removed,
-            "rgbfd1_remove": rgbfd1_remove,
-            "inputName": ["rgbf_image"],
-            "stateFunction": _this._constructor.rgbFiltering,
-            "guiOrder": Object.keys(targetUiLayer.state).length
-          };
         }
 
         var targetPseudolayer = _this.restoreGuiState(targetUiLayer, "rgbFiltering");
@@ -28291,43 +28293,68 @@
 
         _this.activeGui = gui;
 
-        function addSliderEvent(sliderId, valueId, index, targetUiLayer, targetPseudolayer, ui) {
+        function addSliderEvent(sliderId, valueId, targetUiLayer, targetPseudolayer, ui) {
+          var _this3 = this;
+
           document.getElementById(sliderId).oninput = function () {
-            var state = targetUiLayer.state.rgbFiltering;
-            var thisSlider = document.getElementById(sliderId);
-            state.rgbf_filter[index] = thisSlider.value / 255;
-            document.getElementById(valueId).innerHTML = thisSlider.value;
+            rgbf_filter[0] = document.getElementById("red_slider").value / 255;
+            rgbf_filter[1] = document.getElementById("green_slider").value / 255;
+            rgbf_filter[2] = document.getElementById("blue_slider").value / 255;
+            rgbfd1_remove = document.getElementById("operator").value;
+            document.getElementById(valueId).innerHTML = document.getElementById(sliderId).value;
 
             var pseudolayer = ui._constructor.rgbFiltering({
               webgl: ui._webgl,
               rgbf_image: targetPseudolayer,
-              rgbf_filter: state.rgbf_filter,
-              rgbf_removed: state.rgbf_removed,
-              rgbfd1_remove: state.rgbfd1_remove
+              rgbf_filter: rgbf_filter,
+              rgbf_removed: rgbf_removed,
+              rgbfd1_remove: rgbfd1_remove
             });
 
             ui.updateUiLayer(targetUiLayer, pseudolayer);
+            targetUiLayer.state["rgbFiltering"] = {
+              "rgbf_filter": rgbf_filter,
+              "rgbf_removed": rgbf_removed,
+              "rgbfd1_remove": rgbfd1_remove,
+              "inputName": {
+                "rgbf_image": targetPseudolayer
+              },
+              "stateFunction": _this3._constructor.rgbFiltering,
+              "guiOrder": thisGuiNumber
+            };
           };
         }
 
-        addSliderEvent("red_slider", "red_value", 0, targetUiLayer, targetPseudolayer, _this);
-        addSliderEvent("green_slider", "green_value", 1, targetUiLayer, targetPseudolayer, _this);
-        addSliderEvent("blue_slider", "blue_value", 2, targetUiLayer, targetPseudolayer, _this); // event listener on operator to use
+        addSliderEvent("red_slider", "red_value", targetUiLayer, targetPseudolayer, _this);
+        addSliderEvent("green_slider", "green_value", targetUiLayer, targetPseudolayer, _this);
+        addSliderEvent("blue_slider", "blue_value", targetUiLayer, targetPseudolayer, _this); // event listener on operator to use
 
         document.getElementById("operator").onchange = function () {
-          var state = targetUiLayer.state.rgbFiltering;
-          var thisInput = document.getElementById("operator");
-          state.rgbfd1_remove = thisInput.value;
+          rgbf_filter[0] = document.getElementById("red_slider").value / 255;
+          rgbf_filter[1] = document.getElementById("green_slider").value / 255;
+          rgbf_filter[2] = document.getElementById("blue_slider").value / 255;
+          rgbfd1_remove = document.getElementById("operator").value;
 
-          var pseudolayer = _this._constructor.rgbFiltering({
-            webgl: _this._webgl,
+          var pseudolayer = ui._constructor.rgbFiltering({
+            webgl: ui._webgl,
             rgbf_image: targetPseudolayer,
-            rgbf_filter: state.rgbf_filter,
-            rgbf_removed: state.rgbf_removed,
-            rgbfd1_remove: state.rgbfd1_remove
+            rgbf_filter: rgbf_filter,
+            rgbf_removed: rgbf_removed,
+            rgbfd1_remove: rgbfd1_remove
           });
 
           _this.updateUiLayer(targetUiLayer, pseudolayer);
+
+          targetUiLayer.state["rgbFiltering"] = {
+            "rgbf_filter": rgbf_filter,
+            "rgbf_removed": rgbf_removed,
+            "rgbfd1_remove": rgbfd1_remove,
+            "inputName": {
+              "rgbf_image": targetPseudolayer
+            },
+            "stateFunction": _this._constructor.rgbFiltering,
+            "guiOrder": thisGuiNumber
+          };
         };
       };
 
@@ -28335,21 +28362,15 @@
         var targetUiLayer = _this.activeUiLayer;
 
         if ("rgbPercentageFiltering" in targetUiLayer.state) {
+          var thisGuiNumber = targetUiLayer.state.guiOrder;
           var rgbfp_filter = targetUiLayer.state.rgbPercentageFiltering.rgbfp_filter;
           var rgbfp_removed = targetUiLayer.state.rgbPercentageFiltering.rgbfp_removed;
           var rgbfpd1_remove = targetUiLayer.state.rgbPercentageFiltering.rgbfpd1_remove;
         } else {
+          var thisGuiNumber = Object.keys(targetUiLayer.state).length;
           var rgbfp_filter = [1.0, 1.0, 1.0];
           var rgbfp_removed = [0.0, 0.0, 0.0, 1.0];
           var rgbfpd1_remove = ">";
-          targetUiLayer.state["rgbPercentageFiltering"] = {
-            "rgbfp_filter": rgbfp_filter,
-            "rgbfp_removed": rgbfp_removed,
-            "rgbfpd1_remove": rgbfpd1_remove,
-            "inputName": ["rgbfp_image"],
-            "stateFunction": _this._constructor.rgbPercentageFiltering,
-            "guiOrder": Object.keys(targetUiLayer.state).length
-          };
         }
 
         var targetPseudolayer = _this.restoreGuiState(targetUiLayer, "rgbPercentageFiltering");
@@ -28360,33 +28381,47 @@
 
         _this.activeGui = gui;
 
-        function addSliderEvent(sliderId, valueId, index, targetUiLayer, targetPseudolayer, ui) {
+        function addSliderEvent(sliderId, valueId, targetUiLayer, targetPseudolayer, ui) {
+          var _this4 = this;
+
           document.getElementById(sliderId).oninput = function () {
-            var state = targetUiLayer.state.rgbPercentageFiltering;
-            var thisSlider = document.getElementById(sliderId);
-            state.rgbfp_filter[index] = thisSlider.value / 100;
-            document.getElementById(valueId).innerHTML = thisSlider.value + "%";
+            rgbfp_filter[0] = document.getElementById("red_slider").value / 255;
+            rgbfp_filter[1] = document.getElementById("green_slider").value / 255;
+            rgbfp_filter[2] = document.getElementById("blue_slider").value / 255;
+            rgbfpd1_remove = document.getElementById("operator").value;
+            document.getElementById(valueId).innerHTML = document.getElementById(sliderId).value + "%";
 
             var pseudolayer = ui._constructor.rgbPercentageFiltering({
               webgl: ui._webgl,
               rgbfp_image: targetPseudolayer,
-              rgbfp_filter: state.rgbfp_filter,
-              rgbfp_removed: state.rgbfp_removed,
-              rgbfpd1_remove: state.rgbfpd1_remove
+              rgbfp_filter: rgbfp_filter,
+              rgbfp_removed: rgbfp_removed,
+              rgbfpd1_remove: rgbfpd1_remove
             });
 
             ui.updateUiLayer(targetUiLayer, pseudolayer);
+            targetUiLayer.state["rgbPercentageFiltering"] = {
+              "rgbfp_filter": rgbfp_filter,
+              "rgbfp_removed": rgbfp_removed,
+              "rgbfpd1_remove": rgbfpd1_remove,
+              "inputName": {
+                "rgbfp_image": targetPseudolayer
+              },
+              "stateFunction": _this4._constructor.rgbPercentageFiltering,
+              "guiOrder": thisGuiNumber
+            };
           };
         }
 
-        addSliderEvent("red_slider", "red_value", 0, targetUiLayer, targetPseudolayer, _this);
-        addSliderEvent("green_slider", "green_value", 1, targetUiLayer, targetPseudolayer, _this);
-        addSliderEvent("blue_slider", "blue_value", 2, targetUiLayer, targetPseudolayer, _this); // event listener on operator to use
+        addSliderEvent("red_slider", "red_value", targetUiLayer, targetPseudolayer, _this);
+        addSliderEvent("green_slider", "green_value", targetUiLayer, targetPseudolayer, _this);
+        addSliderEvent("blue_slider", "blue_value", targetUiLayer, targetPseudolayer, _this); // event listener on operator to use
 
         document.getElementById("operator").onchange = function () {
-          var state = targetUiLayer.state.rgbPercentageFiltering;
-          var thisInput = document.getElementById("operator");
-          state.rgbfpd1_remove = thisInput.value;
+          rgbfp_filter[0] = document.getElementById("red_slider").value / 255;
+          rgbfp_filter[1] = document.getElementById("green_slider").value / 255;
+          rgbfp_filter[2] = document.getElementById("blue_slider").value / 255;
+          rgbfpd1_remove = document.getElementById("operator").value;
 
           var pseudolayer = _this._constructor.rgbPercentageFiltering({
             webgl: _this._webgl,
@@ -28397,6 +28432,17 @@
           });
 
           _this.updateUiLayer(targetUiLayer, pseudolayer);
+
+          targetUiLayer.state["rgbPercentageFiltering"] = {
+            "rgbfp_filter": rgbfp_filter,
+            "rgbfp_removed": rgbfp_removed,
+            "rgbfpd1_remove": rgbfpd1_remove,
+            "inputName": {
+              "rgbfp_image": targetPseudolayer
+            },
+            "stateFunction": _this._constructor.rgbPercentageFiltering,
+            "guiOrder": thisGuiNumber
+          };
         };
       };
 
@@ -28404,18 +28450,13 @@
         var targetUiLayer = _this.activeUiLayer;
 
         if ("apply3x3Kernel" in targetUiLayer.state) {
+          var thisGuiNumber = targetUiLayer.state.guiOrder;
           var a3k_kernel = targetUiLayer.state.apply3x3Kernel.a3k_kernel;
           var a3k_kernelWeight = targetUiLayer.state.apply3x3Kernel.multiplier;
         } else {
+          var thisGuiNumber = Object.keys(targetUiLayer.state).length;
           var a3k_kernel = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0];
           var a3k_kernelWeight = 1.0;
-          targetUiLayer.state["apply3x3Kernel"] = {
-            "a3k_kernel": a3k_kernel,
-            "a3k_kernelWeight": a3k_kernelWeight,
-            "inputName": ["a3k_image"],
-            "stateFunction": _this._constructor.apply3x3Kernel,
-            "guiOrder": Object.keys(targetUiLayer.state).length
-          };
         }
 
         var targetPseudolayer = _this.restoreGuiState(targetUiLayer, "apply3x3Kernel");
@@ -28427,37 +28468,44 @@
         _this.activeGui = gui;
 
         document.getElementById("apply_kernel").onclick = function () {
-          var state = targetUiLayer.state.apply3x3Kernel;
           var kernelInputs = document.getElementsByClassName("kernel_input");
 
           for (var x = 0; x < kernelInputs.length; x++) {
             var kernelInput = kernelInputs[x];
             var kernelInputIndex = parseInt(kernelInput.dataset.index);
-            state.a3k_kernel[kernelInputIndex] = parseInt(kernelInput.innerHTML);
+            a3k_kernel[kernelInputIndex] = parseInt(kernelInput.innerHTML);
           }
 
-          state.a3k_kernelWeight = parseInt(document.getElementById("kernel_multiplier").value);
+          a3k_kernelWeight = parseInt(document.getElementById("kernel_multiplier").value);
 
           var pseudolayer = _this._constructor.apply3x3Kernel({
             webgl: _this._webgl,
             a3k_image: targetPseudolayer,
-            a3k_kernel: state.a3k_kernel,
-            a3k_kernelWeight: state.a3k_kernelWeight
+            a3k_kernel: a3k_kernel,
+            a3k_kernelWeight: a3k_kernelWeight
           });
 
           _this.updateUiLayer(targetUiLayer, pseudolayer);
+
+          targetUiLayer.state["apply3x3Kernel"] = {
+            "a3k_kernel": a3k_kernel,
+            "a3k_kernelWeight": a3k_kernelWeight,
+            "inputName": {
+              "a3k_image": targetPseudolayer
+            },
+            "stateFunction": _this._constructor.apply3x3Kernel,
+            "guiOrder": thisGuiNumber
+          };
         };
       };
 
       this.sobelEdgeDetection = function () {
         var targetUiLayer = _this.activeUiLayer;
 
-        if (!("sobelEdgeDetection" in targetUiLayer.state)) {
-          targetUiLayer.state["sobelEdgeDetection"] = {
-            "inputName": ["sed_image"],
-            "stateFunction": _this._constructor.sobelEdgeDetection,
-            "guiOrder": Object.keys(targetUiLayer.state).length
-          };
+        if ("sobelEdgeDetection" in targetUiLayer.state) {
+          var thisGuiNumber = targetUiLayer.state.guiOrder;
+        } else {
+          var thisGuiNumber = Object.keys(targetUiLayer.state).length;
         }
 
         var targetPseudolayer = _this.restoreGuiState(targetUiLayer, "sobelEdgeDetection");
@@ -28475,18 +28523,24 @@
           });
 
           _this.updateUiLayer(targetUiLayer, pseudolayer);
+
+          targetUiLayer.state["sobelEdgeDetection"] = {
+            "inputName": {
+              "sed_image": targetPseudolayer
+            },
+            "stateFunction": _this._constructor.sobelEdgeDetection,
+            "guiOrder": thisGuiNumber
+          };
         };
       };
 
       this.greyscale = function () {
         var targetUiLayer = _this.activeUiLayer;
 
-        if (!("greyscale" in targetUiLayer.state)) {
-          targetUiLayer.state["greyscale"] = {
-            "inputName": ["gs_image"],
-            "stateFunction": _this._constructor.greyscale,
-            "guiOrder": Object.keys(targetUiLayer.state).length
-          };
+        if ("greyscale" in targetUiLayer.state) {
+          var thisGuiNumber = targetUiLayer.state.guiOrder;
+        } else {
+          var thisGuiNumber = Object.keys(targetUiLayer.state).length;
         }
 
         var targetPseudolayer = _this.restoreGuiState(targetUiLayer, "greyscale");
@@ -28504,11 +28558,25 @@
           });
 
           _this.updateUiLayer(targetUiLayer, pseudolayer);
+
+          targetUiLayer.state["greyscale"] = {
+            "inputName": {
+              "gs_image": targetPseudolayer
+            },
+            "stateFunction": _this._constructor.greyscale,
+            "guiOrder": thisGuiNumber
+          };
         };
       };
 
       this.stackLayers = function () {
         var targetUiLayer = _this.activeUiLayer;
+
+        if ("stackLayers" in targetUiLayer.state) {
+          var thisGuiNumber = targetUiLayer.state.guiOrder;
+        } else {
+          var thisGuiNumber = Object.keys(targetUiLayer.state).length;
+        }
 
         if ("stackLayers" in targetUiLayer.state) {
           var sl1_weight = targetUiLayer.state.stackLayers.sl1_weight;
@@ -28518,16 +28586,7 @@
           var sl1_weight = 1.0;
           var sl2_weight = 1.0;
           var sl_multiplier = 2.0;
-          targetUiLayer.state["stackLayers"] = {
-            "sl1_weight": sl1_weight,
-            "sl2_weight": sl2_weight,
-            "sl_multiplier": sl_multiplier,
-            "inputName": ["sl1_image", "sl2_image"],
-            "stateFunction": _this._constructor.stackLayers,
-            "guiOrder": Object.keys(targetUiLayer.state).length
-          };
-        } // the first target layer -> the current active layer
-
+        }
 
         var targetPseudolayer1 = _this.restoreGuiState(targetUiLayer, "stackLayers"); // get all of the available layers for the second layer dropdown
 
@@ -28547,8 +28606,7 @@
         _this.activeGui = gui;
 
         document.getElementById("apply_stack_layers").onclick = function () {
-          var state = targetUiLayer.state.stackLayers; // first we need to reconstruct the selected ui layer
-
+          // first we need to reconstruct the selected ui layer
           var selectElement = document.getElementById("layer2_dropdown");
           var selectedElementId = selectElement[selectElement.selectedIndex].id;
           var layer2 = _this._uiLayers[selectedElementId];
@@ -28556,20 +28614,32 @@
           var targetPseudolayer2 = _this.restoreGuiState(layer2, "stackLayers"); // then get input values
 
 
-          state.sl1_weight = parseInt(document.getElementById("layer1_weight").value);
-          state.sl2_weight = parseInt(document.getElementById("layer2_weight").value);
-          state.sl_multiplier = parseInt(document.getElementById("stack_layers_multiplier").value);
+          sl1_weight = parseInt(document.getElementById("layer1_weight").value);
+          sl2_weight = parseInt(document.getElementById("layer2_weight").value);
+          sl_multiplier = parseInt(document.getElementById("stack_layers_multiplier").value);
 
           var pseudolayer = _this._constructor.stackLayers({
             webgl: _this._webgl,
             sl1_image: targetPseudolayer1,
             sl2_image: targetPseudolayer2,
-            sl1_weight: state.sl1_weight,
-            sl2_weight: state.sl2_weight,
-            sl_multiplier: state.sl_multiplier
+            sl1_weight: sl1_weight,
+            sl2_weight: sl2_weight,
+            sl_multiplier: sl_multiplier
           });
 
           _this.updateUiLayer(targetUiLayer, pseudolayer);
+
+          targetUiLayer.state["stackLayers"] = {
+            "sl1_weight": sl1_weight,
+            "sl2_weight": sl2_weight,
+            "sl_multiplier": sl_multiplier,
+            "inputName": {
+              "sl1_image": targetPseudolayer1,
+              "sl2_image": targetPseudolayer2
+            },
+            "stateFunction": _this._constructor.stackLayers,
+            "guiOrder": thisGuiNumber
+          };
         };
       };
 
@@ -28873,7 +28943,7 @@
     });
     var webgl = new WebGLCanvas("canvas_map");
     var con = new Constructor();
-    var ui = new Ui(webgl, con);
+    var ui$1 = new Ui(webgl, con);
     var l1 = new LayerObject(testMapLayer1, testMapView);
     var l2 = new LayerObject(testMapLayer2, testMapView);
     var p1 = webgl.generatePseudoLayer(l1);
@@ -28882,9 +28952,9 @@
       webgl: webgl,
       cndwi_image: p1
     });
-    ui.addUiLayer(p1);
-    ui.addUiLayer(p2);
-    ui.addUiLayer(pp1); // const p2 = webgl.generatePseudoLayer(l2);
+    ui$1.addUiLayer(p1);
+    ui$1.addUiLayer(p2);
+    ui$1.addUiLayer(pp1); // const p2 = webgl.generatePseudoLayer(l2);
     // const pp1 = con.rgbaManipulation({
     //     webgl: webgl, 
     //     rgbam_image: p1, 
@@ -28952,7 +29022,7 @@
       var layerDiv = e.target;
 
       if (layerDiv && layerDiv.classList.contains('layer') || layerDiv.classList.contains('layer_text')) {
-        ui.activateUiLayer(layerDiv);
+        ui$1.activateUiLayer(layerDiv);
       }
     }); // remove layer
 
@@ -28960,7 +29030,7 @@
       var deleteButton = e.target;
 
       if (deleteButton && deleteButton.classList.contains("delete_layer")) {
-        ui.removeUiLayer(deleteButton);
+        ui$1.removeUiLayer(deleteButton);
       }
     }); // close processing gui -> hide gui container and remove gui
 
@@ -28968,7 +29038,7 @@
       var closeButton = e.target;
 
       if (closeButton && closeButton.id === "close_processing_gui") {
-        ui.removeGui();
+        ui$1.removeGui();
       }
     }); // open processing gui when dropdown selected
 
@@ -28976,7 +29046,7 @@
       var menuOption = e.target;
 
       if (menuOption && menuOption.classList.contains("dropdown_menu_option")) {
-        var buildGui = ui.guis[menuOption.dataset.id];
+        var buildGui = ui$1.guis[menuOption.dataset.id];
         buildGui();
       }
     }); // generate a new ui layer from selected layer
@@ -28985,11 +29055,11 @@
       var newLayer = e.target;
 
       if (newLayer && newLayer.id === "new_layer") {
-        var pseudolayer = ui.activeUiLayer.pseudolayer; // generate a new pseudolayer before adding a new layer, just in case the old pseudolayer is the same
+        var pseudolayer = ui$1.activeUiLayer.pseudolayer; // generate a new pseudolayer before adding a new layer, just in case the old pseudolayer is the same
         // as the new pseudolayer
         // var pseudolayer = webgl.generatePseudoLayer(pseudolayer);
 
-        ui.addUiLayer(pseudolayer);
+        ui$1.addUiLayer(pseudolayer);
         console.log(pseudolayer);
       }
     }); // reset a ui layer
@@ -28998,7 +29068,7 @@
       var resetLayer = e.target;
 
       if (resetLayer && resetLayer.id === "reset_layer") {
-        ui.resetUiLayer();
+        ui$1.resetUiLayer();
       }
     });
 
