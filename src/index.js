@@ -133,7 +133,7 @@ ui.addUiLayer(pp1);
 //     sl2_image: p2,
 //     sl1_weight: 1.0,
 //     sl2_weight: 1.0,
-//     sl_multiplier: 2.0,
+//     sl_divisor: 2.0,
 // })
 
 // for (let x = 0; x < 1000; x++) {

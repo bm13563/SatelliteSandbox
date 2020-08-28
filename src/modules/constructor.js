@@ -98,7 +98,7 @@ export class Constructor{
         return pseudolayer;
     }
 
-    stackLayers = ({webgl, sl1_image, sl2_image, sl1_weight, sl2_weight, sl_multiplier}={}) => {
+    stackLayers = ({webgl, sl1_image, sl2_image, sl1_weight, sl2_weight, sl_divisor}={}) => {
         const pseudolayer = webgl.processPseudoLayer({
             shaderName: "stackLayers",
             inputs: {
@@ -109,7 +109,7 @@ export class Constructor{
             variables: {
                 sl1_weight: sl1_weight,
                 sl2_weight: sl2_weight,
-                sl_multiplier: sl_multiplier,
+                sl_divisor: sl_divisor,
             },
             dynamics: {}
         })
@@ -136,7 +136,7 @@ export class Constructor{
         const pseudolayer = webgl.processPseudoLayer({
             shaderName: "greyscale",
             inputs: {
-                sed_image: gs_image,
+                gs_image: gs_image,
             },
             shader: greyscale,
             variables: {},

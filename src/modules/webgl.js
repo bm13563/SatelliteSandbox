@@ -26,8 +26,10 @@ export class WebGLCanvas{
         this._baseVertexShader = baseVertexShader;
         // flips the output, for converting from texture coordinates to clip coordinates
         let vFlipVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
+        this.vFlipVertexShader = vFlipVertexShader;
         // base fragment shader, for rendering a pseudolayer "as is"
         let baseFragmentShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D f_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   o_colour = texture(f_image, o_texCoord);\r\n}";
+        this.baseFragmentShader = baseFragmentShader;
         // the base program. pre-compiled as used for every pseudolayer
         this._baseProgram = twgl.createProgramInfo(this.gl, [baseVertexShader, baseFragmentShader]);
         // the vertical flip program. pre-compiled as used for every pseudolayer
@@ -279,6 +281,7 @@ export class WebGLCanvas{
         return new PseudoLayer(
             "baseProgram",
             {f_image: layer},
+            this.baseFragmentShader,
             this._baseProgram,
             {},
         )
@@ -288,24 +291,24 @@ export class WebGLCanvas{
     processPseudoLayer = (args) => {
         let dynamicShader = this._addDynamicsToShader(args.shader, args.dynamics);
         let compiledShader = this._compileShaders(dynamicShader);
-        return new PseudoLayer(args.shaderName, args.inputs, compiledShader, args.variables);
+        return new PseudoLayer(args.shaderName, args.inputs, args.shader, compiledShader, args.variables);
     }
 
-    _addDynamicsToShader = (shader, dynamics) => {
+    _addDynamicsToShader = (rawShader, dynamics) => {
         if (dynamics === {}) {
-            return shader;
+            return rawShader;
         } else {
             for (const key of Object.keys(dynamics)) {
                 const regex = new RegExp("{" + key + "}", "g");
-                shader = shader.replace(regex, dynamics[key].toString());
+                rawShader = rawShader.replace(regex, dynamics[key].toString());
             }
         }
-        return shader;
+        return rawShader;
     }
 
     // used to update the shader of a specific pseudolayer to accomodate new dynamic values
     updateDynamics = (newDynamics, pseudolayer) => {
-        let dynamicShader = this._addDynamicsToShader(pseudolayer.shader, newDynamics);
+        let dynamicShader = this._addDynamicsToShader(pseudolayer.rawShader, newDynamics);
         let compiledShader = this._compileShaders(dynamicShader);
         pseudolayer.updateShader(compiledShader);
     }

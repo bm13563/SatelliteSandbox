@@ -1,9 +1,10 @@
 export class PseudoLayer{
-    constructor(shaderName, inputs, shader, variables) {
+    constructor(shaderName, inputs, rawShader, shader, variables) {
         this.type = 'pseudolayer';
         this.id = Date.now() + (Math.floor(Math.random() * 1000000));
-        this.inputs = inputs;
         this.shaderName = shaderName;
+        this.inputs = inputs;
+        this.rawShader = rawShader;
         this.shader = shader;
         this.variables = variables;
         this.maps = [];
@@ -52,6 +53,10 @@ export class PseudoLayer{
                 this._getShaderPasses(nextLayer);
             }
         }
+    }
+
+    updateInput = (input, pseudolayer) => {
+        this.inputs[input] = pseudolayer;
     }
 
     updateVariable = (variable, value) => {
