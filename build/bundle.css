@@ -1,3 +1,17 @@
+#processing_gui_container #processing_gui .inner_gui #kernel_table { margin:auto; background-color: lightseagreen; border-collapse: collapse; border: 1px solid black; }
+#processing_gui_container #processing_gui .inner_gui #kernel_table tbody tr td { padding: 4px; border: 1px solid black; }
+#processing_gui_container #processing_gui .inner_gui #kernel_table tbody tr td div { padding: 4px; }#top_bar_container .dropdown { float: left; height: 50px; width: 225px; display:table-cell; line-height: 50px; text-align: center; cursor: pointer; }
+#top_bar_container .dropdown:hover > .dropdown_menu { visibility: visible; }
+#top_bar_container .dropdown .dropdown_menu { visibility: hidden; position: relative; background-color: lightgray; z-index: 100; }
+#top_bar_container .dropdown .dropdown_menu .dropdown_menu_option:hover { background-color:gray; }
+#processing_gui_container #processing_gui { width: 200px; background-color: lightgoldenrodyellow; margin:auto; z-index: 105; display: flex; flex-direction: column; align-content: center; justify-content: center; padding: 10px; visibility: hidden; }
+#processing_gui_container #processing_gui #close_processing_gui { margin-top:-10px; margin-left: 185px;  }
+#processing_gui_container #processing_gui #close_processing_gui:hover { cursor: pointer; }
+#processing_gui_container #processing_gui #processing_gui_actions { background-color: lightgreen; padding:10px; }
+#processing_gui_container #processing_gui .inner_gui { background-color: lightsalmon; width: 100%; margin: 0px; }
+
+
+
 html * { font-family: Arial, sans-serif; }
 #processing_gui_container { position: absolute; width: 900px; height: 700px; margin-left: 200px; margin-top: 50px; text-align: center; display: flex; justify-content: center; align-content: center; }
 #top_bar_container { width:900px; height: 50px; margin-left:200px; background-color: lightblue; }
@@ -12,21 +26,7 @@ html * { font-family: Arial, sans-serif; }
 #layer_container #layers_holder .layer { height:20px; padding-bottom: 5px; margin:5px; background-color: lightgray; text-align: left; font-size: 16px; overflow: hidden; cursor:pointer; }
 #layer_container #layers_holder .layer .delete_layer { background-color: transparent; border: none; margin-top:3px; font-size: 12px; cursor: pointer; }
 #layer_container #layers_holder .layer .delete_layer:focus { outline:none; box-shadow: none; }
-#layer_container #layers_holder .selected { background-color: gray; }#top_bar_container .dropdown { float: left; height: 50px; width: 225px; display:table-cell; line-height: 50px; text-align: center; cursor: pointer; }
-#top_bar_container .dropdown:hover > .dropdown_menu { visibility: visible; }
-#top_bar_container .dropdown .dropdown_menu { visibility: hidden; position: relative; background-color: lightgray; z-index: 100; }
-#top_bar_container .dropdown .dropdown_menu .dropdown_menu_option:hover { background-color:gray; }
-#processing_gui_container #processing_gui { width: 200px; background-color: lightgoldenrodyellow; margin:auto; z-index: 105; display: flex; flex-direction: column; align-content: center; justify-content: center; padding: 10px; visibility: hidden; }
-#processing_gui_container #processing_gui #close_processing_gui { margin-top:-10px; margin-left: 185px;  }
-#processing_gui_container #processing_gui #close_processing_gui:hover { cursor: pointer; }
-#processing_gui_container #processing_gui #processing_gui_actions { background-color: lightgreen; padding:10px; }
-#processing_gui_container #processing_gui .inner_gui { background-color: lightsalmon; width: 100%; margin: 0px; }
-
-
-
-#processing_gui_container #processing_gui .inner_gui #kernel_table { margin:auto; background-color: lightseagreen; border-collapse: collapse; border: 1px solid black; }
-#processing_gui_container #processing_gui .inner_gui #kernel_table tbody tr td { padding: 4px; border: 1px solid black; }
-#processing_gui_container #processing_gui .inner_gui #kernel_table tbody tr td div { padding: 4px; }.ol-box {
+#layer_container #layers_holder .selected { background-color: gray; }.ol-box {
   box-sizing: border-box;
   border-radius: 2px;
   border: 2px solid blue;
