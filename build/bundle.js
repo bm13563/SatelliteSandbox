@@ -28556,7 +28556,7 @@
 
     var rgbPercentageFilteringShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform float rgbfp_filter[3];\r\nuniform vec4 rgbfp_removed;\r\nuniform sampler2D rgbfp_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 raw_colour = texture(rgbfp_image, o_texCoord);\r\n    float sum_colours = raw_colour.r + raw_colour.g + raw_colour.b;\r\n    float remove = 0.0;\r\n\r\n    if(raw_colour.r / sum_colours {rgbfpd1_remove} rgbfp_filter[0]){\r\n        remove = 1.0;\r\n    }\r\n\r\n    if(raw_colour.g / sum_colours {rgbfpd1_remove} rgbfp_filter[1]){\r\n        remove = 1.0;\r\n    }\r\n\r\n    if(raw_colour.b / sum_colours {rgbfpd1_remove} rgbfp_filter[2]){\r\n        remove = 1.0;\r\n    }\r\n\r\n    vec4 final_colour;\r\n    if(remove == 1.0){\r\n        final_colour = rgbfp_removed;\r\n    } else {\r\n        final_colour = raw_colour;\r\n    }\r\n\r\n    o_colour = final_colour;\r\n}";
 
-    var stackLayers = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D sl1_image;\r\nuniform sampler2D sl2_image;\r\nuniform float sl1_weight;\r\nuniform float sl2_weight;\r\nuniform float sl_divisor;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 sl1_texture = texture(sl1_image, o_texCoord) * sl1_weight;\r\n    vec4 sl2_texture = texture(sl2_image, o_texCoord) * sl2_weight;\r\n    vec4 sum_texture = sl1_texture + sl2_texture;\r\n    o_colour = vec4((sum_texture / sl_divisor).rgb, 1);\r\n}";
+    var stackLayers = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D sl1_image;\r\nuniform sampler2D sl2_image;\r\nuniform float sl1_weight;\r\nuniform float sl2_weight;\r\nuniform float sl_ignore;\r\nuniform float sl_divisor;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 sl1_texture = texture(sl1_image, o_texCoord);\r\n    vec4 sl2_texture = texture(sl2_image, o_texCoord);\r\n    if (sl2_texture == vec4(0.0, 0.0, 0.0, 1.0)) {\r\n        o_colour = sl1_texture;\r\n    } else {\r\n        vec4 sl1_weighted = sl1_texture * sl1_weight;\r\n        vec4 sl2_weighted = sl2_texture * sl2_weight;\r\n        vec4 sum_texture = sl1_weighted + sl2_weighted;\r\n        o_colour = vec4((sum_texture / sl_divisor).rgb, 1);\r\n    }\r\n}";
 
     var apply3x3KernelShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nuniform sampler2D a3k_image;\r\nuniform float a3k_textureWidth;\r\nuniform float a3k_textureHeight;\r\nuniform float a3k_kernel[9];\r\nuniform float a3k_kernelWeight;\r\n\r\nin vec2 o_texCoord;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   vec2 onePixel = vec2(1.0 / a3k_textureWidth, 1.0 / a3k_textureHeight);\r\n   vec4 colorSum =\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1, -1)) * a3k_kernel[0] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0, -1)) * a3k_kernel[1] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1, -1)) * a3k_kernel[2] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  0)) * a3k_kernel[3] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  0)) * a3k_kernel[4] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  0)) * a3k_kernel[5] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  1)) * a3k_kernel[6] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  1)) * a3k_kernel[7] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  1)) * a3k_kernel[8] ;\r\n   o_colour = vec4((colorSum / a3k_kernelWeight).rgb, 1);\r\n}";
 
@@ -28722,8 +28722,10 @@
           },
           shader: sobelEdgeDetection,
           variables: {
-            sed_textureWidth: webgl.gl.canvas.width,
-            sed_textureHeight: webgl.gl.canvas.height
+            sed_textureWidth: 900,
+            sed_textureHeight: 700 // sed_textureWidth: webgl.gl.canvas.width,
+            // sed_textureHeight: webgl.gl.canvas.height,
+
           },
           dynamics: {}
         });
@@ -28824,15 +28826,54 @@
     var ui = new Ui(webgl, con);
     var l1 = new LayerObject(testMapLayer1, testMapView);
     var l2 = new LayerObject(testMapLayer2, testMapView);
-    var p1 = webgl.generatePseudoLayer(l1);
-    var p2 = webgl.generatePseudoLayer(l2);
-    var pp1 = con.calculateNDWI({
+    var p1 = webgl.generatePseudoLayer(l1); // const p2 = webgl.generatePseudoLayer(l2);
+    // const pp1 = con.calculateNDWI({
+    //     webgl: webgl,
+    //     cndwi_image: p1,
+    // })
+
+    var pp1 = con.rgbFiltering({
       webgl: webgl,
-      cndwi_image: p1
+      rgbf_image: p1,
+      rgbf_filter: [0.58, 0.58, 0.58],
+      rgbf_removed: [0.0, 0.0, 0.0, 1.0],
+      rgbfd1_remove: "<"
+    });
+    var pp2 = con.greyscale({
+      webgl: webgl,
+      gs_image: pp1
+    });
+    var pp3 = con.sobelEdgeDetection({
+      webgl: webgl,
+      sed_image: pp2
+    });
+    var pp4 = con.rgbaManipulation({
+      webgl: webgl,
+      rgbam_image: pp3,
+      rgbam_multiplier: [0.0, 1.0, 1.0, 1.0]
+    });
+    var pp5 = con.rgbFiltering({
+      webgl: webgl,
+      rgbf_image: pp4,
+      rgbf_filter: [0.0, 1.0, 1.0],
+      rgbf_removed: [0.0, 0.0, 0.0, 1.0],
+      rgbfd1_remove: "<"
+    });
+    var pp6 = con.stackLayers({
+      webgl: webgl,
+      sl1_image: p1,
+      sl2_image: pp5,
+      sl1_weight: 0,
+      sl2_weight: 1.0,
+      sl_divisor: 1.0
     });
     ui.addUiLayer(p1);
-    ui.addUiLayer(p2);
-    ui.addUiLayer(pp1); // const p2 = webgl.generatePseudoLayer(l2);
+    ui.addUiLayer(pp1);
+    ui.addUiLayer(pp2);
+    ui.addUiLayer(pp3);
+    ui.addUiLayer(pp4);
+    ui.addUiLayer(pp5);
+    ui.addUiLayer(pp6); // const p2 = webgl.generatePseudoLayer(l2);
     // const pp1 = con.rgbaManipulation({
     //     webgl: webgl, 
     //     rgbam_image: p1, 

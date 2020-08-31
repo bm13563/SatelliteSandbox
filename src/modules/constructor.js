@@ -124,8 +124,10 @@ export class Constructor{
             },
             shader: sobelEdgeDetection,
             variables: {
-                sed_textureWidth: webgl.gl.canvas.width,
-                sed_textureHeight: webgl.gl.canvas.height,
+                sed_textureWidth: 900,
+                sed_textureHeight: 700,
+                // sed_textureWidth: webgl.gl.canvas.width,
+                // sed_textureHeight: webgl.gl.canvas.height,
             },
             dynamics: {}
         })

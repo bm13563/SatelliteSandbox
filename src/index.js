@@ -82,17 +82,61 @@ var l1 = new LayerObject(testMapLayer1, testMapView);
 var l2 = new LayerObject(testMapLayer2, testMapView);
 
 const p1 = webgl.generatePseudoLayer(l1);
-const p2 = webgl.generatePseudoLayer(l2);
+// const p2 = webgl.generatePseudoLayer(l2);
 
-const pp1 = con.calculateNDWI({
+// const pp1 = con.calculateNDWI({
+//     webgl: webgl,
+//     cndwi_image: p1,
+// })
+
+const pp1 = con.rgbFiltering({
     webgl: webgl,
-    cndwi_image: p1,
+    rgbf_image: p1,
+    rgbf_filter: [0.58, 0.58, 0.58],
+    rgbf_removed: [0.0, 0.0, 0.0, 1.0],
+    rgbfd1_remove: "<",
+})
+
+const pp2 = con.greyscale({
+    webgl: webgl,
+    gs_image: pp1,
+})
+
+const pp3 = con.sobelEdgeDetection({
+    webgl: webgl,
+    sed_image: pp2,
+})
+
+const pp4 = con.rgbaManipulation({
+    webgl: webgl,
+    rgbam_image: pp3,
+    rgbam_multiplier: [0.0, 1.0, 1.0, 1.0],
+})
+
+const pp5 = con.rgbFiltering({
+    webgl: webgl,
+    rgbf_image: pp4,
+    rgbf_filter: [0.0, 1.0, 1.0],
+    rgbf_removed: [0.0, 0.0, 0.0, 1.0],
+    rgbfd1_remove: "<",
+})
+
+const pp6 = con.stackLayers({
+    webgl: webgl,
+    sl1_image: p1,
+    sl2_image: pp5, 
+    sl1_weight: 0,
+    sl2_weight: 1.0,
+    sl_divisor: 1.0,
 })
 
 ui.addUiLayer(p1);
-ui.addUiLayer(p2);
 ui.addUiLayer(pp1);
-
+ui.addUiLayer(pp2);
+ui.addUiLayer(pp3);
+ui.addUiLayer(pp4);
+ui.addUiLayer(pp5);
+ui.addUiLayer(pp6);
 
 
 // const p2 = webgl.generatePseudoLayer(l2);
