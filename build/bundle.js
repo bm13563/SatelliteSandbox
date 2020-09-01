@@ -28111,21 +28111,19 @@
         _this._renderActiveUiLayer();
       };
 
-      this.activateUiLayer = function (clickedLayer) {
+      this.activateUiLayer = function (uiLayerToActivate) {
         // remove selected class from any element that is currently selected
         var selectedElements = document.getElementsByClassName("selected");
 
         for (var x = 0; x < selectedElements.length; x++) {
           selectedElements[x].classList.remove("selected");
-        } // get id of the layer that was clicked
+        } // set the layer as the active uiLayer
 
 
-        var uiLayerId = clickedLayer.dataset.id;
+        _this.activeUiLayer = uiLayerToActivate; // applies the selected class for css
+
+        var uiLayerId = uiLayerToActivate.id;
         var uiLayerDiv = document.getElementById(uiLayerId);
-        var uiLayer = _this._uiLayers[uiLayerId]; // set the layer as the active uiLayer
-
-        _this.activeUiLayer = uiLayer; // applies the selected class for css
-
         uiLayerDiv.classList.add("selected"); // updates the uiLayer array, to move the active uiLayer to the front of the array
 
         _this._uiLayersOrder = _this._uiLayersOrder.filter(function (item) {
@@ -28158,6 +28156,18 @@
           // otherwise stop rendering
           _this._webgl.activatePseudolayer();
         }
+      };
+
+      this.activateUiLayerFromDOM = function (targetLayer) {
+        // get id of the layer that was clicked
+        var uiLayerId = targetLayer.dataset.id;
+        var uiLayer = _this._uiLayers[uiLayerId];
+
+        _this.activateUiLayer(uiLayer);
+      };
+
+      this.getUiLayerFromPseudolayer = function (pseudolayer) {
+        return _this._uiLayers[pseudolayer.id];
       };
 
       this._addGuiToDOM = function (string) {
@@ -28797,12 +28807,12 @@
     var testWMS2 = new TileWMS({
       url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
       params: {
-        'LAYERS': "FALSE_COLOR",
+        'LAYERS': "TRUE_COLOR",
         'TILED': true,
         'FORMAT': 'image/png',
         'showLogo': false,
         'CRS': "EPSG:3857",
-        'TIME': "2020-07-26/2020-08-26"
+        'TIME': "2020-06-26/2020-07-26"
       },
       attribution: "test",
       crossOrigin: "anonymous"
@@ -28826,8 +28836,13 @@
     var ui = new Ui(webgl, con);
     var l1 = new LayerObject(testMapLayer1, testMapView);
     var l2 = new LayerObject(testMapLayer2, testMapView);
-    var p1 = webgl.generatePseudoLayer(l1); // const p2 = webgl.generatePseudoLayer(l2);
-    // const pp1 = con.calculateNDWI({
+    var p1 = webgl.generatePseudoLayer(l1);
+    var p2 = webgl.generatePseudoLayer(l2);
+    var ep2 = con.rgbaManipulation({
+      webgl: webgl,
+      rgbam_image: p2,
+      rgbam_multiplier: [1.5, 1.5, 1.5, 1.0]
+    }); // const pp1 = con.calculateNDWI({
     //     webgl: webgl,
     //     cndwi_image: p1,
     // })
@@ -28850,18 +28865,18 @@
     var pp4 = con.rgbaManipulation({
       webgl: webgl,
       rgbam_image: pp3,
-      rgbam_multiplier: [0.0, 1.0, 1.0, 1.0]
+      rgbam_multiplier: [1.0, 0.0, 1.0, 1.0]
     });
     var pp5 = con.rgbFiltering({
       webgl: webgl,
       rgbf_image: pp4,
-      rgbf_filter: [0.0, 1.0, 1.0],
+      rgbf_filter: [1.0, 0.0, 1.0],
       rgbf_removed: [0.0, 0.0, 0.0, 1.0],
       rgbfd1_remove: "<"
     });
     var pp6 = con.stackLayers({
       webgl: webgl,
-      sl1_image: p1,
+      sl1_image: ep2,
       sl2_image: pp5,
       sl1_weight: 0,
       sl2_weight: 1.0,
@@ -28873,75 +28888,16 @@
     ui.addUiLayer(pp3);
     ui.addUiLayer(pp4);
     ui.addUiLayer(pp5);
-    ui.addUiLayer(pp6); // const p2 = webgl.generatePseudoLayer(l2);
-    // const pp1 = con.rgbaManipulation({
-    //     webgl: webgl, 
-    //     rgbam_image: p1, 
-    //     rgbam_multiplier: [1.5, 1.5, 1.5, 1.0],
-    // });
-    // const pp2 = con.rgbPercentageFiltering({
-    //     webgl: webgl,
-    //     rgbfp_image: pp1,
-    //     rgbfp_filter: [0.38, 0.35, 0.35],
-    //     rgbfp_removed: [0.0, 0.0, 0.0, 1.0],
-    //     rgbfpd1_remove: ">",
-    // })
-    // const pp3 = con.sobelEdgeDetection({
-    //     webgl: webgl,
-    //     sed_image: p1,
-    // })
-    // const pp4 = con.greyscale({
-    //     webgl: webgl,
-    //     gs_image: pp2,
-    // })
-    // const pp5 = con.sobelEdgeDetection({
-    //     webgl: webgl,
-    //     sed_image: pp4,
-    // })
-    // webgl.activatePseudolayer(pp1, 5);
-    // const pp3 = con.rgbaManipulation({
-    //     webgl: webgl, 
-    //     rgbam_image: p1, 
-    //     rgbam_multiplier: [1.5, 1.5, 1.5, 1.5],
-    // });
-    // const pp2 = con.stackLayers({
-    //     webgl: webgl,
-    //     sl1_image: p1,
-    //     sl2_image: p2,
-    //     sl1_weight: 1.0,
-    //     sl2_weight: 1.0,
-    //     sl_divisor: 2.0,
-    // })
-    // for (let x = 0; x < 1000; x++) {
-    //     const r = Math.random() * 2.5;
-    //     webgl.renderPseudoLayer(pp1, 5);
-    // }
-    // function test() {
-    //     setTimeout(() => {
-    //         console.log("run")
-    //         const r = Math.random() * 2.5;
-    //         const pp1 = con.rgbaManipulation({
-    //             webgl: webgl, 
-    //             rgbam_image: p1, 
-    //             rgbam_multiplier: [r, 1.0, 1.0, 1.0],
-    //         });
-    //         webgl.activatePseudolayer(pp1, 5);
-    //         test();   
-    //     }, 1000)
-    // }
-    // test();
-    // const pp1 = con.rgbaManipulation(webgl, p1, [2.5, 2.5, 2.5, 1.0]);
-    // const pp2 = con.apply3x3Kernel(webgl, pp1, [-1, -1, -1, -1, 16, -1, -1, -1, -1], 8);
-    // const pp3 = con.rgbPercentageFiltering(webgl, p1, [1.0, 1.0, 1.0], [0.0, 0.0, 0.0, 1.0], ">");
-    // const pp4 = con.apply3x3Kernel(webgl, pp3, [-1, -1, -1, -1,  8, -1, -1, -1, -1], 1);
-    // UI EVENTS
+    ui.addUiLayer(pp6);
+    var layerToActivate = ui.getUiLayerFromPseudolayer(pp6);
+    ui.activateUiLayer(layerToActivate); // UI EVENTS
     // select layer
 
     document.addEventListener('click', function (e) {
       var layerDiv = e.target;
 
       if (layerDiv && layerDiv.classList.contains('layer') || layerDiv.classList.contains('layer_text')) {
-        ui.activateUiLayer(layerDiv);
+        ui.activateUiLayerFromDOM(layerDiv);
       }
     }); // remove layer
 

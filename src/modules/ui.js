@@ -121,19 +121,17 @@ export class Ui {
     }
 
     // activates a layer when clicked
-    activateUiLayer = (clickedLayer) => {
+    activateUiLayer = (uiLayerToActivate) => {
         // remove selected class from any element that is currently selected
         const selectedElements = document.getElementsByClassName("selected");
         for (let x = 0; x < selectedElements.length; x++) {
             selectedElements[x].classList.remove("selected");
         }
-        // get id of the layer that was clicked
-        const uiLayerId = clickedLayer.dataset.id;
-        const uiLayerDiv = document.getElementById(uiLayerId);
-        const uiLayer = this._uiLayers[uiLayerId];
         // set the layer as the active uiLayer
-        this.activeUiLayer = uiLayer;
+        this.activeUiLayer = uiLayerToActivate;
         // applies the selected class for css
+        const uiLayerId = uiLayerToActivate.id;
+        const uiLayerDiv = document.getElementById(uiLayerId);
         uiLayerDiv.classList.add("selected");
         // updates the uiLayer array, to move the active uiLayer to the front of the array
         this._uiLayersOrder = this._uiLayersOrder.filter(item => item !== parseInt(uiLayerId));
@@ -161,6 +159,20 @@ export class Ui {
             // otherwise stop rendering
             this._webgl.activatePseudolayer();
         }
+    }
+
+    // argument is a dom element that corresponds to a ui layer - activates the corresponding ui layer
+    // using activateUiLayer method
+    activateUiLayerFromDOM = (targetLayer) => {
+        // get id of the layer that was clicked
+        const uiLayerId = targetLayer.dataset.id;
+        const uiLayer = this._uiLayers[uiLayerId];
+        this.activateUiLayer(uiLayer);
+    }
+
+    // get a ui layer from a pseudolayer
+    getUiLayerFromPseudolayer = (pseudolayer) => {
+        return this._uiLayers[pseudolayer.id];
     }
 
     // adds a gui to the correct position in the DOM -> accepts the html string of the gui
