@@ -39,6 +39,7 @@ export class LayerObject{
 
     _createMap = () => {
         const map = new Map({
+            maxTilesLoading: 6,
             target: this.container,
             layers: [this.olLayer],
             view: this.olView,

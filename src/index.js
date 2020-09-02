@@ -35,7 +35,7 @@ const testWMS = new TileWMS({
     params: {
         'LAYERS': "FALSE_COLOR", 
         'TILED': true, 
-        'FORMAT': 'image/png',
+        'FORMAT': 'image/jpeg',
         'showLogo': false,
         'CRS': "EPSG:3857",
         'TIME': "2020-06-26/2020-07-26",
@@ -44,12 +44,14 @@ const testWMS = new TileWMS({
     crossOrigin: "anonymous",
 });
 
+console.log(testWMS)
+
 const testWMS2 = new TileWMS({
     url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
     params: {
         'LAYERS': "TRUE_COLOR", 
         'TILED': true, 
-        'FORMAT': 'image/png',
+        'FORMAT': 'image/jpeg',
         'showLogo': false,
         'CRS': "EPSG:3857",
         'TIME': "2020-06-26/2020-07-26",
@@ -65,6 +67,8 @@ const testMapLayer1 = new TileLayer({
     opacity: 1,
     minZoom: 1,
 });
+
+console.log(testMapLayer1)
 
 const testMapLayer2 = new TileLayer({
     source: testWMS2,
