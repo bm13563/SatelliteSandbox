@@ -27371,27 +27371,43 @@
     // canvas for opengl to read from. this class creates a "layer" with it's own canvas from
     // an openlayers layer. layers will be synced as long as the same view is used
 
-    var LayerObject = function LayerObject(olLayer, olView) {
+    var LayerObject = function LayerObject(olLayer, olView, bufferValue) {
       var _this = this;
 
       _classCallCheck(this, LayerObject);
 
       this._createCanvasElement = function () {
+        // get the container for the tile elements, pass the size of the container to apply buffer to the canvas container
         var container = document.getElementById("tile_container");
-        var boundingRect = container.getBoundingClientRect();
+        var boundingRect = container.getBoundingClientRect(); // return the size of the "buffered" bounding rectangle
+
+        var bufferedBoundingRect = _this._applyBufferToWebglCanvas(boundingRect); // create a div to attach the new layer to
+
+
         var div = document.createElement("div");
         div.classList.add("layer_object");
         div.setAttribute("id", _this.containerId);
-        div.width = boundingRect.width;
-        div.height = boundingRect.height;
+        div.width = bufferedBoundingRect.width;
+        div.height = bufferedBoundingRect.height;
         div.style.width = "".concat(div.width, "px");
         div.style.height = "".concat(div.height, "px");
+        div.style.marginLeft = "-".concat((_this.bufferValue * 100 - 100) / 2, "%");
+        div.style.marginTop = "-".concat((_this.bufferValue * 100 - 100) / 2 * (bufferedBoundingRect.height / bufferedBoundingRect.width), "%");
         div.style.position = "absolute";
-        div.style.top = "0px";
         div.style.zIndex = "".concat(parseInt(_this.olLayer.ol_uid));
         container.appendChild(div);
         _this.container = div;
         _this.activeShaders = [];
+      };
+
+      this._applyBufferToWebglCanvas = function (boundingRect) {
+        var canvasContainer = document.getElementById("canvas_map");
+        canvasContainer.style.width = "".concat(_this.bufferValue * 100, "%");
+        canvasContainer.style.height = "".concat(_this.bufferValue * 100, "%");
+        canvasContainer.style.marginLeft = "-".concat((_this.bufferValue * 100 - 100) / 2, "%"); // need to factor in aspect ratio as seems to use percentage of element width
+
+        canvasContainer.style.marginTop = "-".concat((_this.bufferValue * 100 - 100) / 2 * (boundingRect.height / boundingRect.width), "%");
+        return canvasContainer.getBoundingClientRect();
       };
 
       this._createMap = function () {
@@ -27413,6 +27429,7 @@
       this.type = 'layerObject';
       this.olLayer = olLayer;
       this.olView = olView;
+      this.bufferValue = 1.5;
       this.mapOrderId = parseInt(this.olLayer.ol_uid);
       this.containerId = Date.now() + Math.floor(Math.random() * 1000000);
       this.container;
@@ -27423,7 +27440,9 @@
       this._createCanvasElement();
 
       this._createMap();
-    };
+    } // _preventCachedTilesBeingRequested = () => {
+    // }
+    ;
 
     var PseudoLayer = function PseudoLayer(shaderName, inputs, rawShader, _shader, variables) {
       var _this = this;
@@ -28804,7 +28823,7 @@
       },
       attribution: "test",
       crossOrigin: "anonymous",
-      ratio: 1
+      cacheSize: 1000
     });
     var testWMS2 = new TileWMS({
       url: "https://services.sentinel-hub.com/ogc/wms/f3c43f1a-baa2-4108-ab8e-c59cce0c5900",
@@ -28818,7 +28837,7 @@
       },
       attribution: "test",
       crossOrigin: "anonymous",
-      ratio: 1
+      cacheSize: 1000
     });
     var testMapLayer1 = new TileLayer({
       source: testWMS,
