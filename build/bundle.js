@@ -27379,20 +27379,15 @@
       this._createCanvasElement = function () {
         // get the container for the tile elements, pass the size of the container to apply buffer to the canvas container
         var container = document.getElementById("tile_container");
-        var boundingRect = container.getBoundingClientRect(); // return the size of the "buffered" bounding rectangle
-
-        var bufferedBoundingRect = _this._applyBufferToWebglCanvas(boundingRect); // create a div to attach the new layer to
-
-
+        var boundingRect = container.getBoundingClientRect();
         var div = document.createElement("div");
         div.classList.add("layer_object");
-        div.setAttribute("id", _this.containerId);
-        div.width = bufferedBoundingRect.width;
-        div.height = bufferedBoundingRect.height;
+        div.setAttribute("id", _this.containerId); // set width and height, factoring in buffer value
+
+        div.width = _this.bufferValue * boundingRect.width;
+        div.height = _this.bufferValue * boundingRect.height;
         div.style.width = "".concat(div.width, "px");
         div.style.height = "".concat(div.height, "px");
-        div.style.marginLeft = "-".concat((_this.bufferValue * 100 - 100) / 2, "%");
-        div.style.marginTop = "-".concat((_this.bufferValue * 100 - 100) / 2 * (bufferedBoundingRect.height / bufferedBoundingRect.width), "%");
         div.style.position = "absolute";
         div.style.zIndex = "".concat(parseInt(_this.olLayer.ol_uid));
         container.appendChild(div);
@@ -27400,19 +27395,9 @@
         _this.activeShaders = [];
       };
 
-      this._applyBufferToWebglCanvas = function (boundingRect) {
-        var canvasContainer = document.getElementById("canvas_map");
-        canvasContainer.style.width = "".concat(_this.bufferValue * 100, "%");
-        canvasContainer.style.height = "".concat(_this.bufferValue * 100, "%");
-        canvasContainer.style.marginLeft = "-".concat((_this.bufferValue * 100 - 100) / 2, "%"); // need to factor in aspect ratio as seems to use percentage of element width
-
-        canvasContainer.style.marginTop = "-".concat((_this.bufferValue * 100 - 100) / 2 * (boundingRect.height / boundingRect.width), "%");
-        return canvasContainer.getBoundingClientRect();
-      };
-
       this._createMap = function () {
         var map = new Map({
-          maxTilesLoading: 6,
+          maxTilesLoading: 5,
           target: _this.container,
           layers: [_this.olLayer],
           view: _this.olView
@@ -27440,9 +27425,55 @@
       this._createCanvasElement();
 
       this._createMap();
-    } // _preventCachedTilesBeingRequested = () => {
+    } // TODO tidy up this function
+    // _preventCachedTilesBeingRequested = () => {
     // }
     ;
+
+    /**
+     * Takes twoMatrix3s, a and b, and computes the product in the order
+     * that pre-composes b with a.  In other words, the matrix returned will
+     * @param {module:webgl-2d-math.Matrix3} a A matrix.
+     * @param {module:webgl-2d-math.Matrix3} b A matrix.
+     * @return {module:webgl-2d-math.Matrix3} the result.
+     * @memberOf module:webgl-2d-math
+     * FROM https://webglfundamentals.org/webgl/resources/webgl-2d-math.js
+     */
+
+    var matrix3x3Multiply = function matrix3x3Multiply(a, b) {
+      var a00 = a[0 * 3 + 0];
+      var a01 = a[0 * 3 + 1];
+      var a02 = a[0 * 3 + 2];
+      var a10 = a[1 * 3 + 0];
+      var a11 = a[1 * 3 + 1];
+      var a12 = a[1 * 3 + 2];
+      var a20 = a[2 * 3 + 0];
+      var a21 = a[2 * 3 + 1];
+      var a22 = a[2 * 3 + 2];
+      var b00 = b[0 * 3 + 0];
+      var b01 = b[0 * 3 + 1];
+      var b02 = b[0 * 3 + 2];
+      var b10 = b[1 * 3 + 0];
+      var b11 = b[1 * 3 + 1];
+      var b12 = b[1 * 3 + 2];
+      var b20 = b[2 * 3 + 0];
+      var b21 = b[2 * 3 + 1];
+      var b22 = b[2 * 3 + 2];
+      return [a00 * b00 + a01 * b10 + a02 * b20, a00 * b01 + a01 * b11 + a02 * b21, a00 * b02 + a01 * b12 + a02 * b22, a10 * b00 + a11 * b10 + a12 * b20, a10 * b01 + a11 * b11 + a12 * b21, a10 * b02 + a11 * b12 + a12 * b22, a20 * b00 + a21 * b10 + a22 * b20, a20 * b01 + a21 * b11 + a22 * b21, a20 * b02 + a21 * b12 + a22 * b22];
+    }; // rebuild of https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage.
+    // srcx and src y are pixel offsets from top left, srcwidth and srcheight are the size of the image, dstwidth and dstheight are the size
+    // of the rendering canvas
+
+    var scaleTextureCoordsToCropImage = function scaleTextureCoordsToCropImage(srcX, srcY, srcWidth, srcHeight, dstWidth, dstHeight) {
+      console.log(srcX, srcY, srcWidth, srcHeight, dstWidth, dstHeight);
+      var texXOff = srcX / srcWidth;
+      var texYOff = srcY / srcHeight;
+      var texXScale = dstWidth / srcWidth;
+      var texYScale = dstHeight / srcHeight;
+      var texOffMat = [1, 0, 0, 0, 1, 0, texXOff, texYOff, 1];
+      var texScaleMat = [texXScale, 0, 0, 0, texYScale, 0, 0, 0, 1];
+      return matrix3x3Multiply(texOffMat, texScaleMat);
+    };
 
     var PseudoLayer = function PseudoLayer(shaderName, inputs, rawShader, _shader, variables) {
       var _this = this;
@@ -27683,6 +27714,8 @@
     } // thankfully this is synchronous
     ;
 
+    var standardVertex = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nuniform mat3 u_texMatrix;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = (u_texMatrix * vec3(texcoord, 1)).xy;\r\n}";
+
     // contains hard-coded shaders for rendering a pseudo layer "as is", and for flipping an image
     // also contains state that controls how often the canvas can be rendered to -> prevents rendering before current pseudolayer is rendered
     // uses twgl which makes everyone's life a million times easier. https://twgljs.org/docs/.
@@ -27760,6 +27793,8 @@
 
           if (_this._isCanvasReady()) {
             _this._shadersReadyEvent.notReady();
+
+            resizeCanvasToDisplaySize(_this.gl.canvas);
 
             _this._renderPseudoLayer(pseudolayer);
           }
@@ -27912,15 +27947,23 @@
           var key = _Object$keys2[_i2];
 
           if (inputs[key].type === "layerObject") {
-            var textureId = _this._generateTexture(inputs[key].container.querySelector("canvas"));
+            var inputCanvas = inputs[key].container.querySelector("canvas");
 
-            renderInputs[key] = textureId;
+            var textureId = _this._generateTexture(inputCanvas);
+
+            renderInputs[key] = textureId; // since the target layer is a layer object, we can access the buffer value of the object. we use this
+            // to crop the target layer to the viewport in webgl, saving us from having to render anything offscreen
+
+            var srcX = inputCanvas.width * (inputs[key].bufferValue - 1) / 2;
+            var srcY = inputCanvas.height * (inputs[key].bufferValue - 1) / 2;
+            var textureMatrix = scaleTextureCoordsToCropImage(srcX, srcY, inputCanvas.width, inputCanvas.height, _this.gl.canvas.width, _this.gl.canvas.height);
           } else {
             renderInputs[key] = _this._framebufferTracker[inputs[key].id].attachments[0];
+            var textureMatrix = [1, 0, 0, 0, 1, 0, 0, 0, 1];
           }
         }
 
-        _this._startRendering(renderInputs, renderVariables, renderShader, framebuffer);
+        _this._startRendering(renderInputs, renderVariables, renderShader, textureMatrix, framebuffer);
 
         return framebuffer;
       };
@@ -27930,16 +27973,15 @@
 
         _this._startRendering({
           f_image: framebufferTexture
-        }, {}, _this._vFlipProgram);
+        }, {}, _this._vFlipProgram, [1, 0, 0, 0, 1, 0, 0, 0, 1]);
       };
 
-      this._startRendering = function (inputs, variables, programInfo, currentFramebuffer) {
+      this._startRendering = function (inputs, variables, programInfo, texMatrix, currentFramebuffer) {
         var gl = _this.gl;
         var webglCanvas = _this;
         requestAnimationFrame(render);
 
         function render() {
-          resizeCanvasToDisplaySize(gl.canvas);
           gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
           var quadVertices = primitives.createXYQuadBufferInfo(gl);
 
@@ -27955,6 +27997,9 @@
           gl.useProgram(programInfo.program);
           setUniforms(programInfo, inputs);
           setUniforms(programInfo, variables);
+          setUniforms(programInfo, {
+            "u_texMatrix": texMatrix
+          });
           bindFramebufferInfo(gl, currentFramebuffer);
           drawBufferInfo(gl, quadVertices, gl.TRIANGLES);
 
@@ -28008,8 +28053,9 @@
 
       this._width = this.gl.canvas.width;
       this._height = this.gl.canvas.height; // base vertex shader, with position and texture quads. stored for use in other shader programs, as these only require fragment shader
+      // let baseVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
 
-      var baseVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
+      var baseVertexShader = standardVertex;
       this._baseVertexShader = baseVertexShader; // flips the output, for converting from texture coordinates to clip coordinates
 
       var vFlipVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
@@ -28856,8 +28902,8 @@
     var webgl = new WebGLCanvas("canvas_map");
     var con = new Constructor();
     var ui = new Ui(webgl, con);
-    var l1 = new LayerObject(testMapLayer1, testMapView, 1.5);
-    var l2 = new LayerObject(testMapLayer2, testMapView, 1.5);
+    var l1 = new LayerObject(testMapLayer1, testMapView, 2.0);
+    var l2 = new LayerObject(testMapLayer2, testMapView, 1.4);
     var p1 = webgl.generatePseudoLayer(l1);
     var p2 = webgl.generatePseudoLayer(l2);
     var ep2 = con.rgbaManipulation({
