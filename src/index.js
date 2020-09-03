@@ -31,7 +31,7 @@ const testMapView = new View({
 // });
 
 const testWMS = new TileWMS({
-    url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
+    url: "https://services.sentinel-hub.com/ogc/wms/f3c43f1a-baa2-4108-ab8e-c59cce0c5900",
     params: {
         'LAYERS': "FALSE_COLOR", 
         'TILED': true, 
@@ -42,12 +42,11 @@ const testWMS = new TileWMS({
     },
     attribution: "test",
     crossOrigin: "anonymous",
+    ratio: 1,
 });
 
-console.log(testWMS)
-
 const testWMS2 = new TileWMS({
-    url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
+    url: "https://services.sentinel-hub.com/ogc/wms/f3c43f1a-baa2-4108-ab8e-c59cce0c5900",
     params: {
         'LAYERS': "TRUE_COLOR", 
         'TILED': true, 
@@ -58,6 +57,7 @@ const testWMS2 = new TileWMS({
     },
     attribution: "test",
     crossOrigin: "anonymous",
+    ratio: 1,
 });
 
 const testMapLayer1 = new TileLayer({
@@ -67,8 +67,6 @@ const testMapLayer1 = new TileLayer({
     opacity: 1,
     minZoom: 1,
 });
-
-console.log(testMapLayer1)
 
 const testMapLayer2 = new TileLayer({
     source: testWMS2,

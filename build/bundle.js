@@ -28793,7 +28793,7 @@
     // });
 
     var testWMS = new TileWMS({
-      url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
+      url: "https://services.sentinel-hub.com/ogc/wms/f3c43f1a-baa2-4108-ab8e-c59cce0c5900",
       params: {
         'LAYERS': "FALSE_COLOR",
         'TILED': true,
@@ -28803,11 +28803,11 @@
         'TIME': "2020-06-26/2020-07-26"
       },
       attribution: "test",
-      crossOrigin: "anonymous"
+      crossOrigin: "anonymous",
+      ratio: 1
     });
-    console.log(testWMS);
     var testWMS2 = new TileWMS({
-      url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
+      url: "https://services.sentinel-hub.com/ogc/wms/f3c43f1a-baa2-4108-ab8e-c59cce0c5900",
       params: {
         'LAYERS': "TRUE_COLOR",
         'TILED': true,
@@ -28817,7 +28817,8 @@
         'TIME': "2020-06-26/2020-07-26"
       },
       attribution: "test",
-      crossOrigin: "anonymous"
+      crossOrigin: "anonymous",
+      ratio: 1
     });
     var testMapLayer1 = new TileLayer({
       source: testWMS,
@@ -28826,7 +28827,6 @@
       opacity: 1,
       minZoom: 1
     });
-    console.log(testMapLayer1);
     var testMapLayer2 = new TileLayer({
       source: testWMS2,
       visible: true,
