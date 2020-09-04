@@ -18,7 +18,7 @@
 17. pass constructors to gui on instantiation DONE
 18. apply multiple effects to a pseudolayer without having to create a new layer DONE
 19. fix bug where same pseudolayer duplicated breaks selection system DONE
-20. panel that shows the updates to a layer when changed (to track changes) DONE
+20. panel that shows the updates to a layer when changed (to track changes)
 21. look into 18 DONE
 22. add suggested kernels
 23. test and bug fix gui state (back to 18 sigh) DONE
@@ -29,8 +29,8 @@
     was textures attached to framebuffer not being deleted DONE
 26. refactor webgl.js
 27. work out what flickering is on render -> due to openlayers animations. removing transitions when setting up the layer removes artifacts. DONE
-28. custom event for rendering when canvas is ready -> may not be necessary, to review
-29. still worried about minor memory leak, to review -> monitor but doesn;t seem to be a  problem
+28. custom event for rendering when canvas is ready -> may not be necessary, to review DONE
+29. still worried about minor memory leak, to review -> monitor but doesn;t seem to be a  problem DONE
 30. fix bug with UI state DONE
 31. seperate out "canvasReady" into "layersReady", "mapsReady" and "shadersReady" events. canvasReady only true if all of the others are true. DONE
 32. fix ui bugs caused by 31 -> seems to be that when a second effect is applied, on the first render pass the first effect changes DONE
@@ -39,6 +39,6 @@
 35. rework ui (AGAIN) DONE
 36. look into trying to optimize multiple tile layers as much as possible -> look into more effective caching, preloading outside viewport extent etc DONE
 37. look into errors that occur when changing layers while tiles are rendering -> bug with events
-38. sometimes needs a kick to finish rendering after final tile has loaded in -> look into implementing this upon loading complete
+38. sometimes needs a kick to finish rendering after final tile has laoaded in -> look into implementing this upon loading complete
 39. prevent cached tiles from being re-requested
-
+40. probably need to add constructors in index.js into a smaller class
