@@ -40,5 +40,9 @@
 36. look into trying to optimize multiple tile layers as much as possible -> look into more effective caching, preloading outside viewport extent etc DONE
 37. look into errors that occur when changing layers while tiles are rendering -> bug with events
 38. sometimes needs a kick to finish rendering after final tile has laoaded in -> look into implementing this upon loading complete
-39. prevent cached tiles from being re-requested
-40. probably need to add constructors in index.js into a smaller class
+39. prevent cached tiles from being re-requested DONE -> saves **some** tile requests may (20%?? for normal use). but still making a huge number of requests
+40. having implemented caching and a viewport buffer, very clear that aerial is going to absolute burn through tile requests. this could be a problem,
+    especially with caching, as can result in white tiles being loaded. strongly considering implementing a view system that switches to OSM/ ESRI
+    when the user is panning/ scrolling, then switches back to the target imagery when the user is stationary. this would remove the "real time" feel,
+    but would be far more practical when using sources that have request limits/ charge for requests. maybe "tile-save mode"?
+41. implement tile save mode, add to ui

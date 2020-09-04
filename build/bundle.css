@@ -1,24 +1,9 @@
-html * { font-family: Arial, sans-serif; }
-#processing_gui_container { position: absolute; width: 900px; height: 700px; margin-left: 200px; margin-top: 50px; text-align: center; display: flex; justify-content: center; align-content: center; }
-#top_bar_container { position: absolute; width:900px; height: 50px; margin-left:200px; background-color: lightblue; z-index:50; }
-#layer_container { position: absolute; float:left; width:200px; height: 750px; background-color:lightgreen; z-index: 50; }
-#map_container { position: relative; display: flex; width: 900px; height: 700px; left: 200px; top: 50px; }
-/* change width, height and margin values according to how much of a buffer we want around the viewport */
-/* tile (openlayers native) container */
-#map_container #tile_container { width: 100%; height: 100%; z-index: 10; overflow: hidden; }
-#map_container #tile_container .layer_object canvas { width: 100%; height: 100%; opacity:0; }
-/* canvas (webgl aerial.js) container */
-#map_container #canvas_container { position:absolute; width: 100%; height: 100%; z-index:0; overflow: hidden;  }
-#map_container #canvas_container #canvas_map { width: 100%; height: 100%; }
-
-/* #map_container #tile_container .layer_object div.ol-zoom { left: 8%; top: 10%; } */#layer_container #layer_title { margin: 13.5px;  text-align: center; font-size: 20px; }
+#layer_container #layer_title { margin: 13.5px;  text-align: center; font-size: 20px; }
 #layer_container #layers_holder { height: 700px; background-color: lightseagreen; overflow-y: hidden; }
 #layer_container #layers_holder .layer { height:20px; padding-bottom: 5px; margin:5px; background-color: lightgray; text-align: left; font-size: 16px; overflow: hidden; cursor:pointer; }
 #layer_container #layers_holder .layer .delete_layer { background-color: transparent; border: none; margin-top:3px; font-size: 12px; cursor: pointer; }
 #layer_container #layers_holder .layer .delete_layer:focus { outline:none; box-shadow: none; }
-#layer_container #layers_holder .selected { background-color: gray; }#processing_gui_container #processing_gui .inner_gui #kernel_table { margin:auto; background-color: lightseagreen; border-collapse: collapse; border: 1px solid black; }
-#processing_gui_container #processing_gui .inner_gui #kernel_table tbody tr td { padding: 4px; border: 1px solid black; }
-#processing_gui_container #processing_gui .inner_gui #kernel_table tbody tr td div { padding: 4px; }#top_bar_container .dropdown { float: left; height: 50px; width: 225px; display:table-cell; line-height: 50px; text-align: center; cursor: pointer; }
+#layer_container #layers_holder .selected { background-color: gray; }#top_bar_container .dropdown { float: left; height: 50px; width: 225px; display:table-cell; line-height: 50px; text-align: center; cursor: pointer; }
 #top_bar_container .dropdown:hover > .dropdown_menu { visibility: visible; }
 #top_bar_container .dropdown .dropdown_menu { visibility: hidden; position: relative; background-color: lightgray; z-index: 100; }
 #top_bar_container .dropdown .dropdown_menu .dropdown_menu_option:hover { background-color:gray; }
@@ -30,7 +15,20 @@ html * { font-family: Arial, sans-serif; }
 
 
 
-.ol-box {
+#processing_gui_container #processing_gui .inner_gui #kernel_table { margin:auto; background-color: lightseagreen; border-collapse: collapse; border: 1px solid black; }
+#processing_gui_container #processing_gui .inner_gui #kernel_table tbody tr td { padding: 4px; border: 1px solid black; }
+#processing_gui_container #processing_gui .inner_gui #kernel_table tbody tr td div { padding: 4px; }html * { font-family: Arial, sans-serif; }
+#processing_gui_container { position: absolute; width: 900px; height: 700px; margin-left: 200px; margin-top: 50px; text-align: center; display: flex; justify-content: center; align-content: center; }
+#top_bar_container { position: absolute; width:900px; height: 50px; margin-left:200px; background-color: lightblue; z-index:50; }
+#layer_container { position: absolute; float:left; width:200px; height: 750px; background-color:lightgreen; z-index: 50; }
+#map_container { position: relative; display: flex; width: 900px; height: 700px; left: 200px; top: 50px; }
+/* change width, height and margin values according to how much of a buffer we want around the viewport */
+/* tile (openlayers native) container */
+#map_container #tile_container { width: 100%; height: 100%; z-index: 10; overflow: hidden; }
+#map_container #tile_container .layer_object canvas { width: 100%; height: 100%; opacity:0; }
+/* canvas (webgl aerial.js) container */
+#map_container #canvas_container { position:absolute; width: 100%; height: 100%; z-index:0; overflow: hidden;  }
+#map_container #canvas_container #canvas_map { width: 100%; height: 100%; }.ol-box {
   box-sizing: border-box;
   border-radius: 2px;
   border: 2px solid blue;
