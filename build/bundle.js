@@ -20601,7 +20601,7 @@
           layers: [_this.olLayer],
           view: _this.olView
         });
-        map.getView().setZoom(15); // render the map without animation - prevents artifacts and reduces gpu overhead
+        map.getView().setZoom(12); // render the map without animation - prevents artifacts and reduces gpu overhead
 
         _this.olLayer.getSource().tileOptions.transition = 0; // layers are not requested until they are used -> saves requests
 
@@ -27821,7 +27821,7 @@
         // attempts to render the pseudolayer. allows for smooth movement of the map
 
 
-        var frameRender = pseudolayer.maps[pseudolayer.maps.length - 1].on("postrender", function () {
+        var frameRender = pseudolayer.maps[pseudolayer.maps.length - 1].on("rendercomplete", function () {
           _this._checkWhatsReady(); // tries to render the pseudolayer. if the canvas is still in the previous render pass, will return
           // check if the canvas has finished passing all buffers from the previous frame to the gpu. if it hasn't, skip rendering this pseudolayer
 

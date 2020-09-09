@@ -56,7 +56,7 @@ export class LayerObject{
             layers: [this.olLayer],
             view: this.olView,
         });
-        map.getView().setZoom(15);
+        map.getView().setZoom(12);
         // render the map without animation - prevents artifacts and reduces gpu overhead
         this.olLayer.getSource().tileOptions.transition = 0;
         // layers are not requested until they are used -> saves requests

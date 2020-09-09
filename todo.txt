@@ -46,3 +46,5 @@
     when the user is panning/ scrolling, then switches back to the target imagery when the user is stationary. this would remove the "real time" feel,
     but would be far more practical when using sources that have request limits/ charge for requests. maybe "tile-save mode"?
 41. implement tile save mode, add to ui
+42. named arguments to everything
+43. probably need to change all property access to getters/ setters for event flexibility
