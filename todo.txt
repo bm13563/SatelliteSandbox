@@ -40,5 +40,4 @@
 36. look into trying to optimize multiple tile layers as much as possible -> look into more effective caching, preloading outside viewport extent etc DONE
 37. look into errors that occur when changing layers while tiles are rendering -> bug with events
 38. sometimes needs a kick to finish rendering after final tile has loaded in -> look into implementing this upon loading complete
-39. prevent cached tiles from being re-requested
 

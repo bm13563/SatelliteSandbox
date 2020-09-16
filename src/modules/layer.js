@@ -20,19 +20,22 @@ export class LayerObject{
         this._createMap();
     }
 
-    // TODO tidy up this function
     _createCanvasElement = () => {
         // get the container for the tile elements, pass the size of the container to apply buffer to the canvas container
         const container = document.getElementById("tile_container");
         const boundingRect = container.getBoundingClientRect();
+        // return the size of the "buffered" bounding rectangle
+        const bufferedBoundingRect = this._applyBufferToWebglCanvas(boundingRect);
+        // create a div to attach the new layer to
         const div = document.createElement("div");
         div.classList.add("layer_object");
         div.setAttribute("id", this.containerId);
-        // set width and height, factoring in buffer value
-        div.width = this.bufferValue * boundingRect.width;
-        div.height = this.bufferValue * boundingRect.height;
+        div.width = bufferedBoundingRect.width;
+        div.height = bufferedBoundingRect.height;
         div.style.width = `${div.width}px`;
         div.style.height = `${div.height}px`;
+        div.style.marginLeft = `-${(this.bufferValue*100 - 100) / 2}%`;
+        div.style.marginTop = `-${((this.bufferValue*100 - 100) / 2) * (bufferedBoundingRect.height / bufferedBoundingRect.width)}%`;
         div.style.position = "absolute";
         div.style.zIndex = `${parseInt(this.olLayer.ol_uid)}`;
         container.appendChild(div);
@@ -40,9 +43,20 @@ export class LayerObject{
         this.activeShaders = [];
     }
 
+    // apply a buffer area around the viewport to cache adjacent tiles
+    _applyBufferToWebglCanvas = (boundingRect) => {
+        const canvasContainer = document.getElementById("canvas_map");
+        canvasContainer.style.width = `${this.bufferValue*100}%`;
+        canvasContainer.style.height = `${this.bufferValue*100}%`;
+        canvasContainer.style.marginLeft = `-${(this.bufferValue*100 - 100) / 2}%`;
+        // need to factor in aspect ratio as seems to use percentage of element width
+        canvasContainer.style.marginTop = `-${((this.bufferValue*100 - 100) / 2) * (boundingRect.height / boundingRect.width)}%`;
+        return canvasContainer.getBoundingClientRect();
+    }
+
     _createMap = () => {
         const map = new Map({
-            maxTilesLoading: 5,
+            maxTilesLoading: 6,
             target: this.container,
             layers: [this.olLayer],
             view: this.olView,

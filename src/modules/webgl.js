@@ -1,5 +1,4 @@
 import * as twgl from 'twgl.js';
-import * as utils from './utils.js';
 // useful for debugging -> obvs shouldnt be used in production
 // import * as wLint from 'webgl-lint';
 import { PseudoLayer } from './pseudolayer.js';
@@ -23,7 +22,7 @@ export class WebGLCanvas{
         this._width = this.gl.canvas.width;
         this._height = this.gl.canvas.height;
         // base vertex shader, with position and texture quads. stored for use in other shader programs, as these only require fragment shader
-        let baseVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nuniform mat3 u_texMatrix;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = (u_texMatrix * vec3(texcoord, 1)).xy;\r\n}";
+        let baseVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
         this._baseVertexShader = baseVertexShader;
         // flips the output, for converting from texture coordinates to clip coordinates
         let vFlipVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
@@ -110,7 +109,6 @@ export class WebGLCanvas{
             // check if the canvas has finished passing all buffers from the previous frame to the gpu. if it hasn't, skip rendering this pseudolayer
             if (this._isCanvasReady()) {
                 this._shadersReadyEvent.notReady();
-                twgl.resizeCanvasToDisplaySize(this.gl.canvas);
                 this._renderPseudoLayer(pseudolayer);
             };
         });
@@ -229,25 +227,16 @@ export class WebGLCanvas{
         let renderShader = pseudolayer.shader;
         for (let key of Object.keys(inputs)) {
             if (inputs[key].type === "layerObject") {
-                let inputCanvas = inputs[key].container.querySelector("canvas");
-                let textureId = this._generateTexture(inputCanvas);
+                let textureId = this._generateTexture(inputs[key].container.querySelector("canvas"));
                 renderInputs[key] = textureId;
-                // since the target layer is a layer object, we can access the buffer value of the object. we use this
-                // to crop the target layer to the viewport in webgl, saving us from having to render anything offscreen
-                let srcX = inputCanvas.width * (inputs[key].bufferValue - 1) / 2;
-                let srcY = inputCanvas.height * (inputs[key].bufferValue - 1) / 2;
-                var textureMatrix = utils.scaleTextureCoordsToCropImage(srcX, srcY, inputCanvas.width, inputCanvas.height, this.gl.canvas.width, this.gl.canvas.height)
             } else {
                 renderInputs[key] = this._framebufferTracker[inputs[key].id].attachments[0];
-                var textureMatrix = [1, 0, 0, 0, 1, 0, 0, 0, 1,];
             }
         }
-
         this._startRendering(
             renderInputs, 
             renderVariables,
             renderShader, 
-            textureMatrix,
             framebuffer
         );
         return framebuffer;
@@ -259,17 +248,18 @@ export class WebGLCanvas{
             {f_image: framebufferTexture}, 
             {}, 
             this._vFlipProgram,
-            [1, 0, 0, 0, 1, 0, 0, 0, 1,],
         );
     }
 
-    _startRendering = (inputs, variables, programInfo, texMatrix, currentFramebuffer) => {
+    _startRendering = (inputs, variables, programInfo, currentFramebuffer) => {
         let gl = this.gl;
         let webglCanvas = this;
         requestAnimationFrame(render);
 
         function render() {
+            twgl.resizeCanvasToDisplaySize(gl.canvas);
             gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
             const quadVertices = twgl.primitives.createXYQuadBufferInfo(gl);
             webglCanvas._cleanupTracker._arrayBuffers.push(quadVertices.attribs.normal.buffer);
             webglCanvas._cleanupTracker._arrayBuffers.push(quadVertices.attribs.position.buffer);
@@ -280,7 +270,6 @@ export class WebGLCanvas{
             gl.useProgram(programInfo.program);
             twgl.setUniforms(programInfo, inputs);
             twgl.setUniforms(programInfo, variables);
-            twgl.setUniforms(programInfo, {"u_texMatrix": texMatrix});
             twgl.bindFramebufferInfo(gl, currentFramebuffer);
 
             twgl.drawBufferInfo(gl, quadVertices, gl.TRIANGLES);
