@@ -27429,7 +27429,7 @@
       this.type = 'layerObject';
       this.olLayer = olLayer;
       this.olView = olView;
-      this.bufferValue = bufferValue;
+      this.bufferValue = 1.5;
       this.mapOrderId = parseInt(this.olLayer.ol_uid);
       this.containerId = Date.now() + Math.floor(Math.random() * 1000000);
       this.container;
@@ -28823,7 +28823,7 @@
       },
       attribution: "test",
       crossOrigin: "anonymous",
-      cacheSize: 200
+      cacheSize: 1000
     });
     var testWMS2 = new TileWMS({
       url: "https://services.sentinel-hub.com/ogc/wms/f3c43f1a-baa2-4108-ab8e-c59cce0c5900",
@@ -28837,7 +28837,7 @@
       },
       attribution: "test",
       crossOrigin: "anonymous",
-      cacheSize: 200
+      cacheSize: 1000
     });
     var testMapLayer1 = new TileLayer({
       source: testWMS,
@@ -28856,8 +28856,8 @@
     var webgl = new WebGLCanvas("canvas_map");
     var con = new Constructor();
     var ui = new Ui(webgl, con);
-    var l1 = new LayerObject(testMapLayer1, testMapView, 1.5);
-    var l2 = new LayerObject(testMapLayer2, testMapView, 1.5);
+    var l1 = new LayerObject(testMapLayer1, testMapView);
+    var l2 = new LayerObject(testMapLayer2, testMapView);
     var p1 = webgl.generatePseudoLayer(l1);
     var p2 = webgl.generatePseudoLayer(l2);
     var ep2 = con.rgbaManipulation({

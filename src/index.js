@@ -42,7 +42,7 @@ const testWMS = new TileWMS({
     },
     attribution: "test",
     crossOrigin: "anonymous",
-    cacheSize: 200,
+    cacheSize: 1000,
 });
 
 const testWMS2 = new TileWMS({
@@ -57,7 +57,7 @@ const testWMS2 = new TileWMS({
     },
     attribution: "test",
     crossOrigin: "anonymous",
-    cacheSize: 200,
+    cacheSize: 1000,
 });
 
 const testMapLayer1 = new TileLayer({

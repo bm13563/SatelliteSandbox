@@ -1,8 +1,8 @@
 html * { font-family: Arial, sans-serif; }
 #processing_gui_container { position: absolute; width: 900px; height: 700px; margin-left: 200px; margin-top: 50px; text-align: center; display: flex; justify-content: center; align-content: center; }
-#top_bar_container { position: absolute; width:900px; height: 50px; margin-left:200px; background-color: lightblue; z-index:50; }
-#layer_container { position: absolute; float:left; width:200px; height: 750px; background-color:lightgreen; z-index: 50; }
-#map_container { position: relative; display: flex; width: 900px; height: 700px; left: 200px; top: 50px; }
+#top_bar_container { width:900px; height: 50px; margin-left:200px; background-color: lightblue; }
+#layer_container { float:left; width:200px; height: 750px; margin-top:-50px; background-color:lightgreen; }
+#map_container { position:relative; display: flex; width: 900px; height: 700px; }
 /* change width, height and margin values according to how much of a buffer we want around the viewport */
 /* tile (openlayers native) container */
 #map_container #tile_container { width: 100%; height: 100%; z-index: 10; overflow: hidden; }
