@@ -42,7 +42,7 @@ const testWMS = new TileWMS({
     },
     attribution: "test",
     crossOrigin: "anonymous",
-    cacheSize: 1000,
+    ratio: 1,
 });
 
 const testWMS2 = new TileWMS({
@@ -57,7 +57,7 @@ const testWMS2 = new TileWMS({
     },
     attribution: "test",
     crossOrigin: "anonymous",
-    cacheSize: 1000,
+    ratio: 1,
 });
 
 const testMapLayer1 = new TileLayer({
@@ -79,8 +79,8 @@ const testMapLayer2 = new TileLayer({
 var webgl = new WebGLCanvas("canvas_map");
 var con = new Constructor();
 var ui = new Ui(webgl, con);
-var l1 = new LayerObject(testMapLayer1, testMapView, 1.5);
-var l2 = new LayerObject(testMapLayer2, testMapView, 1.5);
+var l1 = new LayerObject(testMapLayer1, testMapView);
+var l2 = new LayerObject(testMapLayer2, testMapView);
 
 const p1 = webgl.generatePseudoLayer(l1);
 const p2 = webgl.generatePseudoLayer(l2);
