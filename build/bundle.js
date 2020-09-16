@@ -27720,10 +27720,7 @@
 
       this.activatePseudolayer = function (pseudolayer) {
         // remove the maps used to render the previous pseudolayer and their handlers
-        _this.deactivatePseudolayer(); // set up the shader ready event for this pseudolayer
-
-
-        _this._shadersReadyEvent.log(pseudolayer.shaderPasses); // set up the layers ready event for this pseudolayer
+        _this.deactivatePseudolayer(); // set up the layers ready event for this pseudolayer
 
 
         _this._layersReadyEvent.wait(pseudolayer.layers); // set up the maps ready event for this pseudolayer
@@ -27739,6 +27736,10 @@
 
 
           if (_this._isCanvasReady()) {
+            // shader passes need to be set every render loop -> this ensures that the shaders passes arent updated when a new layer is selected
+            // when the shaders arent ready
+            _this._shadersReadyEvent.log(pseudolayer.shaderPasses);
+
             _this._shadersReadyEvent.notReady();
 
             _this._renderPseudoLayer(pseudolayer);
@@ -28792,7 +28793,7 @@
     // });
 
     var testWMS = new TileWMS({
-      url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
+      url: "https://services.sentinel-hub.com/ogc/wms/f3c43f1a-baa2-4108-ab8e-c59cce0c5900",
       params: {
         'LAYERS': "FALSE_COLOR",
         'TILED': true,
@@ -28805,7 +28806,7 @@
       crossOrigin: "anonymous"
     });
     var testWMS2 = new TileWMS({
-      url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
+      url: "https://services.sentinel-hub.com/ogc/wms/f3c43f1a-baa2-4108-ab8e-c59cce0c5900",
       params: {
         'LAYERS': "TRUE_COLOR",
         'TILED': true,

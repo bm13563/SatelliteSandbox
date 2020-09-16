@@ -95,12 +95,10 @@ export class WebGLCanvas{
     activatePseudolayer = (pseudolayer) => {
         // remove the maps used to render the previous pseudolayer and their handlers
         this.deactivatePseudolayer();
-        // set up the shader ready event for this pseudolayer
-        this._shadersReadyEvent.log(pseudolayer.shaderPasses);
         // set up the layers ready event for this pseudolayer
         this._layersReadyEvent.wait(pseudolayer.layers);
         // set up the maps ready event for this pseudolayer
-        this._mapsReadyEvent.wait(pseudolayer.maps);        
+        this._mapsReadyEvent.wait(pseudolayer.maps);       
         // sets the current event handler, on the first map. from this point until activatePseudolayer is called again, every frame update
         // attempts to render the pseudolayer. allows for smooth movement of the map
         let frameRender = pseudolayer.maps[pseudolayer.maps.length-1].on("postrender", () => {
@@ -108,6 +106,9 @@ export class WebGLCanvas{
             // tries to render the pseudolayer. if the canvas is still in the previous render pass, will return
             // check if the canvas has finished passing all buffers from the previous frame to the gpu. if it hasn't, skip rendering this pseudolayer
             if (this._isCanvasReady()) {
+                // shader passes need to be set every render loop -> this ensures that the shaders passes arent updated when a new layer is selected
+                // when the shaders arent ready
+                this._shadersReadyEvent.log(pseudolayer.shaderPasses); 
                 this._shadersReadyEvent.notReady();
                 this._renderPseudoLayer(pseudolayer);
             };
