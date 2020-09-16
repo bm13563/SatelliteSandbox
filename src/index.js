@@ -139,7 +139,6 @@ const pp6 = con.stackLayers({
 })
 
 ui.addUiLayer(p1);
-ui.addUiLayer(ep2);
 ui.addUiLayer(pp1);
 ui.addUiLayer(pp2);
 ui.addUiLayer(pp3);
