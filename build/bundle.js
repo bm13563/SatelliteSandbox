@@ -18994,6 +18994,34 @@
         });
     }
     /**
+     * @typedef {Object} XYZOptions
+     * @property {import("./extent.js").Extent} [extent] Extent for the tile grid. The origin for an XYZ tile grid is the
+     * top-left corner of the extent. If `maxResolution` is not provided the zero level of the grid is defined by the resolution
+     * at which one tile fits in the provided extent. If not provided, the extent of the EPSG:3857 projection is used.
+     * @property {number} [maxResolution] Resolution at level zero.
+     * @property {number} [maxZoom] Maximum zoom. The default is `42`. This determines the number of levels
+     * in the grid set. For example, a `maxZoom` of 21 means there are 22 levels in the grid set.
+     * @property {number} [minZoom=0] Minimum zoom.
+     * @property {number|import("./size.js").Size} [tileSize=[256, 256]] Tile size in pixels.
+     */
+    /**
+     * Creates a tile grid with a standard XYZ tiling scheme.
+     * @param {XYZOptions=} opt_options Tile grid options.
+     * @return {!TileGrid} Tile grid instance.
+     * @api
+     */
+    function createXYZ(opt_options) {
+        var xyzOptions = opt_options || {};
+        var extent = xyzOptions.extent || get$2('EPSG:3857').getExtent();
+        var gridOptions = {
+            extent: extent,
+            minZoom: xyzOptions.minZoom,
+            tileSize: xyzOptions.tileSize,
+            resolutions: resolutionsFromExtent(extent, xyzOptions.maxZoom, xyzOptions.tileSize, xyzOptions.maxResolution),
+        };
+        return new TileGrid(gridOptions);
+    }
+    /**
      * Create a resolutions array from an extent.  A zoom factor of 2 is assumed.
      * @param {import("./extent.js").Extent} extent Extent.
      * @param {number=} opt_maxZoom Maximum zoom level (default is
@@ -20556,6 +20584,126 @@
             return this.getRequestUrl_(tileCoord, tileSize, tileExtent, pixelRatio, projection, baseParams);
         };
         return TileWMS;
+    }(TileImage));
+
+    /**
+     * @module ol/source/XYZ
+     */
+    var __extends$W = (undefined && undefined.__extends) || (function () {
+        var extendStatics = function (d, b) {
+            extendStatics = Object.setPrototypeOf ||
+                ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+                function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            return extendStatics(d, b);
+        };
+        return function (d, b) {
+            extendStatics(d, b);
+            function __() { this.constructor = d; }
+            d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+        };
+    })();
+    /**
+     * @typedef {Object} Options
+     * @property {import("./Source.js").AttributionLike} [attributions] Attributions.
+     * @property {boolean} [attributionsCollapsible=true] Attributions are collapsible.
+     * @property {number} [cacheSize] Initial tile cache size. Will auto-grow to hold at least the number of tiles in the viewport.
+     * @property {null|string} [crossOrigin] The `crossOrigin` attribute for loaded images.  Note that
+     * you must provide a `crossOrigin` value if you want to access pixel data with the Canvas renderer.
+     * See https://developer.mozilla.org/en-US/docs/Web/HTML/CORS_enabled_image for more detail.
+     * @property {boolean} [imageSmoothing=true] Enable image smoothing.
+     * @property {boolean} [opaque=false] Whether the layer is opaque.
+     * @property {import("../proj.js").ProjectionLike} [projection='EPSG:3857'] Projection.
+     * @property {number} [reprojectionErrorThreshold=0.5] Maximum allowed reprojection error (in pixels).
+     * Higher values can increase reprojection performance, but decrease precision.
+     * @property {number} [maxZoom=42] Optional max zoom level. Not used if `tileGrid` is provided.
+     * @property {number} [minZoom=0] Optional min zoom level. Not used if `tileGrid` is provided.
+     * @property {number} [maxResolution] Optional tile grid resolution at level zero. Not used if `tileGrid` is provided.
+     * @property {import("../tilegrid/TileGrid.js").default} [tileGrid] Tile grid.
+     * @property {import("../Tile.js").LoadFunction} [tileLoadFunction] Optional function to load a tile given a URL. The default is
+     * ```js
+     * function(imageTile, src) {
+     *   imageTile.getImage().src = src;
+     * };
+     * ```
+     * @property {number} [tilePixelRatio=1] The pixel ratio used by the tile service.
+     * For example, if the tile service advertizes 256px by 256px tiles but actually sends 512px
+     * by 512px images (for retina/hidpi devices) then `tilePixelRatio`
+     * should be set to `2`.
+     * @property {number|import("../size.js").Size} [tileSize=[256, 256]] The tile size used by the tile service.
+     * Not used if `tileGrid` is provided.
+     * @property {import("../Tile.js").UrlFunction} [tileUrlFunction] Optional function to get
+     * tile URL given a tile coordinate and the projection.
+     * Required if `url` or `urls` are not provided.
+     * @property {string} [url] URL template. Must include `{x}`, `{y}` or `{-y}`,
+     * and `{z}` placeholders. A `{?-?}` template pattern, for example `subdomain{a-f}.domain.com`,
+     * may be used instead of defining each one separately in the `urls` option.
+     * @property {Array<string>} [urls] An array of URL templates.
+     * @property {boolean} [wrapX=true] Whether to wrap the world horizontally.
+     * @property {number} [transition] Duration of the opacity transition for rendering.
+     * To disable the opacity transition, pass `transition: 0`.
+     * @property {number} [zDirection=0] Indicate which resolution should be used
+     * by a renderer if the view resolution does not match any resolution of the tile source.
+     * If 0, the nearest resolution will be used. If 1, the nearest lower resolution
+     * will be used. If -1, the nearest higher resolution will be used.
+     */
+    /**
+     * @classdesc
+     * Layer source for tile data with URLs in a set XYZ format that are
+     * defined in a URL template. By default, this follows the widely-used
+     * Google grid where `x` 0 and `y` 0 are in the top left. Grids like
+     * TMS where `x` 0 and `y` 0 are in the bottom left can be used by
+     * using the `{-y}` placeholder in the URL template, so long as the
+     * source does not have a custom tile grid. In this case,
+     * {@link module:ol/source/TileImage} can be used with a `tileUrlFunction`
+     * such as:
+     *
+     *  tileUrlFunction: function(coordinate) {
+     *    return 'http://mapserver.com/' + coordinate[0] + '/' +
+     *        coordinate[1] + '/' + coordinate[2] + '.png';
+     *    }
+     *
+     * @api
+     */
+    var XYZ = /** @class */ (function (_super) {
+        __extends$W(XYZ, _super);
+        /**
+         * @param {Options=} opt_options XYZ options.
+         */
+        function XYZ(opt_options) {
+            var _this = this;
+            var options = opt_options || {};
+            var projection = options.projection !== undefined ? options.projection : 'EPSG:3857';
+            var tileGrid = options.tileGrid !== undefined
+                ? options.tileGrid
+                : createXYZ({
+                    extent: extentFromProjection(projection),
+                    maxResolution: options.maxResolution,
+                    maxZoom: options.maxZoom,
+                    minZoom: options.minZoom,
+                    tileSize: options.tileSize,
+                });
+            _this = _super.call(this, {
+                attributions: options.attributions,
+                cacheSize: options.cacheSize,
+                crossOrigin: options.crossOrigin,
+                imageSmoothing: options.imageSmoothing,
+                opaque: options.opaque,
+                projection: projection,
+                reprojectionErrorThreshold: options.reprojectionErrorThreshold,
+                tileGrid: tileGrid,
+                tileLoadFunction: options.tileLoadFunction,
+                tilePixelRatio: options.tilePixelRatio,
+                tileUrlFunction: options.tileUrlFunction,
+                url: options.url,
+                urls: options.urls,
+                wrapX: options.wrapX !== undefined ? options.wrapX : true,
+                transition: options.transition,
+                attributionsCollapsible: options.attributionsCollapsible,
+                zDirection: options.zDirection,
+            }) || this;
+            return _this;
+        }
+        return XYZ;
     }(TileImage));
 
     function _classCallCheck(instance, Constructor) {
@@ -27821,7 +27969,7 @@
         // attempts to render the pseudolayer. allows for smooth movement of the map
 
 
-        var frameRender = pseudolayer.maps[pseudolayer.maps.length - 1].on("rendercomplete", function () {
+        var frameRender = pseudolayer.maps[pseudolayer.maps.length - 1].on("postrender", function () {
           _this._checkWhatsReady(); // tries to render the pseudolayer. if the canvas is still in the previous render pass, will return
           // check if the canvas has finished passing all buffers from the previous frame to the gpu. if it hasn't, skip rendering this pseudolayer
 
@@ -28117,6 +28265,8 @@
 
       this._canvasEvents = [];
     } // canvas is only ready if all ready events are true
+    // setBaseLayer = (pseudolayer) => {
+    // }
     ;
 
     var UiLayer = function UiLayer(pseudolayer, layerNumber) {
@@ -28880,17 +29030,17 @@
     var testMapView = new View({
       center: [27288.019098, 6575113.173091],
       zoom: 7
-    }); // const testWMS = new XYZ({
-    //     url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
-    //     params: {
-    //         'TILED': true, 
-    //         'FORMAT': 'image/png',
-    //         attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community',
-    //     },
-    //     attribution: "test",
-    //     crossOrigin: "anonymous",
-    // });
-
+    });
+    var baseLayer = new XYZ({
+      url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
+      params: {
+        'TILED': true,
+        'FORMAT': 'image/png',
+        attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community'
+      },
+      attribution: "test",
+      crossOrigin: "anonymous"
+    });
     var testWMS = new TileWMS({
       url: "https://services.sentinel-hub.com/ogc/wms/f3c43f1a-baa2-4108-ab8e-c59cce0c5900",
       params: {
@@ -28938,6 +29088,7 @@
     var ui = new Ui(webgl, con);
     var l1 = new LayerObject(testMapLayer1, testMapView, 1.5);
     var l2 = new LayerObject(testMapLayer2, testMapView, 1.5);
+    var l3 = new LayerObject(testMapLayer2, testMapView, 1.5);
     var p1 = webgl.generatePseudoLayer(l1);
     var p2 = webgl.generatePseudoLayer(l2);
     var ep2 = con.rgbaManipulation({

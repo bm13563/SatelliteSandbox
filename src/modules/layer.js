@@ -64,7 +64,7 @@ export class LayerObject{
         this.olMap = map;
     }
 
-    // prevent any layer from requesting tiles that have been cached. saves requests
+    // prevent any layer from requesting tiles that have been cached. does not appear that openlayers cahche prevents tile requests being made
     _preventCachedTilesBeingRequested = () => {
         this.olLayer.getSource().setTileLoadFunction((imageTile, src) => {
             // reformat the current tile source to match the key of the tile cache
