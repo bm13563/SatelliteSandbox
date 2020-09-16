@@ -27396,7 +27396,6 @@
 
       this._createMap = function () {
         var map = new Map({
-          maxTilesLoading: 6,
           target: _this.container,
           layers: [_this.olLayer],
           view: _this.olView
@@ -28797,7 +28796,7 @@
       params: {
         'LAYERS': "FALSE_COLOR",
         'TILED': true,
-        'FORMAT': 'image/jpeg',
+        'FORMAT': 'image/png',
         'showLogo': false,
         'CRS': "EPSG:3857",
         'TIME': "2020-06-26/2020-07-26"
@@ -28805,13 +28804,12 @@
       attribution: "test",
       crossOrigin: "anonymous"
     });
-    console.log(testWMS);
     var testWMS2 = new TileWMS({
       url: "https://services.sentinel-hub.com/ogc/wms/e25b0e1d-5cf3-4abe-9091-e9054ef6640a",
       params: {
         'LAYERS': "TRUE_COLOR",
         'TILED': true,
-        'FORMAT': 'image/jpeg',
+        'FORMAT': 'image/png',
         'showLogo': false,
         'CRS': "EPSG:3857",
         'TIME': "2020-06-26/2020-07-26"
@@ -28826,7 +28824,6 @@
       opacity: 1,
       minZoom: 1
     });
-    console.log(testMapLayer1);
     var testMapLayer2 = new TileLayer({
       source: testWMS2,
       visible: true,
