@@ -29136,7 +29136,6 @@
       sl_divisor: 1.0
     });
     ui.addUiLayer(p1);
-    ui.addUiLayer(ep2);
     ui.addUiLayer(pp1);
     ui.addUiLayer(pp2);
     ui.addUiLayer(pp3);
