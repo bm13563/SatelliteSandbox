@@ -1,4 +1,5 @@
 import {Map, View} from 'ol';
+import * as twgl from 'twgl.js';
 
 // "layers" are different to those in native openlayers. each "layer" needs to have it's own
 // canvas for opengl to read from. this class creates a "layer" with it's own canvas from
@@ -19,11 +20,10 @@ export class LayerObject{
         this._createMap();
     }
 
-    // TODO tidy up this function -> work out if we give a shit about ol controls - it's easy enough to control a map without right?
+    // TODO tidy up this function
     _createCanvasElement = () => {
         // get the container for the tile elements, pass the size of the container to apply buffer to the canvas container
         const container = document.getElementById("tile_container");
-        const openlayerControls = document.getElementById("")
         const boundingRect = container.getBoundingClientRect();
         const div = document.createElement("div");
         div.classList.add("layer_object");
@@ -33,8 +33,6 @@ export class LayerObject{
         div.height = this.bufferValue * boundingRect.height;
         div.style.width = `${div.width}px`;
         div.style.height = `${div.height}px`;
-        div.style.marginLeft = `-${((this.bufferValue * boundingRect.width) - boundingRect.width) / 2}px`
-        div.style.marginTop = `-${((this.bufferValue * boundingRect.height) - boundingRect.height) / 2}px`;
         div.style.position = "absolute";
         div.style.zIndex = `${parseInt(this.olLayer.ol_uid)}`;
         container.appendChild(div);

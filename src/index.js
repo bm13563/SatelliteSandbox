@@ -79,8 +79,8 @@ const testMapLayer2 = new TileLayer({
 var webgl = new WebGLCanvas("canvas_map");
 var con = new Constructor();
 var ui = new Ui(webgl, con);
-var l1 = new LayerObject(testMapLayer1, testMapView, 1.1);
-var l2 = new LayerObject(testMapLayer2, testMapView, 1.1);
+var l1 = new LayerObject(testMapLayer1, testMapView, 1.0);
+var l2 = new LayerObject(testMapLayer2, testMapView, 1.0);
 
 const p1 = webgl.generatePseudoLayer(l1);
 const p2 = webgl.generatePseudoLayer(l2);

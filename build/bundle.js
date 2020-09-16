@@ -20564,70 +20564,6 @@
       }
     }
 
-    // canvas for opengl to read from. this class creates a "layer" with it's own canvas from
-    // an openlayers layer. layers will be synced as long as the same view is used
-
-    var LayerObject = function LayerObject(olLayer, olView, bufferValue) {
-      var _this = this;
-
-      _classCallCheck(this, LayerObject);
-
-      this._createCanvasElement = function () {
-        // get the container for the tile elements, pass the size of the container to apply buffer to the canvas container
-        var container = document.getElementById("tile_container");
-        var boundingRect = container.getBoundingClientRect();
-        var div = document.createElement("div");
-        div.classList.add("layer_object");
-        div.setAttribute("id", _this.containerId); // set width and height, factoring in buffer value
-
-        div.width = _this.bufferValue * boundingRect.width;
-        div.height = _this.bufferValue * boundingRect.height;
-        div.style.width = "".concat(div.width, "px");
-        div.style.height = "".concat(div.height, "px");
-        div.style.marginLeft = "-".concat((_this.bufferValue * boundingRect.width - boundingRect.width) / 2, "px");
-        div.style.marginTop = "-".concat((_this.bufferValue * boundingRect.height - boundingRect.height) / 2, "px");
-        div.style.position = "absolute";
-        div.style.zIndex = "".concat(parseInt(_this.olLayer.ol_uid));
-        container.appendChild(div);
-        _this.container = div;
-        _this.activeShaders = [];
-      };
-
-      this._createMap = function () {
-        var map = new Map({
-          maxTilesLoading: 5,
-          target: _this.container,
-          layers: [_this.olLayer],
-          view: _this.olView
-        });
-        map.getView().setZoom(12); // render the map without animation - prevents artifacts and reduces gpu overhead
-
-        _this.olLayer.getSource().tileOptions.transition = 0; // layers are not requested until they are used -> saves requests
-
-        _this.olLayer.setVisible(false);
-
-        _this.olMap = map;
-      };
-
-      this.type = 'layerObject';
-      this.olLayer = olLayer;
-      this.olView = olView;
-      this.bufferValue = bufferValue;
-      this.mapOrderId = parseInt(this.olLayer.ol_uid);
-      this.containerId = Date.now() + Math.floor(Math.random() * 1000000);
-      this.container;
-      this.olMap;
-      this.shaders = {};
-      this.activeShader;
-
-      this._createCanvasElement();
-
-      this._createMap();
-    } // TODO tidy up this function
-    // _preventCachedTilesBeingRequested = () => {
-    // }
-    ;
-
     /* @license twgl.js 4.15.2 Copyright (c) 2015, Gregg Tavares All Rights Reserved.
     Available via the MIT license.
     see: http://github.com/greggman/twgl.js for details */
@@ -27432,6 +27368,68 @@
       return false;
     }
 
+    // canvas for opengl to read from. this class creates a "layer" with it's own canvas from
+    // an openlayers layer. layers will be synced as long as the same view is used
+
+    var LayerObject = function LayerObject(olLayer, olView, bufferValue) {
+      var _this = this;
+
+      _classCallCheck(this, LayerObject);
+
+      this._createCanvasElement = function () {
+        // get the container for the tile elements, pass the size of the container to apply buffer to the canvas container
+        var container = document.getElementById("tile_container");
+        var boundingRect = container.getBoundingClientRect();
+        var div = document.createElement("div");
+        div.classList.add("layer_object");
+        div.setAttribute("id", _this.containerId); // set width and height, factoring in buffer value
+
+        div.width = _this.bufferValue * boundingRect.width;
+        div.height = _this.bufferValue * boundingRect.height;
+        div.style.width = "".concat(div.width, "px");
+        div.style.height = "".concat(div.height, "px");
+        div.style.position = "absolute";
+        div.style.zIndex = "".concat(parseInt(_this.olLayer.ol_uid));
+        container.appendChild(div);
+        _this.container = div;
+        _this.activeShaders = [];
+      };
+
+      this._createMap = function () {
+        var map = new Map({
+          maxTilesLoading: 5,
+          target: _this.container,
+          layers: [_this.olLayer],
+          view: _this.olView
+        });
+        map.getView().setZoom(12); // render the map without animation - prevents artifacts and reduces gpu overhead
+
+        _this.olLayer.getSource().tileOptions.transition = 0; // layers are not requested until they are used -> saves requests
+
+        _this.olLayer.setVisible(false);
+
+        _this.olMap = map;
+      };
+
+      this.type = 'layerObject';
+      this.olLayer = olLayer;
+      this.olView = olView;
+      this.bufferValue = bufferValue;
+      this.mapOrderId = parseInt(this.olLayer.ol_uid);
+      this.containerId = Date.now() + Math.floor(Math.random() * 1000000);
+      this.container;
+      this.olMap;
+      this.shaders = {};
+      this.activeShader;
+
+      this._createCanvasElement();
+
+      this._createMap();
+    } // TODO tidy up this function
+    // _preventCachedTilesBeingRequested = () => {
+    // }
+    ;
+
     /**
      * Takes twoMatrix3s, a and b, and computes the product in the order
      * that pre-composes b with a.  In other words, the matrix returned will
@@ -27715,6 +27713,8 @@
       this._layersUsed = [];
     } // thankfully this is synchronous
     ;
+
+    var standardVertex = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nuniform mat3 u_texMatrix;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = (u_texMatrix * vec3(texcoord, 1)).xy;\r\n}";
 
     // contains hard-coded shaders for rendering a pseudo layer "as is", and for flipping an image
     // also contains state that controls how often the canvas can be rendered to -> prevents rendering before current pseudolayer is rendered
@@ -28053,8 +28053,9 @@
 
       this._width = this.gl.canvas.width;
       this._height = this.gl.canvas.height; // base vertex shader, with position and texture quads. stored for use in other shader programs, as these only require fragment shader
+      // let baseVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
 
-      var baseVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nuniform mat3 u_texMatrix;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position, 0, 1);\r\n   o_texCoord = (u_texMatrix * vec3(texcoord, 1)).xy;\r\n}";
+      var baseVertexShader = standardVertex;
       this._baseVertexShader = baseVertexShader; // flips the output, for converting from texture coordinates to clip coordinates
 
       var vFlipVertexShader = "#version 300 es\r\n\r\nin vec2 position;\r\nin vec2 texcoord;\r\n\r\nout vec2 o_texCoord;\r\n\r\nvoid main() {\r\n   gl_Position = vec4(position.x, position.y * -1.0, 0, 1);\r\n   o_texCoord = texcoord;\r\n}";
@@ -28901,8 +28902,8 @@
     var webgl = new WebGLCanvas("canvas_map");
     var con = new Constructor();
     var ui = new Ui(webgl, con);
-    var l1 = new LayerObject(testMapLayer1, testMapView, 1.1);
-    var l2 = new LayerObject(testMapLayer2, testMapView, 1.1);
+    var l1 = new LayerObject(testMapLayer1, testMapView, 2.0);
+    var l2 = new LayerObject(testMapLayer2, testMapView, 1.4);
     var p1 = webgl.generatePseudoLayer(l1);
     var p2 = webgl.generatePseudoLayer(l2);
     var ep2 = con.rgbaManipulation({
