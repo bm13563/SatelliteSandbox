@@ -20567,7 +20567,7 @@
     // canvas for opengl to read from. this class creates a "layer" with it's own canvas from
     // an openlayers layer. layers will be synced as long as the same view is used
 
-    var LayerObject = function LayerObject(olLayer, olView, bufferValue, cacheSize) {
+    var LayerObject = function LayerObject(olLayer, olView, bufferValue) {
       var _this = this;
 
       _classCallCheck(this, LayerObject);
@@ -20583,8 +20583,7 @@
         div.width = _this.bufferValue * boundingRect.width;
         div.height = _this.bufferValue * boundingRect.height;
         div.style.width = "".concat(div.width, "px");
-        div.style.height = "".concat(div.height, "px"); // need to buffer the layer to ensure it's centred on our visible canvas. allows us to still use ol controls properly
-
+        div.style.height = "".concat(div.height, "px");
         div.style.marginLeft = "-".concat((_this.bufferValue * boundingRect.width - boundingRect.width) / 2, "px");
         div.style.marginTop = "-".concat((_this.bufferValue * boundingRect.height - boundingRect.height) / 2, "px");
         div.style.position = "absolute";
@@ -20601,42 +20600,13 @@
           layers: [_this.olLayer],
           view: _this.olView
         });
-        map.getView().setZoom(15); // render the map without animation - prevents artifacts and reduces gpu overhead
+        map.getView().setZoom(12); // render the map without animation - prevents artifacts and reduces gpu overhead
 
         _this.olLayer.getSource().tileOptions.transition = 0; // layers are not requested until they are used -> saves requests
 
         _this.olLayer.setVisible(false);
 
         _this.olMap = map;
-      };
-
-      this._preventCachedTilesBeingRequested = function () {
-        _this.olLayer.getSource().setTileLoadFunction(function (imageTile, src) {
-          // reformat the current tile source to match the key of the tile cache
-          var tileCoords = imageTile.getTileCoord().join("/"); // check if the tile has been cached
-
-          if (tileCoords in _this._imageCache) {
-            console.log("using cached image");
-            imageTile.image_ = _this._imageCache[tileCoords];
-          } else {
-            imageTile.getImage().src = src;
-
-            _this._addToImageCache(tileCoords, imageTile.image_);
-          }
-        });
-      };
-
-      this._addToImageCache = function (key, image) {
-        var imagesInCache = Object.keys(_this._imageCache).length;
-
-        if (imagesInCache >= _this._cacheSize) {
-          delete _this._imageCache[_this._cacheOrder[_this._cacheDelete]];
-          _this._cacheDelete++;
-        }
-
-        _this._imageCache[key] = image;
-        _this._cacheOrder[_this._cacheIndex] = key;
-        _this._cacheIndex++;
       };
 
       this.type = 'layerObject';
@@ -20648,20 +20618,14 @@
       this.container;
       this.olMap;
       this.shaders = {};
-      this.activeShader; // this is kinda ridiculous and definitely needs refactoring
-
-      this._cacheSize = 250;
-      this._imageCache = {};
-      this._cacheOrder = {};
-      this._cacheIndex = 0;
-      this._cacheDelete = 0;
+      this.activeShader;
 
       this._createCanvasElement();
 
       this._createMap();
-
-      this._preventCachedTilesBeingRequested();
-    } // TODO tidy up this function -> work out if we give a shit about ol controls - it's easy enough to control a map without right?
+    } // TODO tidy up this function
+    // _preventCachedTilesBeingRequested = () => {
+    // }
     ;
 
     /* @license twgl.js 4.15.2 Copyright (c) 2015, Gregg Tavares All Rights Reserved.
@@ -27503,6 +27467,7 @@
     // of the rendering canvas
 
     var scaleTextureCoordsToCropImage = function scaleTextureCoordsToCropImage(srcX, srcY, srcWidth, srcHeight, dstWidth, dstHeight) {
+      console.log(srcX, srcY, srcWidth, srcHeight, dstWidth, dstHeight);
       var texXOff = srcX / srcWidth;
       var texYOff = srcY / srcHeight;
       var texXScale = dstWidth / srcWidth;
@@ -28903,7 +28868,7 @@
       },
       attribution: "test",
       crossOrigin: "anonymous",
-      cacheSize: 0
+      cacheSize: 200
     });
     var testWMS2 = new TileWMS({
       url: "https://services.sentinel-hub.com/ogc/wms/f3c43f1a-baa2-4108-ab8e-c59cce0c5900",
@@ -28917,7 +28882,7 @@
       },
       attribution: "test",
       crossOrigin: "anonymous",
-      cacheSize: 0
+      cacheSize: 200
     });
     var testMapLayer1 = new TileLayer({
       source: testWMS,
@@ -28936,8 +28901,8 @@
     var webgl = new WebGLCanvas("canvas_map");
     var con = new Constructor();
     var ui = new Ui(webgl, con);
-    var l1 = new LayerObject(testMapLayer1, testMapView, 1.5);
-    var l2 = new LayerObject(testMapLayer2, testMapView, 1.5);
+    var l1 = new LayerObject(testMapLayer1, testMapView, 1.1);
+    var l2 = new LayerObject(testMapLayer2, testMapView, 1.1);
     var p1 = webgl.generatePseudoLayer(l1);
     var p2 = webgl.generatePseudoLayer(l2);
     var ep2 = con.rgbaManipulation({

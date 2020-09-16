@@ -50,6 +50,7 @@ export const matrix3x3Multiply = (a, b) => {
 // srcx and src y are pixel offsets from top left, srcwidth and srcheight are the size of the image, dstwidth and dstheight are the size
 // of the rendering canvas
 export const scaleTextureCoordsToCropImage = (srcX, srcY, srcWidth, srcHeight, dstWidth, dstHeight) => {
+    console.log(srcX, srcY, srcWidth, srcHeight, dstWidth, dstHeight)
     const texXOff   = srcX / srcWidth;
     const texYOff   = srcY / srcHeight;
     const texXScale = dstWidth / srcWidth;
