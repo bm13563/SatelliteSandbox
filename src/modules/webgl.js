@@ -323,8 +323,4 @@ export class WebGLCanvas{
         let compiledShader = this._compileShaders(dynamicShader);
         pseudolayer.updateShader(compiledShader);
     }
-
-    // setBaseLayer = (pseudolayer) => {
-
-    // }
 }

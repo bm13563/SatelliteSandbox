@@ -19,16 +19,16 @@ const testMapView = new View({
     zoom: 7,
 })
 
-const baseLayer = new XYZ({
-    url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
-    params: {
-        'TILED': true, 
-        'FORMAT': 'image/png',
-        attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community',
-    },
-    attribution: "test",
-    crossOrigin: "anonymous",
-});
+// const testWMS = new XYZ({
+//     url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
+//     params: {
+//         'TILED': true, 
+//         'FORMAT': 'image/png',
+//         attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community',
+//     },
+//     attribution: "test",
+//     crossOrigin: "anonymous",
+// });
 
 const testWMS = new TileWMS({
     url: "https://services.sentinel-hub.com/ogc/wms/f3c43f1a-baa2-4108-ab8e-c59cce0c5900",
@@ -81,7 +81,6 @@ var con = new Constructor();
 var ui = new Ui(webgl, con);
 var l1 = new LayerObject(testMapLayer1, testMapView, 1.5);
 var l2 = new LayerObject(testMapLayer2, testMapView, 1.5);
-var l3 = new LayerObject(testMapLayer2, testMapView, 1.5);
 
 const p1 = webgl.generatePseudoLayer(l1);
 const p2 = webgl.generatePseudoLayer(l2);
