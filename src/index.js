@@ -61,31 +61,27 @@ const testMapView = new View({
 //     crossOrigin: "anonymous",
 // });#
 
-var brEVI2001 = new WMTS({
-    url: 'https://gibs-{a-c}.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi?TIME=2001-01-01',
-    layer: 'MODIS_Terra_L3_EVI_16Day',
-    format: 'image/png',
-    matrixSet: '250m',
+var brEVI2001 = new TileWMS({
+    url: 'https://gibs-{a-c}.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
+    params: {
+        LAYERS: 'MODIS_Terra_L3_EVI_16Day',
+        FORMAT: 'image/png',
+        CRS: 'EPSG:3857',
+        TIME: '2001-01-01',
+    },
     projection: projection,
-    tileGrid: new WMTSTileGrid({
-        origin: getTopLeft(projectionExtent),
-        resolutions: resolutions,
-        matrixIds: matrixIds,
-    }),
     crossOrigin: "anonymous",
 });
 
-var brEVI2020 = new WMTS({
-    url: 'https://gibs-{a-c}.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi?TIME=2020-08-01',
-    layer: 'MODIS_Terra_L3_EVI_16Day',
-    format: 'image/png',
-    matrixSet: '250m',
+var brEVI2020 = new TileWMS({
+    url: 'https://gibs-{a-c}.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
+    params: {
+        LAYERS: 'MODIS_Terra_L3_EVI_16Day',
+        FORMAT: 'image/png',
+        CRS: 'EPSG:3857',
+        TIME: '2020-01-01',
+    },
     projection: projection,
-    tileGrid: new WMTSTileGrid({
-        origin: getTopLeft(projectionExtent),
-        resolutions: resolutions,
-        matrixIds: matrixIds,
-    }),
     crossOrigin: "anonymous",
 });
 
