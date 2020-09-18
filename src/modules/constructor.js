@@ -6,6 +6,7 @@ import apply3x3KernelShader from '../shaders/processing/apply3x3Kernel.shader';
 import sobelEdgeDetection from '../shaders/processing/sobelEdgeDetection.shader';
 import greyscale from '../shaders/processing/greyscale.shader';
 import calculateNDWI from '../shaders/processing/calculateNDWI.shader';
+import calculateDifference from '../shaders/processing/calculateDifference.shader';
 
 export class Constructor{
     // takes in a pseudolayer and a vec4 (float 0-1)
@@ -154,6 +155,20 @@ export class Constructor{
                 cndwi_image: cndwi_image,
             },
             shader: calculateNDWI,
+            variables: {},
+            dynamics: {},
+        })
+        return pseudolayer;
+    }
+
+    calculateDifference = ({webgl, cd_image1, cd_image2}={}) => {
+        const pseudolayer = webgl.processPseudoLayer({
+            shaderName: "calculateDifference",
+            inputs: {
+                cd_image1: cd_image1,
+                cd_image2: cd_image2,
+            },
+            shader: calculateDifference,
             variables: {},
             dynamics: {},
         })

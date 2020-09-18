@@ -5,8 +5,13 @@ import "./styles/top_bar.css";
 import "./styles/guis.css";
 
 import {Map, View} from 'ol';
+import {get as getProjection} from 'ol/proj';
+import {getTopLeft, getWidth} from 'ol/extent';
+
 import TileLayer from 'ol/layer/Tile';
 import TileWMS from 'ol/source/TileWMS';
+import WMTS from 'ol/source/WMTS';
+import WMTSTileGrid from 'ol/tilegrid/WMTS';
 import XYZ from 'ol/source/XYZ';
 
 import {LayerObject} from './modules/layer.js';
@@ -14,9 +19,26 @@ import {WebGLCanvas} from './modules/webgl.js';
 import {UiLayer, Ui} from './modules/ui.js';
 import {Constructor} from './modules/constructor.js';
 
+
+// set up project projection
+const projection = getProjection('EPSG:3857');
+
+// set up tile matrix if a wmts is used
+const projectionExtent = projection.getExtent();
+const size = getWidth(projectionExtent) / 256;
+var resolutions = new Array(14);
+var matrixIds = new Array(14);
+for (var z = 0; z < 14; ++z) {
+    // generate resolutions and matrixIds arrays for this WMTS
+    resolutions[z] = size / Math.pow(2, z);
+    matrixIds[z] = z;
+}
+
+// set a map view
 const testMapView = new View({
     center: [27288.019098, 6575113.173091],
-    zoom: 7,
+    zoom: 6,
+    projection: projection,
 })
 
 // const testWMS = new XYZ({
@@ -30,44 +52,53 @@ const testMapView = new View({
 //     crossOrigin: "anonymous",
 // });
 
-const testWMS = new TileWMS({
-    url: "https://services.sentinel-hub.com/ogc/wms/f3c43f1a-baa2-4108-ab8e-c59cce0c5900",
-    params: {
-        'LAYERS': "FALSE_COLOR", 
-        'TILED': true, 
-        'FORMAT': 'image/png',
-        'showLogo': false,
-        'CRS': "EPSG:3857",
-        'TIME': "2020-06-26/2020-07-26",
-    },
-    attribution: "test",
+// const testWMS = new TileWMS({
+//     url: "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi/ASTER_GDEM_Color_Index",
+//     params: {
+//         'TILED': true, 
+//     },
+//     attribution: "test",
+//     crossOrigin: "anonymous",
+// });#
+
+var brEVI2001 = new WMTS({
+    url: 'https://gibs-{a-c}.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi?TIME=2001-01-01',
+    layer: 'MODIS_Terra_L3_EVI_16Day',
+    format: 'image/png',
+    matrixSet: '250m',
+    projection: projection,
+    tileGrid: new WMTSTileGrid({
+        origin: getTopLeft(projectionExtent),
+        resolutions: resolutions,
+        matrixIds: matrixIds,
+    }),
     crossOrigin: "anonymous",
 });
 
-const testWMS2 = new TileWMS({
-    url: "https://services.sentinel-hub.com/ogc/wms/f3c43f1a-baa2-4108-ab8e-c59cce0c5900",
-    params: {
-        'LAYERS': "TRUE_COLOR", 
-        'TILED': true, 
-        'FORMAT': 'image/png',
-        'showLogo': false,
-        'CRS': "EPSG:3857",
-        'TIME': "2020-06-26/2020-07-26",
-    },
-    attribution: "test",
+var brEVI2020 = new WMTS({
+    url: 'https://gibs-{a-c}.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi?TIME=2020-08-01',
+    layer: 'MODIS_Terra_L3_EVI_16Day',
+    format: 'image/png',
+    matrixSet: '250m',
+    projection: projection,
+    tileGrid: new WMTSTileGrid({
+        origin: getTopLeft(projectionExtent),
+        resolutions: resolutions,
+        matrixIds: matrixIds,
+    }),
     crossOrigin: "anonymous",
 });
 
-const testMapLayer1 = new TileLayer({
-    source: testWMS,
+var brEVI2001Layer = new TileLayer({
+    source: brEVI2001,
     visible: true,
     title: "Sentinel testing",
     opacity: 1,
     minZoom: 1,
 });
 
-const testMapLayer2 = new TileLayer({
-    source: testWMS2,
+var brEVI2020Layer = new TileLayer({
+    source: brEVI2020,
     visible: true,
     title: "Sentinel testing",
     opacity: 1,
@@ -77,75 +108,23 @@ const testMapLayer2 = new TileLayer({
 var webgl = new WebGLCanvas("canvas_map");
 var con = new Constructor();
 var ui = new Ui(webgl, con);
-var l1 = new LayerObject(testMapLayer1, testMapView);
-var l2 = new LayerObject(testMapLayer2, testMapView);
+var l1 = new LayerObject(brEVI2001Layer, testMapView);
+var l2 = new LayerObject(brEVI2020Layer, testMapView);
 
 const p1 = webgl.generatePseudoLayer(l1);
 const p2 = webgl.generatePseudoLayer(l2);
 
-const ep2 = con.rgbaManipulation({
+const pp1 = con.calculateDifference({
     webgl: webgl,
-    rgbam_image: p2,
-    rgbam_multiplier: [1.5, 1.5, 1.5, 1.0],
-})
-
-// const pp1 = con.calculateNDWI({
-//     webgl: webgl,
-//     cndwi_image: p1,
-// })
-
-const pp1 = con.rgbFiltering({
-    webgl: webgl,
-    rgbf_image: p1,
-    rgbf_filter: [0.58, 0.58, 0.58],
-    rgbf_removed: [0.0, 0.0, 0.0, 1.0],
-    rgbfd1_remove: "<",
-})
-
-const pp2 = con.greyscale({
-    webgl: webgl,
-    gs_image: pp1,
-})
-
-const pp3 = con.sobelEdgeDetection({
-    webgl: webgl,
-    sed_image: pp2,
-})
-
-const pp4 = con.rgbaManipulation({
-    webgl: webgl,
-    rgbam_image: pp3,
-    rgbam_multiplier: [1.0, 0.0, 1.0, 1.0],
-})
-
-const pp5 = con.rgbFiltering({
-    webgl: webgl,
-    rgbf_image: pp4,
-    rgbf_filter: [1.0, 0.0, 1.0],
-    rgbf_removed: [0.0, 0.0, 0.0, 1.0],
-    rgbfd1_remove: "<",
-})
-
-const pp6 = con.stackLayers({
-    webgl: webgl,
-    sl1_image: ep2,
-    sl2_image: pp5, 
-    sl1_weight: 0,
-    sl2_weight: 1.0,
-    sl_divisor: 1.0,
+    cd_image1: p1,
+    cd_image2: p2,
 })
 
 ui.addUiLayer(p1);
-ui.addUiLayer(ep2);
+ui.addUiLayer(p2);
 ui.addUiLayer(pp1);
-ui.addUiLayer(pp2);
-ui.addUiLayer(pp3);
-ui.addUiLayer(pp4);
-ui.addUiLayer(pp5);
-ui.addUiLayer(pp6);
 
-const layerToActivate = ui.getUiLayerFromPseudolayer(pp6);
-ui.activateUiLayer(layerToActivate);
+
 
 // UI EVENTS
 // select layer

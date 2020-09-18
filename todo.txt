@@ -37,5 +37,5 @@
 33. build band calculators -> single and multiple layers
 34. rewrite/ re-comment restoreGuiState function in ui DONE -> just removed it
 35. rework ui (AGAIN) DONE
-36. bug when layers are switched while tiles are loading. because number of shader passes is being updated while shaders arent ready
+36. bug when layers are switched while tiles are loading. because number of shader passes is being updated while shaders arent ready DONE
 
