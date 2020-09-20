@@ -1,3 +1,7 @@
-#processing_gui_container #processing_gui .inner_gui #kernel_table { margin:auto; background-color: lightseagreen; border-collapse: collapse; border: 1px solid black; }
-#processing_gui_container #processing_gui .inner_gui #kernel_table tbody tr td { padding: 4px; border: 1px solid black; }
-#processing_gui_container #processing_gui .inner_gui #kernel_table tbody tr td div { padding: 4px; }
+/* formatting for comparison swiping */
+#page_container #comparison_swipe_container { position: relative; width: 100%; height: 30px; margin-top: -30px; z-index: 100; background-color: rgba(255, 255, 255, 0.25); visibility: hidden; }
+#page_container #comparison_swipe_container #comparison_swipe { width: 100%; height: 10px; margin: 10px 0px 0px 0px; }
+/* formatting for processing guis */
+#gui_container #gui .inner_gui #kernel_table { margin:auto; background-color: lightseagreen; border-collapse: collapse; border: 1px solid black; }
+#gui_container #gui .inner_gui #kernel_table tbody tr td { padding: 4px; border: 1px solid black; }
+#gui_container #gui .inner_gui #kernel_table tbody tr td div { padding: 4px; }

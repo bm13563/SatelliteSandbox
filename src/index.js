@@ -19,6 +19,8 @@ import {WebGLCanvas} from './modules/webgl.js';
 import {UiLayer, Ui} from './modules/ui.js';
 import {Constructor} from './modules/constructor.js';
 
+import {getRenderPixel} from 'ol/render';
+
 
 // set up project projection
 const projection = getProjection('EPSG:3857');
@@ -36,38 +38,43 @@ for (var z = 0; z < 14; ++z) {
 
 // set a map view
 const testMapView = new View({
-    center: [27288.019098, 6575113.173091],
+    center: [-4441908.587708, -831634.867743],
     zoom: 6,
     projection: projection,
 })
 
-// const testWMS = new XYZ({
-//     url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
+const trueColour = new XYZ({
+    url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
+    params: {
+        'TILED': true, 
+        'FORMAT': 'image/png',
+        attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community',
+    },
+    attribution: "test",
+    crossOrigin: "anonymous",
+});
+
+// var trueColour = new TileWMS({
+//     url: 'https://gibs-{a-c}.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
 //     params: {
-//         'TILED': true, 
-//         'FORMAT': 'image/png',
-//         attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community',
+//         LAYERS: 'MODIS_Terra_CorrectedReflectance_TrueColor',
+//         FORMAT: 'image/jpeg',
+//         CRS: 'EPSG:3857',
+//         TIME: '2020-01-01',
+//         TILED: true,
 //     },
-//     attribution: "test",
+//     projection: projection,
 //     crossOrigin: "anonymous",
 // });
-
-// const testWMS = new TileWMS({
-//     url: "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi/ASTER_GDEM_Color_Index",
-//     params: {
-//         'TILED': true, 
-//     },
-//     attribution: "test",
-//     crossOrigin: "anonymous",
-// });#
 
 var brEVI2001 = new TileWMS({
     url: 'https://gibs-{a-c}.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
     params: {
         LAYERS: 'MODIS_Terra_L3_EVI_16Day',
-        FORMAT: 'image/png',
+        FORMAT: 'image/jpeg',
         CRS: 'EPSG:3857',
         TIME: '2001-01-01',
+        TILED: true,
     },
     projection: projection,
     crossOrigin: "anonymous",
@@ -77,12 +84,21 @@ var brEVI2020 = new TileWMS({
     url: 'https://gibs-{a-c}.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
     params: {
         LAYERS: 'MODIS_Terra_L3_EVI_16Day',
-        FORMAT: 'image/png',
+        FORMAT: 'image/jpeg',
         CRS: 'EPSG:3857',
         TIME: '2020-01-01',
+        TILED: true,
     },
     projection: projection,
     crossOrigin: "anonymous",
+});
+
+var trueColourLayer = new TileLayer({
+    source: trueColour,
+    visible: true,
+    title: "Sentinel testing",
+    opacity: 1,
+    minZoom: 1,
 });
 
 var brEVI2001Layer = new TileLayer({
@@ -104,21 +120,32 @@ var brEVI2020Layer = new TileLayer({
 var webgl = new WebGLCanvas("canvas_map");
 var con = new Constructor();
 var ui = new Ui(webgl, con);
-var l1 = new LayerObject(brEVI2001Layer, testMapView);
-var l2 = new LayerObject(brEVI2020Layer, testMapView);
+var l1 = new LayerObject(trueColourLayer, testMapView);
+var l2 = new LayerObject(brEVI2001Layer, testMapView);
+var l3 = new LayerObject(brEVI2020Layer, testMapView);
 
 const p1 = webgl.generatePseudoLayer(l1);
 const p2 = webgl.generatePseudoLayer(l2);
+const p3 = webgl.generatePseudoLayer(l3);
 
 const pp1 = con.calculateDifference({
     webgl: webgl,
-    cd_image1: p1,
-    cd_image2: p2,
+    cd_image1: p2,
+    cd_image2: p3,
+})
+
+const pp2 = con.compareLayers({
+    webgl: webgl,
+    cl_image1: p2,
+    cl_image2: p3,
+    cl_width: 0.5,
 })
 
 ui.addUiLayer(p1);
 ui.addUiLayer(p2);
+ui.addUiLayer(p3);
 ui.addUiLayer(pp1);
+ui.addUiLayer(pp2);
 
 
 
@@ -142,7 +169,7 @@ document.addEventListener('click', (e) => {
 // close processing gui -> hide gui container and remove gui
 document.addEventListener('click', (e) => {
     const closeButton = e.target;
-    if(closeButton && closeButton.id === "close_processing_gui"){
+    if(closeButton && closeButton.id === "close_gui"){
         ui.removeGui();
     }
 });

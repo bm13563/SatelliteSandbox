@@ -17,9 +17,15 @@ void main() {
     // vec4 negative_difference = (cd_negative_colour.r - image1.r, cd_negative_colour.g - image1.g, cd_negative_colour.b - image1.b, 1.0);
     vec3 positive_difference = vec3(0.0, 0.0, 1.0) - image1.rgb;
     vec3 negative_difference = vec3(1.0, 0.0, 0.0) - image1.rgb;
-    float image_difference = ((image1.r - image2.r) + (image1.g - image2.g) + (image1.b - image2.b) / 3.0) / 1.0;
+    float image_difference = ((image1.r - image2.r) + (image1.g - image2.g) + (image1.b - image2.b)) / 3.0;
 
     vec4 final_colour = vec4(image1.r - image_difference, 0.0, image1.b + image_difference, 1.0);
+    if (abs(image_difference) < 0.4) {
+        final_colour = vec4(0.0, 0.0, 0.0, 1.0);
+    }
+    if (image1.r == 0.0) {
+        final_colour = vec4(0.0, 0.0, 0.0, 1.0);
+    }
 
     o_colour = final_colour;
 }

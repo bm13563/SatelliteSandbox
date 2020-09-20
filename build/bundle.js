@@ -18994,6 +18994,34 @@
         });
     }
     /**
+     * @typedef {Object} XYZOptions
+     * @property {import("./extent.js").Extent} [extent] Extent for the tile grid. The origin for an XYZ tile grid is the
+     * top-left corner of the extent. If `maxResolution` is not provided the zero level of the grid is defined by the resolution
+     * at which one tile fits in the provided extent. If not provided, the extent of the EPSG:3857 projection is used.
+     * @property {number} [maxResolution] Resolution at level zero.
+     * @property {number} [maxZoom] Maximum zoom. The default is `42`. This determines the number of levels
+     * in the grid set. For example, a `maxZoom` of 21 means there are 22 levels in the grid set.
+     * @property {number} [minZoom=0] Minimum zoom.
+     * @property {number|import("./size.js").Size} [tileSize=[256, 256]] Tile size in pixels.
+     */
+    /**
+     * Creates a tile grid with a standard XYZ tiling scheme.
+     * @param {XYZOptions=} opt_options Tile grid options.
+     * @return {!TileGrid} Tile grid instance.
+     * @api
+     */
+    function createXYZ(opt_options) {
+        var xyzOptions = opt_options || {};
+        var extent = xyzOptions.extent || get$2('EPSG:3857').getExtent();
+        var gridOptions = {
+            extent: extent,
+            minZoom: xyzOptions.minZoom,
+            tileSize: xyzOptions.tileSize,
+            resolutions: resolutionsFromExtent(extent, xyzOptions.maxZoom, xyzOptions.tileSize, xyzOptions.maxResolution),
+        };
+        return new TileGrid(gridOptions);
+    }
+    /**
      * Create a resolutions array from an extent.  A zoom factor of 2 is assumed.
      * @param {import("./extent.js").Extent} extent Extent.
      * @param {number=} opt_maxZoom Maximum zoom level (default is
@@ -20556,6 +20584,126 @@
             return this.getRequestUrl_(tileCoord, tileSize, tileExtent, pixelRatio, projection, baseParams);
         };
         return TileWMS;
+    }(TileImage));
+
+    /**
+     * @module ol/source/XYZ
+     */
+    var __extends$W = (undefined && undefined.__extends) || (function () {
+        var extendStatics = function (d, b) {
+            extendStatics = Object.setPrototypeOf ||
+                ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+                function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            return extendStatics(d, b);
+        };
+        return function (d, b) {
+            extendStatics(d, b);
+            function __() { this.constructor = d; }
+            d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+        };
+    })();
+    /**
+     * @typedef {Object} Options
+     * @property {import("./Source.js").AttributionLike} [attributions] Attributions.
+     * @property {boolean} [attributionsCollapsible=true] Attributions are collapsible.
+     * @property {number} [cacheSize] Initial tile cache size. Will auto-grow to hold at least the number of tiles in the viewport.
+     * @property {null|string} [crossOrigin] The `crossOrigin` attribute for loaded images.  Note that
+     * you must provide a `crossOrigin` value if you want to access pixel data with the Canvas renderer.
+     * See https://developer.mozilla.org/en-US/docs/Web/HTML/CORS_enabled_image for more detail.
+     * @property {boolean} [imageSmoothing=true] Enable image smoothing.
+     * @property {boolean} [opaque=false] Whether the layer is opaque.
+     * @property {import("../proj.js").ProjectionLike} [projection='EPSG:3857'] Projection.
+     * @property {number} [reprojectionErrorThreshold=0.5] Maximum allowed reprojection error (in pixels).
+     * Higher values can increase reprojection performance, but decrease precision.
+     * @property {number} [maxZoom=42] Optional max zoom level. Not used if `tileGrid` is provided.
+     * @property {number} [minZoom=0] Optional min zoom level. Not used if `tileGrid` is provided.
+     * @property {number} [maxResolution] Optional tile grid resolution at level zero. Not used if `tileGrid` is provided.
+     * @property {import("../tilegrid/TileGrid.js").default} [tileGrid] Tile grid.
+     * @property {import("../Tile.js").LoadFunction} [tileLoadFunction] Optional function to load a tile given a URL. The default is
+     * ```js
+     * function(imageTile, src) {
+     *   imageTile.getImage().src = src;
+     * };
+     * ```
+     * @property {number} [tilePixelRatio=1] The pixel ratio used by the tile service.
+     * For example, if the tile service advertizes 256px by 256px tiles but actually sends 512px
+     * by 512px images (for retina/hidpi devices) then `tilePixelRatio`
+     * should be set to `2`.
+     * @property {number|import("../size.js").Size} [tileSize=[256, 256]] The tile size used by the tile service.
+     * Not used if `tileGrid` is provided.
+     * @property {import("../Tile.js").UrlFunction} [tileUrlFunction] Optional function to get
+     * tile URL given a tile coordinate and the projection.
+     * Required if `url` or `urls` are not provided.
+     * @property {string} [url] URL template. Must include `{x}`, `{y}` or `{-y}`,
+     * and `{z}` placeholders. A `{?-?}` template pattern, for example `subdomain{a-f}.domain.com`,
+     * may be used instead of defining each one separately in the `urls` option.
+     * @property {Array<string>} [urls] An array of URL templates.
+     * @property {boolean} [wrapX=true] Whether to wrap the world horizontally.
+     * @property {number} [transition] Duration of the opacity transition for rendering.
+     * To disable the opacity transition, pass `transition: 0`.
+     * @property {number} [zDirection=0] Indicate which resolution should be used
+     * by a renderer if the view resolution does not match any resolution of the tile source.
+     * If 0, the nearest resolution will be used. If 1, the nearest lower resolution
+     * will be used. If -1, the nearest higher resolution will be used.
+     */
+    /**
+     * @classdesc
+     * Layer source for tile data with URLs in a set XYZ format that are
+     * defined in a URL template. By default, this follows the widely-used
+     * Google grid where `x` 0 and `y` 0 are in the top left. Grids like
+     * TMS where `x` 0 and `y` 0 are in the bottom left can be used by
+     * using the `{-y}` placeholder in the URL template, so long as the
+     * source does not have a custom tile grid. In this case,
+     * {@link module:ol/source/TileImage} can be used with a `tileUrlFunction`
+     * such as:
+     *
+     *  tileUrlFunction: function(coordinate) {
+     *    return 'http://mapserver.com/' + coordinate[0] + '/' +
+     *        coordinate[1] + '/' + coordinate[2] + '.png';
+     *    }
+     *
+     * @api
+     */
+    var XYZ = /** @class */ (function (_super) {
+        __extends$W(XYZ, _super);
+        /**
+         * @param {Options=} opt_options XYZ options.
+         */
+        function XYZ(opt_options) {
+            var _this = this;
+            var options = opt_options || {};
+            var projection = options.projection !== undefined ? options.projection : 'EPSG:3857';
+            var tileGrid = options.tileGrid !== undefined
+                ? options.tileGrid
+                : createXYZ({
+                    extent: extentFromProjection(projection),
+                    maxResolution: options.maxResolution,
+                    maxZoom: options.maxZoom,
+                    minZoom: options.minZoom,
+                    tileSize: options.tileSize,
+                });
+            _this = _super.call(this, {
+                attributions: options.attributions,
+                cacheSize: options.cacheSize,
+                crossOrigin: options.crossOrigin,
+                imageSmoothing: options.imageSmoothing,
+                opaque: options.opaque,
+                projection: projection,
+                reprojectionErrorThreshold: options.reprojectionErrorThreshold,
+                tileGrid: tileGrid,
+                tileLoadFunction: options.tileLoadFunction,
+                tilePixelRatio: options.tilePixelRatio,
+                tileUrlFunction: options.tileUrlFunction,
+                url: options.url,
+                urls: options.urls,
+                wrapX: options.wrapX !== undefined ? options.wrapX : true,
+                transition: options.transition,
+                attributionsCollapsible: options.attributionsCollapsible,
+                zDirection: options.zDirection,
+            }) || this;
+            return _this;
+        }
+        return XYZ;
     }(TileImage));
 
     function _classCallCheck(instance, Constructor) {
@@ -27958,8 +28106,6 @@
       };
 
       this._addDynamicsToShader = function (rawShader, dynamics) {
-        console.log(dynamics);
-
         if (dynamics === {}) {
           return rawShader;
         } else {
@@ -28179,19 +28325,33 @@
         htmlElement.innerHTML = string;
         htmlElement = htmlElement.firstChild; // appends the div to the  correct place in the DOM
 
-        var processingGui = document.getElementById("processing_gui");
+        var processingGui = document.getElementById("gui");
         processingGui.style.visibility = "visible";
-        var insertPoint = document.getElementById("processing_gui_actions");
+        var insertPoint = document.getElementById("gui_actions");
         insertPoint.insertAdjacentElement('beforebegin', htmlElement);
         return htmlElement;
       };
 
       this.removeGui = function () {
         // remove the gui placeholder
-        var processingGui = document.getElementById("processing_gui");
+        var processingGui = document.getElementById("gui");
         processingGui.style.visibility = "hidden"; // remove the gui
 
         processingGui.removeChild(_this.activeGui); // event listeners *should* be garbage collected
+        // hide any elements necessary -> for extras associated with the gui
+
+        var toHide = document.getElementsByClassName("gui_close_hide");
+
+        for (var x = 0; x < toHide.length; x++) {
+          toHide[x].style.visibility = "hidden";
+        } // remove any elements necessary -> for extras associated with the gui
+
+
+        var toRemove = document.getElementsByClassName("gui_close_remove");
+
+        for (var _x = 0; _x < toRemove.length; _x++) {
+          toRemove[_x].remove();
+        }
       };
 
       this.rgbaManipulationGui = function () {
@@ -28493,7 +28653,7 @@
           layerOptions += "<option id=".concat(uiLayer.id, ">").concat(uiLayer.name, "</option>");
         }
 
-        var html = "<div id=\"rgbaManipulation\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Stack layers</p>\n                          <p class=\"gui_text\">This layer weight:</p>\n                          <input id=\"layer1_weight\" type=\"number\" min=\"1\" max=\"5\" value=\"".concat(sl1_weight, "\">\n                          <p class=\"gui_text\">Layer 2 input:</p>\n                          <select id=\"layer2_dropdown\">\n                              ").concat(layerOptions, "\n                          </select>\n                          <p class=\"gui_text\">Layer 2 weight:</p>\n                          <input id=\"layer2_weight\" type=\"number\" min=\"1\" max=\"5\" value=\"").concat(sl2_weight, "\">\n                          <p class=\"gui_text\">Divisor:</p>\n                          <input id=\"stack_layers_divisor\" type=\"number\" min=\"1\" max=\"5\" value=\"").concat(sl_divisor, "\">\n                          <br><br>\n                          <input id=\"apply_stack_layers\" type=\"button\" value=\"Apply\">\n                          <br><br>\n                      </div>");
+        var html = "<div id=\"stackLayers\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Stack layers</p>\n                          <p class=\"gui_text\">This layer weight:</p>\n                          <input id=\"layer1_weight\" type=\"number\" min=\"1\" max=\"5\" value=\"".concat(sl1_weight, "\">\n                          <p class=\"gui_text\">Layer 2 input:</p>\n                          <select id=\"sl_layer2_dropdown\">\n                              ").concat(layerOptions, "\n                          </select>\n                          <p class=\"gui_text\">Layer 2 weight:</p>\n                          <input id=\"layer2_weight\" type=\"number\" min=\"1\" max=\"5\" value=\"").concat(sl2_weight, "\">\n                          <p class=\"gui_text\">Divisor:</p>\n                          <input id=\"stack_layers_divisor\" type=\"number\" min=\"1\" max=\"5\" value=\"").concat(sl_divisor, "\">\n                          <br><br>\n                          <input id=\"apply_stack_layers\" type=\"button\" value=\"Apply\">\n                          <br><br>\n                      </div>");
 
         var gui = _this._addGuiToDOM(html);
 
@@ -28501,7 +28661,7 @@
 
         document.getElementById("apply_stack_layers").onclick = function () {
           // first we need to reconstruct the selected ui layer
-          var selectElement = document.getElementById("layer2_dropdown");
+          var selectElement = document.getElementById("sl_layer2_dropdown");
           var selectedElementId = selectElement[selectElement.selectedIndex].id;
           var targetPseudolayer2 = _this._uiLayers[selectedElementId].pseudolayer; // then get input values
 
@@ -28516,7 +28676,9 @@
               sl2_image: targetPseudolayer2,
               sl1_weight: layer1_weight,
               sl2_weight: layer2_weight,
-              sl_divisor: overall_divisor
+              sl_divisor: overall_divisor,
+              sl_ignore: [0.0, 0.0, 0.0, 1.0],
+              sld1_operator: '=='
             });
 
             _this.activeUiLayer._processingTracker["stackLayers"] = pseudolayer;
@@ -28531,6 +28693,63 @@
 
             _this._renderActiveUiLayer();
           }
+        };
+      };
+
+      this.compareLayers = function () {
+        var layerOptions = "";
+
+        for (var _i2 = 0, _Object$keys2 = Object.keys(_this._uiLayers); _i2 < _Object$keys2.length; _i2++) {
+          var key = _Object$keys2[_i2];
+          var uiLayer = _this._uiLayers[key];
+          layerOptions += "<option id=".concat(uiLayer.id, ">").concat(uiLayer.name, "</option>");
+        } // generate gui -> can be unstyled, as will resize to fit generic gui container, or can be styled in guis.css
+
+
+        var html = "<div id=\"compareLayers\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Compare layers</p>\n                          <p class=\"gui_text\">Comparison layer:</p>\n                          <select id=\"cl_layer2_dropdown\">\n                              ".concat(layerOptions, "\n                          </select>\n                          <br><br>\n                      </div>");
+
+        var gui = _this._addGuiToDOM(html);
+
+        _this.activeGui = gui; // set the swipe container as visible at the bottom of the screen
+
+        var swipeContainer = document.getElementById("comparison_swipe_container");
+        swipeContainer.style.visibility = "visible"; // event handler
+
+        document.getElementById("comparison_swipe").oninput = function () {
+          var widthValue = document.getElementById("comparison_swipe").value / 100;
+          var selectElement = document.getElementById("cl_layer2_dropdown");
+          var selectedElementId = selectElement[selectElement.selectedIndex].id;
+          var targetPseudolayer2 = _this._uiLayers[selectedElementId].pseudolayer;
+
+          if (!("compareLayers" in _this.activeUiLayer._processingTracker)) {
+            var pseudolayer = _this._constructor.compareLayers({
+              webgl: _this._webgl,
+              cl_image1: _this.activeUiLayer.pseudolayer,
+              cl_image2: targetPseudolayer2,
+              cl_width: widthValue
+            });
+
+            _this.activeUiLayer._processingTracker["compareLayers"] = pseudolayer;
+
+            _this.updateUiLayer(_this.activeUiLayer, pseudolayer);
+          } else {
+            var targetPseudolayer = _this.activeUiLayer._processingTracker.compareLayers;
+            targetPseudolayer.updateInput("cl_image2", targetPseudolayer2);
+            targetPseudolayer.updateVariable("cl_width", widthValue);
+            console.log(targetPseudolayer.variables);
+
+            _this._renderActiveUiLayer();
+          }
+        }; // hide gui when slider starts
+
+
+        document.getElementById("comparison_swipe").onmousedown = function () {
+          document.getElementById("gui_container").style.opacity = 0;
+        }; // show gui when slider ends
+
+
+        document.getElementById("comparison_swipe").onmouseup = function () {
+          document.getElementById("gui_container").style.opacity = 1;
         };
       };
 
@@ -28551,13 +28770,16 @@
       this._lastGui = false; // an object containing the methods that need to be called when a gui is to be opened
 
       this.guis = {
+        // processing guis
         "rgbaManipulation": this.rgbaManipulationGui,
         "rgbFiltering": this.rgbFilteringGui,
         "rgbPercentageFiltering": this.rgbPercentageFilteringGui,
         "apply3x3Kernel": this.apply3x3KernelGui,
         "sobelEdgeDetection": this.sobelEdgeDetection,
         "greyscale": this.greyscale,
-        "stackLayers": this.stackLayers
+        "stackLayers": this.stackLayers,
+        // visualisation guis
+        "compareLayers": this.compareLayers
       };
     } // add a pseudolayer to the ui, generating a new uiLayer. this uiLayer is added to the end 
     // of the existing uiLayers
@@ -28569,7 +28791,7 @@
 
     var rgbPercentageFilteringShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform float rgbfp_filter[3];\r\nuniform vec4 rgbfp_removed;\r\nuniform sampler2D rgbfp_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 raw_colour = texture(rgbfp_image, o_texCoord);\r\n    float sum_colours = raw_colour.r + raw_colour.g + raw_colour.b;\r\n    float remove = 0.0;\r\n\r\n    if(raw_colour.r / sum_colours {rgbfpd1_remove} rgbfp_filter[0]){\r\n        remove = 1.0;\r\n    }\r\n\r\n    if(raw_colour.g / sum_colours {rgbfpd1_remove} rgbfp_filter[1]){\r\n        remove = 1.0;\r\n    }\r\n\r\n    if(raw_colour.b / sum_colours {rgbfpd1_remove} rgbfp_filter[2]){\r\n        remove = 1.0;\r\n    }\r\n\r\n    vec4 final_colour;\r\n    if(remove == 1.0){\r\n        final_colour = rgbfp_removed;\r\n    } else {\r\n        final_colour = raw_colour;\r\n    }\r\n\r\n    o_colour = final_colour;\r\n}";
 
-    var stackLayers = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D sl1_image;\r\nuniform sampler2D sl2_image;\r\nuniform float sl1_weight;\r\nuniform float sl2_weight;\r\nuniform float sl_ignore;\r\nuniform float sl_divisor;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 sl1_texture = texture(sl1_image, o_texCoord);\r\n    vec4 sl2_texture = texture(sl2_image, o_texCoord);\r\n    if (sl2_texture == vec4(0.0, 0.0, 0.0, 1.0)) {\r\n        o_colour = sl1_texture;\r\n    } else {\r\n        vec4 sl1_weighted = sl1_texture * sl1_weight;\r\n        vec4 sl2_weighted = sl2_texture * sl2_weight;\r\n        vec4 sum_texture = sl1_weighted + sl2_weighted;\r\n        o_colour = vec4((sum_texture / sl_divisor).rgb, 1);\r\n    }\r\n}";
+    var stackLayers = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D sl1_image;\r\nuniform sampler2D sl2_image;\r\nuniform float sl1_weight;\r\nuniform float sl2_weight;\r\nuniform float sl_ignore;\r\nuniform float sl_divisor;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 sl1_texture = texture(sl1_image, o_texCoord);\r\n    vec4 sl2_texture = texture(sl2_image, o_texCoord);\r\n    if (sl2_texture {sld1_operator} sl_ignore) {\r\n        o_colour = sl1_texture;\r\n    } else {\r\n        vec4 sl1_weighted = sl1_texture * sl1_weight;\r\n        vec4 sl2_weighted = sl2_texture * sl2_weight;\r\n        vec4 sum_texture = sl1_weighted + sl2_weighted;\r\n        o_colour = vec4((sum_texture / sl_divisor).rgb, 1);\r\n    }\r\n}";
 
     var apply3x3KernelShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nuniform sampler2D a3k_image;\r\nuniform float a3k_textureWidth;\r\nuniform float a3k_textureHeight;\r\nuniform float a3k_kernel[9];\r\nuniform float a3k_kernelWeight;\r\n\r\nin vec2 o_texCoord;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   vec2 onePixel = vec2(1.0 / a3k_textureWidth, 1.0 / a3k_textureHeight);\r\n   vec4 colorSum =\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1, -1)) * a3k_kernel[0] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0, -1)) * a3k_kernel[1] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1, -1)) * a3k_kernel[2] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  0)) * a3k_kernel[3] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  0)) * a3k_kernel[4] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  0)) * a3k_kernel[5] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  1)) * a3k_kernel[6] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  1)) * a3k_kernel[7] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  1)) * a3k_kernel[8] ;\r\n   o_colour = vec4((colorSum / a3k_kernelWeight).rgb, 1);\r\n}";
 
@@ -28579,7 +28801,9 @@
 
     var calculateNDWI = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D cndwi_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 image_bands = texture(cndwi_image, o_texCoord);\r\n    float green = image_bands.g;\r\n    float nir = image_bands.r;\r\n\r\n    float ndwi = (green - nir) / (green + nir);\r\n\r\n    o_colour = vec4(ndwi, 0.0, 0.0, 1.0);\r\n}";
 
-    var calculateDifference = "#version 300 es\r\nprecision mediump float;\r\n\r\n// uniform vec4 cd_positive_colour;\r\n// uniform vec4 cd_negative_colour;\r\nuniform sampler2D cd_image1;\r\nuniform sampler2D cd_image2;\r\n\r\nin vec2 o_texCoord;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 image1 = texture(cd_image1, o_texCoord);\r\n    vec4 image2 = texture(cd_image2, o_texCoord);\r\n    // vec4 positive_difference = (cd_positive_colour.r - image1.r, cd_positive_colour.g - image1.g, cd_positive_colour.b - image1.b, 1.0);\r\n    // vec4 negative_difference = (cd_negative_colour.r - image1.r, cd_negative_colour.g - image1.g, cd_negative_colour.b - image1.b, 1.0);\r\n    vec3 positive_difference = vec3(0.0, 0.0, 1.0) - image1.rgb;\r\n    vec3 negative_difference = vec3(1.0, 0.0, 0.0) - image1.rgb;\r\n    float image_difference = ((image1.r - image2.r) + (image1.g - image2.g) + (image1.b - image2.b) / 3.0) / 1.0;\r\n\r\n    vec4 final_colour = vec4(image1.r - image_difference, 0.0, image1.b + image_difference, 1.0);\r\n\r\n    o_colour = final_colour;\r\n}";
+    var calculateDifference = "#version 300 es\r\nprecision mediump float;\r\n\r\n// uniform vec4 cd_positive_colour;\r\n// uniform vec4 cd_negative_colour;\r\nuniform sampler2D cd_image1;\r\nuniform sampler2D cd_image2;\r\n\r\nin vec2 o_texCoord;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 image1 = texture(cd_image1, o_texCoord);\r\n    vec4 image2 = texture(cd_image2, o_texCoord);\r\n    // vec4 positive_difference = (cd_positive_colour.r - image1.r, cd_positive_colour.g - image1.g, cd_positive_colour.b - image1.b, 1.0);\r\n    // vec4 negative_difference = (cd_negative_colour.r - image1.r, cd_negative_colour.g - image1.g, cd_negative_colour.b - image1.b, 1.0);\r\n    vec3 positive_difference = vec3(0.0, 0.0, 1.0) - image1.rgb;\r\n    vec3 negative_difference = vec3(1.0, 0.0, 0.0) - image1.rgb;\r\n    float image_difference = ((image1.r - image2.r) + (image1.g - image2.g) + (image1.b - image2.b)) / 3.0;\r\n\r\n    vec4 final_colour = vec4(image1.r - image_difference, 0.0, image1.b + image_difference, 1.0);\r\n    if (abs(image_difference) < 0.4) {\r\n        final_colour = vec4(0.0, 0.0, 0.0, 1.0);\r\n    }\r\n    if (image1.r == 0.0) {\r\n        final_colour = vec4(0.0, 0.0, 0.0, 1.0);\r\n    }\r\n\r\n    o_colour = final_colour;\r\n}";
+
+    var compareLayers = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform float cl_width;\r\nuniform sampler2D cl_image1;\r\nuniform sampler2D cl_image2;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n\r\n    vec4 half_colour;\r\n    if (o_texCoord.x > cl_width) {\r\n        half_colour = texture(cl_image2, o_texCoord);\r\n    } else {\r\n        half_colour = texture(cl_image1, o_texCoord);\r\n    }\r\n\r\n    o_colour = half_colour;\r\n}";
 
     var Constructor = function Constructor() {
       _classCallCheck(this, Constructor);
@@ -28706,7 +28930,8 @@
             sl2_image = _ref6.sl2_image,
             sl1_weight = _ref6.sl1_weight,
             sl2_weight = _ref6.sl2_weight,
-            sl_divisor = _ref6.sl_divisor;
+            sl_divisor = _ref6.sl_divisor,
+            sld1_operator = _ref6.sld1_operator;
 
         var pseudolayer = webgl.processPseudoLayer({
           shaderName: "stackLayers",
@@ -28720,7 +28945,9 @@
             sl2_weight: sl2_weight,
             sl_divisor: sl_divisor
           },
-          dynamics: {}
+          dynamics: {
+            sld1_operator: sld1_operator
+          }
         });
         return pseudolayer;
       };
@@ -28799,6 +29026,28 @@
         });
         return pseudolayer;
       };
+
+      this.compareLayers = function () {
+        var _ref11 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+            webgl = _ref11.webgl,
+            cl_image1 = _ref11.cl_image1,
+            cl_image2 = _ref11.cl_image2,
+            cl_width = _ref11.cl_width;
+
+        var pseudolayer = webgl.processPseudoLayer({
+          shaderName: "compareLayers",
+          inputs: {
+            cl_image1: cl_image1,
+            cl_image2: cl_image2
+          },
+          shader: compareLayers,
+          variables: {
+            cl_width: cl_width
+          },
+          dynamics: {}
+        });
+        return pseudolayer;
+      };
     };
 
     var projection = get$2('EPSG:3857'); // set up tile matrix if a wmts is used
@@ -28816,35 +29065,40 @@
 
 
     var testMapView = new View({
-      center: [27288.019098, 6575113.173091],
+      center: [-4441908.587708, -831634.867743],
       zoom: 6,
       projection: projection
-    }); // const testWMS = new XYZ({
-    //     url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
+    });
+    var trueColour = new XYZ({
+      url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
+      params: {
+        'TILED': true,
+        'FORMAT': 'image/png',
+        attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community'
+      },
+      attribution: "test",
+      crossOrigin: "anonymous"
+    }); // var trueColour = new TileWMS({
+    //     url: 'https://gibs-{a-c}.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
     //     params: {
-    //         'TILED': true, 
-    //         'FORMAT': 'image/png',
-    //         attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community',
+    //         LAYERS: 'MODIS_Terra_CorrectedReflectance_TrueColor',
+    //         FORMAT: 'image/jpeg',
+    //         CRS: 'EPSG:3857',
+    //         TIME: '2020-01-01',
+    //         TILED: true,
     //     },
-    //     attribution: "test",
+    //     projection: projection,
     //     crossOrigin: "anonymous",
     // });
-    // const testWMS = new TileWMS({
-    //     url: "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi/ASTER_GDEM_Color_Index",
-    //     params: {
-    //         'TILED': true, 
-    //     },
-    //     attribution: "test",
-    //     crossOrigin: "anonymous",
-    // });#
 
     var brEVI2001 = new TileWMS({
       url: 'https://gibs-{a-c}.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
       params: {
         LAYERS: 'MODIS_Terra_L3_EVI_16Day',
-        FORMAT: 'image/png',
+        FORMAT: 'image/jpeg',
         CRS: 'EPSG:3857',
-        TIME: '2001-01-01'
+        TIME: '2001-01-01',
+        TILED: true
       },
       projection: projection,
       crossOrigin: "anonymous"
@@ -28853,12 +29107,20 @@
       url: 'https://gibs-{a-c}.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
       params: {
         LAYERS: 'MODIS_Terra_L3_EVI_16Day',
-        FORMAT: 'image/png',
+        FORMAT: 'image/jpeg',
         CRS: 'EPSG:3857',
-        TIME: '2020-01-01'
+        TIME: '2020-01-01',
+        TILED: true
       },
       projection: projection,
       crossOrigin: "anonymous"
+    });
+    var trueColourLayer = new TileLayer({
+      source: trueColour,
+      visible: true,
+      title: "Sentinel testing",
+      opacity: 1,
+      minZoom: 1
     });
     var brEVI2001Layer = new TileLayer({
       source: brEVI2001,
@@ -28877,18 +29139,28 @@
     var webgl = new WebGLCanvas("canvas_map");
     var con = new Constructor();
     var ui = new Ui(webgl, con);
-    var l1 = new LayerObject(brEVI2001Layer, testMapView);
-    var l2 = new LayerObject(brEVI2020Layer, testMapView);
+    var l1 = new LayerObject(trueColourLayer, testMapView);
+    var l2 = new LayerObject(brEVI2001Layer, testMapView);
+    var l3 = new LayerObject(brEVI2020Layer, testMapView);
     var p1 = webgl.generatePseudoLayer(l1);
     var p2 = webgl.generatePseudoLayer(l2);
+    var p3 = webgl.generatePseudoLayer(l3);
     var pp1 = con.calculateDifference({
       webgl: webgl,
-      cd_image1: p1,
-      cd_image2: p2
+      cd_image1: p2,
+      cd_image2: p3
+    });
+    var pp2 = con.compareLayers({
+      webgl: webgl,
+      cl_image1: p2,
+      cl_image2: p3,
+      cl_width: 0.5
     });
     ui.addUiLayer(p1);
     ui.addUiLayer(p2);
-    ui.addUiLayer(pp1); // UI EVENTS
+    ui.addUiLayer(p3);
+    ui.addUiLayer(pp1);
+    ui.addUiLayer(pp2); // UI EVENTS
     // select layer
 
     document.addEventListener('click', function (e) {
@@ -28910,7 +29182,7 @@
     document.addEventListener('click', function (e) {
       var closeButton = e.target;
 
-      if (closeButton && closeButton.id === "close_processing_gui") {
+      if (closeButton && closeButton.id === "close_gui") {
         ui.removeGui();
       }
     }); // open processing gui when dropdown selected

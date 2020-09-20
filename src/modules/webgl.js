@@ -296,7 +296,6 @@ export class WebGLCanvas{
     }
 
     _addDynamicsToShader = (rawShader, dynamics) => {
-        console.log(dynamics)
         if (dynamics === {}) {
             return rawShader;
         } else {

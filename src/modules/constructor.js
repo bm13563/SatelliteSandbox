@@ -7,6 +7,7 @@ import sobelEdgeDetection from '../shaders/processing/sobelEdgeDetection.shader'
 import greyscale from '../shaders/processing/greyscale.shader';
 import calculateNDWI from '../shaders/processing/calculateNDWI.shader';
 import calculateDifference from '../shaders/processing/calculateDifference.shader';
+import compareLayers from '../shaders/visualisation/compareLayers.shader';
 
 export class Constructor{
     // takes in a pseudolayer and a vec4 (float 0-1)
@@ -99,7 +100,7 @@ export class Constructor{
         return pseudolayer;
     }
 
-    stackLayers = ({webgl, sl1_image, sl2_image, sl1_weight, sl2_weight, sl_divisor}={}) => {
+    stackLayers = ({webgl, sl1_image, sl2_image, sl1_weight, sl2_weight, sl_divisor, sld1_operator}={}) => {
         const pseudolayer = webgl.processPseudoLayer({
             shaderName: "stackLayers",
             inputs: {
@@ -112,7 +113,9 @@ export class Constructor{
                 sl2_weight: sl2_weight,
                 sl_divisor: sl_divisor,
             },
-            dynamics: {}
+            dynamics: {
+                sld1_operator: sld1_operator,
+            }
         })
         return pseudolayer;
     }
@@ -170,6 +173,24 @@ export class Constructor{
             },
             shader: calculateDifference,
             variables: {},
+            dynamics: {},
+        })
+        return pseudolayer;
+    }
+
+
+    // visualiszation constructors
+    compareLayers = ({webgl, cl_image1, cl_image2, cl_width}={}) => {
+        const pseudolayer = webgl.processPseudoLayer({
+            shaderName: "compareLayers",
+            inputs: {
+                cl_image1: cl_image1,
+                cl_image2: cl_image2,
+            },
+            shader: compareLayers,
+            variables: {
+                cl_width: cl_width,
+            },
             dynamics: {},
         })
         return pseudolayer;

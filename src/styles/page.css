@@ -1,5 +1,5 @@
 html * { font-family: Arial, sans-serif; }
-#processing_gui_container { position: absolute; width: 900px; height: 700px; margin-left: 200px; margin-top: 50px; text-align: center; display: flex; justify-content: center; align-content: center; }
+#gui_container { position: absolute; width: 900px; height: 700px; margin-left: 200px; margin-top: 50px; text-align: center; display: flex; justify-content: center; align-content: center; }
 #top_bar_container { width:900px; height: 50px; margin-left:200px; background-color: lightblue; }
 #layer_container { float:left; width:200px; height: 750px; margin-top:-50px; background-color:lightgreen; }
 #page_container { position:relative; width: 900px; height: 700px; margin-left:200px;}

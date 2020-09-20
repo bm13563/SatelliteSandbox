@@ -39,6 +39,7 @@ export class Ui {
         this._lastGui = false;
         // an object containing the methods that need to be called when a gui is to be opened
         this.guis = {
+            // processing guis
             "rgbaManipulation": this.rgbaManipulationGui,
             "rgbFiltering": this.rgbFilteringGui,
             "rgbPercentageFiltering": this.rgbPercentageFilteringGui,
@@ -46,6 +47,8 @@ export class Ui {
             "sobelEdgeDetection": this.sobelEdgeDetection,
             "greyscale": this.greyscale,
             "stackLayers": this.stackLayers,
+            // visualisation guis
+            "compareLayers": this.compareLayers,
         }
     }
 
@@ -182,9 +185,9 @@ export class Ui {
         htmlElement.innerHTML = string;
         htmlElement = htmlElement.firstChild;
         // appends the div to the  correct place in the DOM
-        const processingGui = document.getElementById("processing_gui");
+        const processingGui = document.getElementById("gui");
         processingGui.style.visibility = "visible";
-        const insertPoint = document.getElementById("processing_gui_actions");
+        const insertPoint = document.getElementById("gui_actions");
         insertPoint.insertAdjacentElement('beforebegin', htmlElement);
         return htmlElement;
     }
@@ -192,14 +195,24 @@ export class Ui {
     // removes the gui from the DOM
     removeGui = () => {
         // remove the gui placeholder
-        const processingGui = document.getElementById("processing_gui");
+        const processingGui = document.getElementById("gui");
         processingGui.style.visibility = "hidden";
         // remove the gui
         processingGui.removeChild(this.activeGui);
         // event listeners *should* be garbage collected
+        // hide any elements necessary -> for extras associated with the gui
+        let toHide = document.getElementsByClassName("gui_close_hide");
+        for (let x = 0; x < toHide.length; x++) {
+            toHide[x].style.visibility = "hidden";;
+        }
+        // remove any elements necessary -> for extras associated with the gui
+        let toRemove = document.getElementsByClassName("gui_close_remove");
+        for (let x = 0; x < toRemove.length; x++) {
+            toRemove[x].remove();
+        }
     }
 
-    // template for guis. contains comments explaining how to put a gui together
+    // processing guis
     rgbaManipulationGui = () => {
         // check if a pseudolayer has been created for this gui yet
         if (!("rgbaManipulationGui" in this.activeUiLayer._processingTracker)) {
@@ -522,12 +535,12 @@ export class Ui {
             layerOptions += `<option id=${uiLayer.id}>${uiLayer.name}</option>`
         }
 
-        const html = `<div id="rgbaManipulation" class="inner_gui">
+        const html = `<div id="stackLayers" class="inner_gui">
                           <p class="gui_title">Stack layers</p>
                           <p class="gui_text">This layer weight:</p>
                           <input id="layer1_weight" type="number" min="1" max="5" value="${sl1_weight}">
                           <p class="gui_text">Layer 2 input:</p>
-                          <select id="layer2_dropdown">
+                          <select id="sl_layer2_dropdown">
                               ${layerOptions}
                           </select>
                           <p class="gui_text">Layer 2 weight:</p>
@@ -543,7 +556,7 @@ export class Ui {
 
         document.getElementById("apply_stack_layers").onclick = () => {
             // first we need to reconstruct the selected ui layer
-            let selectElement = document.getElementById("layer2_dropdown");
+            let selectElement = document.getElementById("sl_layer2_dropdown");
             let selectedElementId = selectElement[selectElement.selectedIndex].id;
             let targetPseudolayer2 = this._uiLayers[selectedElementId].pseudolayer;
             // then get input values
@@ -558,6 +571,8 @@ export class Ui {
                     sl1_weight: layer1_weight,
                     sl2_weight: layer2_weight,
                     sl_divisor: overall_divisor,
+                    sl_ignore: [0.0, 0.0, 0.0, 1.0],
+                    sld1_operator: '==',
                 })
                 this.activeUiLayer._processingTracker["stackLayers"] = pseudolayer;
                 this.updateUiLayer(this.activeUiLayer, pseudolayer);
@@ -569,6 +584,64 @@ export class Ui {
                 targetPseudolayer.updateInput("sl2_image", targetPseudolayer2);
                 this._renderActiveUiLayer();
             }
+        }
+    }
+
+    // visualisation guis
+    compareLayers = () => {
+        var layerOptions = "";
+        for (let key of Object.keys(this._uiLayers)) {
+            let uiLayer = this._uiLayers[key];
+            layerOptions += `<option id=${uiLayer.id}>${uiLayer.name}</option>`
+        }
+
+        // generate gui -> can be unstyled, as will resize to fit generic gui container, or can be styled in guis.css
+        const html = `<div id="compareLayers" class="inner_gui">
+                          <p class="gui_title">Compare layers</p>
+                          <p class="gui_text">Comparison layer:</p>
+                          <select id="cl_layer2_dropdown">
+                              ${layerOptions}
+                          </select>
+                          <br><br>
+                      </div>`
+        const gui = this._addGuiToDOM(html);
+        this.activeGui = gui;
+
+        // set the swipe container as visible at the bottom of the screen
+        let swipeContainer = document.getElementById("comparison_swipe_container");
+        swipeContainer.style.visibility = "visible";
+        // event handler
+        document.getElementById("comparison_swipe").oninput = () => {
+            let widthValue = document.getElementById("comparison_swipe").value/ 100;
+            let selectElement = document.getElementById("cl_layer2_dropdown");
+            let selectedElementId = selectElement[selectElement.selectedIndex].id;
+            let targetPseudolayer2 = this._uiLayers[selectedElementId].pseudolayer;
+            if (!("compareLayers" in this.activeUiLayer._processingTracker)) {
+                let pseudolayer = this._constructor.compareLayers({
+                    webgl: this._webgl, 
+                    cl_image1: this.activeUiLayer.pseudolayer,
+                    cl_image2: targetPseudolayer2,
+                    cl_width: widthValue,
+                });
+                this.activeUiLayer._processingTracker["compareLayers"] = pseudolayer;
+                this.updateUiLayer(this.activeUiLayer, pseudolayer);
+            } else {
+                let targetPseudolayer = this.activeUiLayer._processingTracker.compareLayers;
+                targetPseudolayer.updateInput("cl_image2", targetPseudolayer2);
+                targetPseudolayer.updateVariable("cl_width", widthValue);
+                console.log(targetPseudolayer.variables)
+                this._renderActiveUiLayer();
+            }
+        }
+
+        // hide gui when slider starts
+        document.getElementById("comparison_swipe").onmousedown = () => {
+            document.getElementById("gui_container").style.opacity = 0;
+        }
+
+        // show gui when slider ends
+        document.getElementById("comparison_swipe").onmouseup = () => {
+            document.getElementById("gui_container").style.opacity = 1;
         }
     }
 }

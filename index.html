@@ -6,11 +6,11 @@
     </head>
     <body>
         <!-- This way of generating a GUI needs to be more flexible -->
-        <div id="processing_gui_container">
-            <div id="processing_gui">
-                <div id="close_processing_gui">&#10060</div>
+        <div id="gui_container">
+            <div id="gui">
+                <div id="close_gui">&#10060</div>
                 <!-- indiviudal guis are appended here -->
-                <div id="processing_gui_actions">
+                <div id="gui_actions">
                     <button id="new_layer">New layer</button>
                     <button id="reset_layer">Reset layer</button>
                 </div>
@@ -29,7 +29,12 @@
                     <div class="dropdown_menu_option" data-id="stackLayers">Stack layers</div>
                 </div>
             </div>
-            <div id="test_div2" class="dropdown">test</div>
+            <div id="visualisation_div" class="dropdown">
+                <div id="visualisation_div" class="dropdown_title">Visualisation</div>
+                <div id="visualisation_menu" class="dropdown_menu">
+                    <div class="dropdown_menu_option" data-id="compareLayers">Compare layers</div>
+                </div>
+            </div>
             <div id="test_div3" class="dropdown">test</div>
             <div id="test_div4" class="dropdown">test</div>
         </div>
@@ -42,6 +47,7 @@
                 <canvas id="canvas_map"></canvas>
             </div>
             <div id="tile_container"></div>
+            <div id="comparison_swipe_container" class="gui_close_hide"><input id="comparison_swipe" type="range" min="0" max="100" value="50"></div>
         </div>
         <br>
         <h3>aerial.js</h3>

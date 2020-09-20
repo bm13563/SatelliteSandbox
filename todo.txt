@@ -38,4 +38,6 @@
 34. rewrite/ re-comment restoreGuiState function in ui DONE -> just removed it
 35. rework ui (AGAIN) DONE
 36. bug when layers are switched while tiles are loading. because number of shader passes is being updated while shaders arent ready DONE
+37. finish side-by-side visualisation
+38. replace stackLayers shader with mix(image1, image2, interpolation)
 

@@ -15,7 +15,7 @@ out vec4 o_colour;
 void main() {
     vec4 sl1_texture = texture(sl1_image, o_texCoord);
     vec4 sl2_texture = texture(sl2_image, o_texCoord);
-    if (sl2_texture == vec4(0.0, 0.0, 0.0, 1.0)) {
+    if (sl2_texture {sld1_operator} sl_ignore) {
         o_colour = sl1_texture;
     } else {
         vec4 sl1_weighted = sl1_texture * sl1_weight;
