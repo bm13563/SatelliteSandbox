@@ -3106,6 +3106,85 @@
         return coordinate;
     }
     /**
+     * Returns a {@link module:ol/coordinate~CoordinateFormat} function that can be
+     * used to format
+     * a {Coordinate} to a string.
+     *
+     * Example without specifying the fractional digits:
+     *
+     *     import {createStringXY} from 'ol/coordinate';
+     *
+     *     var coord = [7.85, 47.983333];
+     *     var stringifyFunc = createStringXY();
+     *     var out = stringifyFunc(coord);
+     *     // out is now '8, 48'
+     *
+     * Example with explicitly specifying 2 fractional digits:
+     *
+     *     import {createStringXY} from 'ol/coordinate';
+     *
+     *     var coord = [7.85, 47.983333];
+     *     var stringifyFunc = createStringXY(2);
+     *     var out = stringifyFunc(coord);
+     *     // out is now '7.85, 47.98'
+     *
+     * @param {number=} opt_fractionDigits The number of digits to include
+     *    after the decimal point. Default is `0`.
+     * @return {CoordinateFormat} Coordinate format.
+     * @api
+     */
+    function createStringXY(opt_fractionDigits) {
+        return (
+        /**
+         * @param {Coordinate} coordinate Coordinate.
+         * @return {string} String XY.
+         */
+        function (coordinate) {
+            return toStringXY(coordinate, opt_fractionDigits);
+        });
+    }
+    /**
+     * Transforms the given {@link module:ol/coordinate~Coordinate} to a string
+     * using the given string template. The strings `{x}` and `{y}` in the template
+     * will be replaced with the first and second coordinate values respectively.
+     *
+     * Example without specifying the fractional digits:
+     *
+     *     import {format} from 'ol/coordinate';
+     *
+     *     var coord = [7.85, 47.983333];
+     *     var template = 'Coordinate is ({x}|{y}).';
+     *     var out = format(coord, template);
+     *     // out is now 'Coordinate is (8|48).'
+     *
+     * Example explicitly specifying the fractional digits:
+     *
+     *     import {format} from 'ol/coordinate';
+     *
+     *     var coord = [7.85, 47.983333];
+     *     var template = 'Coordinate is ({x}|{y}).';
+     *     var out = format(coord, template, 2);
+     *     // out is now 'Coordinate is (7.85|47.98).'
+     *
+     * @param {Coordinate} coordinate Coordinate.
+     * @param {string} template A template string with `{x}` and `{y}` placeholders
+     *     that will be replaced by first and second coordinate values.
+     * @param {number=} opt_fractionDigits The number of digits to include
+     *    after the decimal point. Default is `0`.
+     * @return {string} Formatted coordinate.
+     * @api
+     */
+    function format(coordinate, template, opt_fractionDigits) {
+        if (coordinate) {
+            return template
+                .replace('{x}', coordinate[0].toFixed(opt_fractionDigits))
+                .replace('{y}', coordinate[1].toFixed(opt_fractionDigits));
+        }
+        else {
+            return '';
+        }
+    }
+    /**
      * @param {Coordinate} coordinate1 First coordinate.
      * @param {Coordinate} coordinate2 Second coordinate.
      * @return {boolean} The two coordinates are equal.
@@ -3168,6 +3247,34 @@
         coordinate[0] *= scale;
         coordinate[1] *= scale;
         return coordinate;
+    }
+    /**
+     * Format a coordinate as a comma delimited string.
+     *
+     * Example without specifying fractional digits:
+     *
+     *     import {toStringXY} from 'ol/coordinate';
+     *
+     *     var coord = [7.85, 47.983333];
+     *     var out = toStringXY(coord);
+     *     // out is now '8, 48'
+     *
+     * Example explicitly specifying 1 fractional digit:
+     *
+     *     import {toStringXY} from 'ol/coordinate';
+     *
+     *     var coord = [7.85, 47.983333];
+     *     var out = toStringXY(coord, 1);
+     *     // out is now '7.8, 48.0'
+     *
+     * @param {Coordinate} coordinate Coordinate.
+     * @param {number=} opt_fractionDigits The number of digits to include
+     *    after the decimal point. Default is `0`.
+     * @return {string} XY.
+     * @api
+     */
+    function toStringXY(coordinate, opt_fractionDigits) {
+        return format(coordinate, '{x}, {y}', opt_fractionDigits);
     }
     /**
      * Modifies the provided coordinate in-place to be within the real world
@@ -14001,6 +14108,247 @@
     }(Control));
 
     /**
+     * @module ol/control/MousePosition
+     */
+    var __extends$z = (undefined && undefined.__extends) || (function () {
+        var extendStatics = function (d, b) {
+            extendStatics = Object.setPrototypeOf ||
+                ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+                function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+            return extendStatics(d, b);
+        };
+        return function (d, b) {
+            extendStatics(d, b);
+            function __() { this.constructor = d; }
+            d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+        };
+    })();
+    /**
+     * @type {string}
+     */
+    var PROJECTION = 'projection';
+    /**
+     * @type {string}
+     */
+    var COORDINATE_FORMAT = 'coordinateFormat';
+    /**
+     * @typedef {Object} Options
+     * @property {string} [className='ol-mouse-position'] CSS class name.
+     * @property {import("../coordinate.js").CoordinateFormat} [coordinateFormat] Coordinate format.
+     * @property {import("../proj.js").ProjectionLike} [projection] Projection. Default is the view projection.
+     * @property {function(import("../MapEvent.js").default):void} [render] Function called when the
+     * control should be re-rendered. This is called in a `requestAnimationFrame`
+     * callback.
+     * @property {HTMLElement|string} [target] Specify a target if you want the
+     * control to be rendered outside of the map's viewport.
+     * @property {string} [undefinedHTML='&#160;'] Markup to show when coordinates are not
+     * available (e.g. when the pointer leaves the map viewport).  By default, the last position
+     * will be replaced with `'&#160;'` (`&nbsp;`) when the pointer leaves the viewport.  To
+     * retain the last rendered position, set this option to something falsey (like an empty
+     * string `''`).
+     */
+    /**
+     * @classdesc
+     * A control to show the 2D coordinates of the mouse cursor. By default, these
+     * are in the view projection, but can be in any supported projection.
+     * By default the control is shown in the top right corner of the map, but this
+     * can be changed by using the css selector `.ol-mouse-position`.
+     *
+     * On touch devices, which usually do not have a mouse cursor, the coordinates
+     * of the currently touched position are shown.
+     *
+     * @api
+     */
+    var MousePosition = /** @class */ (function (_super) {
+        __extends$z(MousePosition, _super);
+        /**
+         * @param {Options=} opt_options Mouse position options.
+         */
+        function MousePosition(opt_options) {
+            var _this = this;
+            var options = opt_options ? opt_options : {};
+            var element = document.createElement('div');
+            element.className =
+                options.className !== undefined ? options.className : 'ol-mouse-position';
+            _this = _super.call(this, {
+                element: element,
+                render: options.render,
+                target: options.target,
+            }) || this;
+            _this.addEventListener(getChangeEventType(PROJECTION), _this.handleProjectionChanged_);
+            if (options.coordinateFormat) {
+                _this.setCoordinateFormat(options.coordinateFormat);
+            }
+            if (options.projection) {
+                _this.setProjection(options.projection);
+            }
+            /**
+             * @private
+             * @type {string}
+             */
+            _this.undefinedHTML_ =
+                options.undefinedHTML !== undefined ? options.undefinedHTML : '&#160;';
+            /**
+             * @private
+             * @type {boolean}
+             */
+            _this.renderOnMouseOut_ = !!_this.undefinedHTML_;
+            /**
+             * @private
+             * @type {string}
+             */
+            _this.renderedHTML_ = element.innerHTML;
+            /**
+             * @private
+             * @type {?import("../proj/Projection.js").default}
+             */
+            _this.mapProjection_ = null;
+            /**
+             * @private
+             * @type {?import("../proj.js").TransformFunction}
+             */
+            _this.transform_ = null;
+            return _this;
+        }
+        /**
+         * @private
+         */
+        MousePosition.prototype.handleProjectionChanged_ = function () {
+            this.transform_ = null;
+        };
+        /**
+         * Return the coordinate format type used to render the current position or
+         * undefined.
+         * @return {import("../coordinate.js").CoordinateFormat|undefined} The format to render the current
+         *     position in.
+         * @observable
+         * @api
+         */
+        MousePosition.prototype.getCoordinateFormat = function () {
+            return /** @type {import("../coordinate.js").CoordinateFormat|undefined} */ (this.get(COORDINATE_FORMAT));
+        };
+        /**
+         * Return the projection that is used to report the mouse position.
+         * @return {import("../proj/Projection.js").default|undefined} The projection to report mouse
+         *     position in.
+         * @observable
+         * @api
+         */
+        MousePosition.prototype.getProjection = function () {
+            return /** @type {import("../proj/Projection.js").default|undefined} */ (this.get(PROJECTION));
+        };
+        /**
+         * @param {MouseEvent} event Browser event.
+         * @protected
+         */
+        MousePosition.prototype.handleMouseMove = function (event) {
+            var map = this.getMap();
+            this.updateHTML_(map.getEventPixel(event));
+        };
+        /**
+         * @param {Event} event Browser event.
+         * @protected
+         */
+        MousePosition.prototype.handleMouseOut = function (event) {
+            this.updateHTML_(null);
+        };
+        /**
+         * Remove the control from its current map and attach it to the new map.
+         * Subclasses may set up event handlers to get notified about changes to
+         * the map here.
+         * @param {import("../PluggableMap.js").default} map Map.
+         * @api
+         */
+        MousePosition.prototype.setMap = function (map) {
+            _super.prototype.setMap.call(this, map);
+            if (map) {
+                var viewport = map.getViewport();
+                this.listenerKeys.push(listen(viewport, PointerEventType.POINTERMOVE, this.handleMouseMove, this));
+                if (this.renderOnMouseOut_) {
+                    this.listenerKeys.push(listen(viewport, PointerEventType.POINTEROUT, this.handleMouseOut, this));
+                }
+            }
+        };
+        /**
+         * Set the coordinate format type used to render the current position.
+         * @param {import("../coordinate.js").CoordinateFormat} format The format to render the current
+         *     position in.
+         * @observable
+         * @api
+         */
+        MousePosition.prototype.setCoordinateFormat = function (format) {
+            this.set(COORDINATE_FORMAT, format);
+        };
+        /**
+         * Set the projection that is used to report the mouse position.
+         * @param {import("../proj.js").ProjectionLike} projection The projection to report mouse
+         *     position in.
+         * @observable
+         * @api
+         */
+        MousePosition.prototype.setProjection = function (projection) {
+            this.set(PROJECTION, get$2(projection));
+        };
+        /**
+         * @param {?import("../pixel.js").Pixel} pixel Pixel.
+         * @private
+         */
+        MousePosition.prototype.updateHTML_ = function (pixel) {
+            var html = this.undefinedHTML_;
+            if (pixel && this.mapProjection_) {
+                if (!this.transform_) {
+                    var projection = this.getProjection();
+                    if (projection) {
+                        this.transform_ = getTransformFromProjections(this.mapProjection_, projection);
+                    }
+                    else {
+                        this.transform_ = identityTransform;
+                    }
+                }
+                var map = this.getMap();
+                var coordinate = map.getCoordinateFromPixelInternal(pixel);
+                if (coordinate) {
+                    var userProjection = getUserProjection();
+                    if (userProjection) {
+                        this.transform_ = getTransformFromProjections(this.mapProjection_, userProjection);
+                    }
+                    this.transform_(coordinate, coordinate);
+                    var coordinateFormat = this.getCoordinateFormat();
+                    if (coordinateFormat) {
+                        html = coordinateFormat(coordinate);
+                    }
+                    else {
+                        html = coordinate.toString();
+                    }
+                }
+            }
+            if (!this.renderedHTML_ || html !== this.renderedHTML_) {
+                this.element.innerHTML = html;
+                this.renderedHTML_ = html;
+            }
+        };
+        /**
+         * Update the projection. Rendering of the coordinates is done in
+         * `handleMouseMove` and `handleMouseUp`.
+         * @param {import("../MapEvent.js").default} mapEvent Map event.
+         * @override
+         */
+        MousePosition.prototype.render = function (mapEvent) {
+            var frameState = mapEvent.frameState;
+            if (!frameState) {
+                this.mapProjection_ = null;
+            }
+            else {
+                if (this.mapProjection_ != frameState.viewState.projection) {
+                    this.mapProjection_ = frameState.viewState.projection;
+                    this.transform_ = null;
+                }
+            }
+        };
+        return MousePosition;
+    }(Control));
+
+    /**
      * @module ol/control
      */
     /**
@@ -14060,7 +14408,7 @@
         ACTIVE: 'active',
     };
 
-    var __extends$z = (undefined && undefined.__extends) || (function () {
+    var __extends$A = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -14097,7 +14445,7 @@
      * @api
      */
     var Interaction = /** @class */ (function (_super) {
-        __extends$z(Interaction, _super);
+        __extends$A(Interaction, _super);
         /**
          * @param {InteractionOptions=} opt_options Options.
          */
@@ -14200,7 +14548,7 @@
         });
     }
 
-    var __extends$A = (undefined && undefined.__extends) || (function () {
+    var __extends$B = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -14224,7 +14572,7 @@
      * @api
      */
     var DoubleClickZoom = /** @class */ (function (_super) {
-        __extends$A(DoubleClickZoom, _super);
+        __extends$B(DoubleClickZoom, _super);
         /**
          * @param {Options=} opt_options Options.
          */
@@ -14266,7 +14614,7 @@
         return DoubleClickZoom;
     }(Interaction));
 
-    var __extends$B = (undefined && undefined.__extends) || (function () {
+    var __extends$C = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -14317,7 +14665,7 @@
      * @api
      */
     var PointerInteraction = /** @class */ (function (_super) {
-        __extends$B(PointerInteraction, _super);
+        __extends$C(PointerInteraction, _super);
         /**
          * @param {Options=} opt_options Options.
          */
@@ -14652,7 +15000,7 @@
         return pointerEvent.isPrimary && pointerEvent.button === 0;
     };
 
-    var __extends$C = (undefined && undefined.__extends) || (function () {
+    var __extends$D = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -14680,7 +15028,7 @@
      * @api
      */
     var DragPan = /** @class */ (function (_super) {
-        __extends$C(DragPan, _super);
+        __extends$D(DragPan, _super);
         /**
          * @param {Options=} opt_options Options.
          */
@@ -14828,7 +15176,7 @@
         return DragPan;
     }(PointerInteraction));
 
-    var __extends$D = (undefined && undefined.__extends) || (function () {
+    var __extends$E = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -14859,7 +15207,7 @@
      * @api
      */
     var DragRotate = /** @class */ (function (_super) {
-        __extends$D(DragRotate, _super);
+        __extends$E(DragRotate, _super);
         /**
          * @param {Options=} opt_options Options.
          */
@@ -14948,7 +15296,7 @@
     /**
      * @module ol/render/Box
      */
-    var __extends$E = (undefined && undefined.__extends) || (function () {
+    var __extends$F = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -14962,7 +15310,7 @@
         };
     })();
     var RenderBox = /** @class */ (function (_super) {
-        __extends$E(RenderBox, _super);
+        __extends$F(RenderBox, _super);
         /**
          * @param {string} className CSS class name.
          */
@@ -15075,7 +15423,7 @@
         return RenderBox;
     }(Disposable));
 
-    var __extends$F = (undefined && undefined.__extends) || (function () {
+    var __extends$G = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -15137,7 +15485,7 @@
      * this type.
      */
     var DragBoxEvent = /** @class */ (function (_super) {
-        __extends$F(DragBoxEvent, _super);
+        __extends$G(DragBoxEvent, _super);
         /**
          * @param {string} type The event type.
          * @param {import("../coordinate.js").Coordinate} coordinate The event coordinate.
@@ -15175,7 +15523,7 @@
      * @api
      */
     var DragBox = /** @class */ (function (_super) {
-        __extends$F(DragBox, _super);
+        __extends$G(DragBox, _super);
         /**
          * @param {Options=} opt_options Options.
          */
@@ -15282,7 +15630,7 @@
         return DragBox;
     }(PointerInteraction));
 
-    var __extends$G = (undefined && undefined.__extends) || (function () {
+    var __extends$H = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -15319,7 +15667,7 @@
      * @api
      */
     var DragZoom = /** @class */ (function (_super) {
-        __extends$G(DragZoom, _super);
+        __extends$H(DragZoom, _super);
         /**
          * @param {Options=} opt_options Options.
          */
@@ -15389,7 +15737,7 @@
         DOWN: 40,
     };
 
-    var __extends$H = (undefined && undefined.__extends) || (function () {
+    var __extends$I = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -15427,7 +15775,7 @@
      * @api
      */
     var KeyboardPan = /** @class */ (function (_super) {
-        __extends$H(KeyboardPan, _super);
+        __extends$I(KeyboardPan, _super);
         /**
          * @param {Options=} opt_options Options.
          */
@@ -15509,7 +15857,7 @@
         return KeyboardPan;
     }(Interaction));
 
-    var __extends$I = (undefined && undefined.__extends) || (function () {
+    var __extends$J = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -15545,7 +15893,7 @@
      * @api
      */
     var KeyboardZoom = /** @class */ (function (_super) {
-        __extends$I(KeyboardZoom, _super);
+        __extends$J(KeyboardZoom, _super);
         /**
          * @param {Options=} opt_options Options.
          */
@@ -15598,7 +15946,7 @@
         return KeyboardZoom;
     }(Interaction));
 
-    var __extends$J = (undefined && undefined.__extends) || (function () {
+    var __extends$K = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -15642,7 +15990,7 @@
      * @api
      */
     var MouseWheelZoom = /** @class */ (function (_super) {
-        __extends$J(MouseWheelZoom, _super);
+        __extends$K(MouseWheelZoom, _super);
         /**
          * @param {Options=} opt_options Options.
          */
@@ -15848,7 +16196,7 @@
         return MouseWheelZoom;
     }(Interaction));
 
-    var __extends$K = (undefined && undefined.__extends) || (function () {
+    var __extends$L = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -15874,7 +16222,7 @@
      * @api
      */
     var PinchRotate = /** @class */ (function (_super) {
-        __extends$K(PinchRotate, _super);
+        __extends$L(PinchRotate, _super);
         /**
          * @param {Options=} opt_options Options.
          */
@@ -15996,7 +16344,7 @@
         return PinchRotate;
     }(PointerInteraction));
 
-    var __extends$L = (undefined && undefined.__extends) || (function () {
+    var __extends$M = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -16020,7 +16368,7 @@
      * @api
      */
     var PinchZoom = /** @class */ (function (_super) {
-        __extends$L(PinchZoom, _super);
+        __extends$M(PinchZoom, _super);
         /**
          * @param {Options=} opt_options Options.
          */
@@ -16232,7 +16580,7 @@
         return interactions;
     }
 
-    var __extends$M = (undefined && undefined.__extends) || (function () {
+    var __extends$N = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -16293,7 +16641,7 @@
      * @api
      */
     var Map = /** @class */ (function (_super) {
-        __extends$M(Map, _super);
+        __extends$N(Map, _super);
         /**
          * @param {import("./PluggableMap.js").MapOptions} options Map options.
          */
@@ -16650,7 +16998,7 @@
         }
     }
 
-    var __extends$N = (undefined && undefined.__extends) || (function () {
+    var __extends$O = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -16664,7 +17012,7 @@
         };
     })();
     var TileCache = /** @class */ (function (_super) {
-        __extends$N(TileCache, _super);
+        __extends$O(TileCache, _super);
         function TileCache() {
             return _super !== null && _super.apply(this, arguments) || this;
         }
@@ -16848,7 +17196,7 @@
         USE_INTERIM_TILES_ON_ERROR: 'useInterimTilesOnError',
     };
 
-    var __extends$O = (undefined && undefined.__extends) || (function () {
+    var __extends$P = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -16901,7 +17249,7 @@
      * @api
      */
     var BaseTileLayer = /** @class */ (function (_super) {
-        __extends$O(BaseTileLayer, _super);
+        __extends$P(BaseTileLayer, _super);
         /**
          * @param {Options=} opt_options Tile layer options.
          */
@@ -16957,7 +17305,7 @@
         return BaseTileLayer;
     }(Layer));
 
-    var __extends$P = (undefined && undefined.__extends) || (function () {
+    var __extends$Q = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -16976,7 +17324,7 @@
      * @api
      */
     var CanvasTileLayerRenderer = /** @class */ (function (_super) {
-        __extends$P(CanvasTileLayerRenderer, _super);
+        __extends$Q(CanvasTileLayerRenderer, _super);
         /**
          * @param {import("../../layer/Tile.js").default|import("../../layer/VectorTile.js").default} tileLayer Tile layer.
          */
@@ -17446,7 +17794,7 @@
      */
     CanvasTileLayerRenderer.prototype.getLayer;
 
-    var __extends$Q = (undefined && undefined.__extends) || (function () {
+    var __extends$R = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -17470,7 +17818,7 @@
      * @api
      */
     var TileLayer = /** @class */ (function (_super) {
-        __extends$Q(TileLayer, _super);
+        __extends$R(TileLayer, _super);
         /**
          * @param {import("./BaseTile.js").Options=} opt_options Tile layer options.
          */
@@ -18163,7 +18511,7 @@
         return context.canvas;
     }
 
-    var __extends$R = (undefined && undefined.__extends) || (function () {
+    var __extends$S = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -18186,7 +18534,7 @@
      *
      */
     var ReprojTile = /** @class */ (function (_super) {
-        __extends$R(ReprojTile, _super);
+        __extends$S(ReprojTile, _super);
         /**
          * @param {import("../proj/Projection.js").default} sourceProj Source projection.
          * @param {import("../tilegrid/TileGrid.js").default} sourceTileGrid Source tile grid.
@@ -18994,34 +19342,6 @@
         });
     }
     /**
-     * @typedef {Object} XYZOptions
-     * @property {import("./extent.js").Extent} [extent] Extent for the tile grid. The origin for an XYZ tile grid is the
-     * top-left corner of the extent. If `maxResolution` is not provided the zero level of the grid is defined by the resolution
-     * at which one tile fits in the provided extent. If not provided, the extent of the EPSG:3857 projection is used.
-     * @property {number} [maxResolution] Resolution at level zero.
-     * @property {number} [maxZoom] Maximum zoom. The default is `42`. This determines the number of levels
-     * in the grid set. For example, a `maxZoom` of 21 means there are 22 levels in the grid set.
-     * @property {number} [minZoom=0] Minimum zoom.
-     * @property {number|import("./size.js").Size} [tileSize=[256, 256]] Tile size in pixels.
-     */
-    /**
-     * Creates a tile grid with a standard XYZ tiling scheme.
-     * @param {XYZOptions=} opt_options Tile grid options.
-     * @return {!TileGrid} Tile grid instance.
-     * @api
-     */
-    function createXYZ(opt_options) {
-        var xyzOptions = opt_options || {};
-        var extent = xyzOptions.extent || get$2('EPSG:3857').getExtent();
-        var gridOptions = {
-            extent: extent,
-            minZoom: xyzOptions.minZoom,
-            tileSize: xyzOptions.tileSize,
-            resolutions: resolutionsFromExtent(extent, xyzOptions.maxZoom, xyzOptions.tileSize, xyzOptions.maxResolution),
-        };
-        return new TileGrid(gridOptions);
-    }
-    /**
      * Create a resolutions array from an extent.  A zoom factor of 2 is assumed.
      * @param {import("./extent.js").Extent} extent Extent.
      * @param {number=} opt_maxZoom Maximum zoom level (default is
@@ -19075,7 +19395,7 @@
         return extent;
     }
 
-    var __extends$S = (undefined && undefined.__extends) || (function () {
+    var __extends$T = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -19112,7 +19432,7 @@
      * @api
      */
     var TileSource = /** @class */ (function (_super) {
-        __extends$S(TileSource, _super);
+        __extends$T(TileSource, _super);
         /**
          * @param {Options} options SourceTile source options.
          */
@@ -19393,7 +19713,7 @@
      * type.
      */
     var TileSourceEvent = /** @class */ (function (_super) {
-        __extends$S(TileSourceEvent, _super);
+        __extends$T(TileSourceEvent, _super);
         /**
          * @param {string} type Type.
          * @param {import("../Tile.js").default} tile The tile.
@@ -19519,7 +19839,7 @@
         return urls;
     }
 
-    var __extends$T = (undefined && undefined.__extends) || (function () {
+    var __extends$U = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -19558,7 +19878,7 @@
      * @fires import("./Tile.js").TileSourceEvent
      */
     var UrlTile = /** @class */ (function (_super) {
-        __extends$T(UrlTile, _super);
+        __extends$U(UrlTile, _super);
         /**
          * @param {Options} options Image tile options.
          */
@@ -19737,7 +20057,7 @@
         return UrlTile;
     }(TileSource));
 
-    var __extends$U = (undefined && undefined.__extends) || (function () {
+    var __extends$V = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -19802,7 +20122,7 @@
      * @api
      */
     var TileImage = /** @class */ (function (_super) {
-        __extends$U(TileImage, _super);
+        __extends$V(TileImage, _super);
         /**
          * @param {!Options} options Image tile options.
          */
@@ -20199,7 +20519,7 @@
     /**
      * @module ol/source/TileWMS
      */
-    var __extends$V = (undefined && undefined.__extends) || (function () {
+    var __extends$W = (undefined && undefined.__extends) || (function () {
         var extendStatics = function (d, b) {
             extendStatics = Object.setPrototypeOf ||
                 ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -20270,7 +20590,7 @@
      * @api
      */
     var TileWMS = /** @class */ (function (_super) {
-        __extends$V(TileWMS, _super);
+        __extends$W(TileWMS, _super);
         /**
          * @param {Options=} [opt_options] Tile WMS options.
          */
@@ -20584,126 +20904,6 @@
             return this.getRequestUrl_(tileCoord, tileSize, tileExtent, pixelRatio, projection, baseParams);
         };
         return TileWMS;
-    }(TileImage));
-
-    /**
-     * @module ol/source/XYZ
-     */
-    var __extends$W = (undefined && undefined.__extends) || (function () {
-        var extendStatics = function (d, b) {
-            extendStatics = Object.setPrototypeOf ||
-                ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-                function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-            return extendStatics(d, b);
-        };
-        return function (d, b) {
-            extendStatics(d, b);
-            function __() { this.constructor = d; }
-            d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-        };
-    })();
-    /**
-     * @typedef {Object} Options
-     * @property {import("./Source.js").AttributionLike} [attributions] Attributions.
-     * @property {boolean} [attributionsCollapsible=true] Attributions are collapsible.
-     * @property {number} [cacheSize] Initial tile cache size. Will auto-grow to hold at least the number of tiles in the viewport.
-     * @property {null|string} [crossOrigin] The `crossOrigin` attribute for loaded images.  Note that
-     * you must provide a `crossOrigin` value if you want to access pixel data with the Canvas renderer.
-     * See https://developer.mozilla.org/en-US/docs/Web/HTML/CORS_enabled_image for more detail.
-     * @property {boolean} [imageSmoothing=true] Enable image smoothing.
-     * @property {boolean} [opaque=false] Whether the layer is opaque.
-     * @property {import("../proj.js").ProjectionLike} [projection='EPSG:3857'] Projection.
-     * @property {number} [reprojectionErrorThreshold=0.5] Maximum allowed reprojection error (in pixels).
-     * Higher values can increase reprojection performance, but decrease precision.
-     * @property {number} [maxZoom=42] Optional max zoom level. Not used if `tileGrid` is provided.
-     * @property {number} [minZoom=0] Optional min zoom level. Not used if `tileGrid` is provided.
-     * @property {number} [maxResolution] Optional tile grid resolution at level zero. Not used if `tileGrid` is provided.
-     * @property {import("../tilegrid/TileGrid.js").default} [tileGrid] Tile grid.
-     * @property {import("../Tile.js").LoadFunction} [tileLoadFunction] Optional function to load a tile given a URL. The default is
-     * ```js
-     * function(imageTile, src) {
-     *   imageTile.getImage().src = src;
-     * };
-     * ```
-     * @property {number} [tilePixelRatio=1] The pixel ratio used by the tile service.
-     * For example, if the tile service advertizes 256px by 256px tiles but actually sends 512px
-     * by 512px images (for retina/hidpi devices) then `tilePixelRatio`
-     * should be set to `2`.
-     * @property {number|import("../size.js").Size} [tileSize=[256, 256]] The tile size used by the tile service.
-     * Not used if `tileGrid` is provided.
-     * @property {import("../Tile.js").UrlFunction} [tileUrlFunction] Optional function to get
-     * tile URL given a tile coordinate and the projection.
-     * Required if `url` or `urls` are not provided.
-     * @property {string} [url] URL template. Must include `{x}`, `{y}` or `{-y}`,
-     * and `{z}` placeholders. A `{?-?}` template pattern, for example `subdomain{a-f}.domain.com`,
-     * may be used instead of defining each one separately in the `urls` option.
-     * @property {Array<string>} [urls] An array of URL templates.
-     * @property {boolean} [wrapX=true] Whether to wrap the world horizontally.
-     * @property {number} [transition] Duration of the opacity transition for rendering.
-     * To disable the opacity transition, pass `transition: 0`.
-     * @property {number} [zDirection=0] Indicate which resolution should be used
-     * by a renderer if the view resolution does not match any resolution of the tile source.
-     * If 0, the nearest resolution will be used. If 1, the nearest lower resolution
-     * will be used. If -1, the nearest higher resolution will be used.
-     */
-    /**
-     * @classdesc
-     * Layer source for tile data with URLs in a set XYZ format that are
-     * defined in a URL template. By default, this follows the widely-used
-     * Google grid where `x` 0 and `y` 0 are in the top left. Grids like
-     * TMS where `x` 0 and `y` 0 are in the bottom left can be used by
-     * using the `{-y}` placeholder in the URL template, so long as the
-     * source does not have a custom tile grid. In this case,
-     * {@link module:ol/source/TileImage} can be used with a `tileUrlFunction`
-     * such as:
-     *
-     *  tileUrlFunction: function(coordinate) {
-     *    return 'http://mapserver.com/' + coordinate[0] + '/' +
-     *        coordinate[1] + '/' + coordinate[2] + '.png';
-     *    }
-     *
-     * @api
-     */
-    var XYZ = /** @class */ (function (_super) {
-        __extends$W(XYZ, _super);
-        /**
-         * @param {Options=} opt_options XYZ options.
-         */
-        function XYZ(opt_options) {
-            var _this = this;
-            var options = opt_options || {};
-            var projection = options.projection !== undefined ? options.projection : 'EPSG:3857';
-            var tileGrid = options.tileGrid !== undefined
-                ? options.tileGrid
-                : createXYZ({
-                    extent: extentFromProjection(projection),
-                    maxResolution: options.maxResolution,
-                    maxZoom: options.maxZoom,
-                    minZoom: options.minZoom,
-                    tileSize: options.tileSize,
-                });
-            _this = _super.call(this, {
-                attributions: options.attributions,
-                cacheSize: options.cacheSize,
-                crossOrigin: options.crossOrigin,
-                imageSmoothing: options.imageSmoothing,
-                opaque: options.opaque,
-                projection: projection,
-                reprojectionErrorThreshold: options.reprojectionErrorThreshold,
-                tileGrid: tileGrid,
-                tileLoadFunction: options.tileLoadFunction,
-                tilePixelRatio: options.tilePixelRatio,
-                tileUrlFunction: options.tileUrlFunction,
-                url: options.url,
-                urls: options.urls,
-                wrapX: options.wrapX !== undefined ? options.wrapX : true,
-                transition: options.transition,
-                attributionsCollapsible: options.attributionsCollapsible,
-                zDirection: options.zDirection,
-            }) || this;
-            return _this;
-        }
-        return XYZ;
     }(TileImage));
 
     function _classCallCheck(instance, Constructor) {
@@ -27543,12 +27743,19 @@
       };
 
       this._createMap = function () {
+        // add mouse location 
+        var mousePositionControl = new MousePosition({
+          coordinateFormat: createStringXY(4),
+          projection: 'EPSG:3857',
+          undefinedHTML: '&nbsp;'
+        });
         var map = new Map({
+          controls: defaults().extend([mousePositionControl]),
           target: _this.container,
           layers: [_this.olLayer],
           view: _this.olView
         });
-        map.getView().setZoom(12); // render the map without animation - prevents artifacts and reduces gpu overhead
+        map.getView().setZoom(15); // render the map without animation - prevents artifacts and reduces gpu overhead
 
         _this.olLayer.getSource().tileOptions.transition = 0; // layers are not requested until they are used -> saves requests
 
@@ -29100,67 +29307,55 @@
 
 
     var testMapView = new View({
-      center: [27288.019098, 6575113.173091],
-      zoom: 12,
+      center: [-348342.647153, 6658410.424665],
+      zoom: 15,
       projection: projection
-    });
-    var trueColour = new XYZ({
-      url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
-      params: {
-        'TILED': true,
-        'FORMAT': 'image/png',
-        attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community'
-      },
-      attribution: "test",
-      crossOrigin: "anonymous"
-    }); // var trueColour = new TileWMS({
-    //     url: 'https://gibs-{a-c}.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
+    }); // const trueColour = new XYZ({
+    //     url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
     //     params: {
-    //         LAYERS: 'MODIS_Terra_CorrectedReflectance_TrueColor',
-    //         FORMAT: 'image/jpeg',
-    //         CRS: 'EPSG:3857',
-    //         TIME: '2020-01-01',
-    //         TILED: true,
+    //         'TILED': true, 
+    //         'FORMAT': 'image/png',
+    //         attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community',
     //     },
-    //     projection: projection,
+    //     attribution: "test",
     //     crossOrigin: "anonymous",
     // });
 
-    var testWMS = new TileWMS({
+    var sentinelSource1 = new TileWMS({
       url: "https://services.sentinel-hub.com/ogc/wms/e28a9327-dd59-4020-9bad-ee8e5087fca4",
       params: {
         'LAYERS': "FALSE_COLOR",
         'TILED': true,
-        'FORMAT': 'image/png',
+        'FORMAT': 'image/jpeg',
         'showLogo': false,
         'CRS': "EPSG:3857",
-        'TIME': "2020-06-26/2020-07-26"
+        'TIME': "2020-09-28"
       },
       attribution: "test",
       crossOrigin: "anonymous"
     });
-    var testWMS2 = new TileWMS({
+    var sentinelSource2 = new TileWMS({
       url: "https://services.sentinel-hub.com/ogc/wms/e28a9327-dd59-4020-9bad-ee8e5087fca4",
       params: {
-        'LAYERS': "TRUE_COLOR",
+        'LAYERS': "FALSE_COLOR",
         'TILED': true,
-        'FORMAT': 'image/png',
+        'FORMAT': 'image/jpeg',
         'showLogo': false,
         'CRS': "EPSG:3857",
-        'TIME': "2020-06-26/2020-07-26"
+        'TIME': "2020-08-14"
       },
       attribution: "test",
       crossOrigin: "anonymous"
     });
-    var testMapLayer1 = new TileLayer({
-      source: testWMS,
+    var sentinelLayer1 = new TileLayer({
+      source: sentinelSource1,
       visible: true,
       title: "Sentinel testing",
       opacity: 1,
       minZoom: 1
     });
-    var testMapLayer2 = new TileLayer({
-      source: testWMS2,
+    var sentinelLayer2 = new TileLayer({
+      source: sentinelSource2,
       visible: true,
       title: "Sentinel testing",
       opacity: 1,
@@ -29169,59 +29364,39 @@
     var webgl = new WebGLCanvas("canvas_map");
     var con = new Constructor();
     var ui = new Ui(webgl, con);
-    var l1 = new LayerObject(testMapLayer1, testMapView);
-    var l2 = new LayerObject(testMapLayer2, testMapView);
-    var p1 = webgl.generatePseudoLayer(l1);
-    var p2 = webgl.generatePseudoLayer(l2);
-    var ep2 = con.rgbaManipulation({
+    var aSentinel1 = new LayerObject(sentinelLayer1, testMapView);
+    var aSentinel2 = new LayerObject(sentinelLayer2, testMapView);
+    var enhancedSentinel1 = con.rgbaManipulation({
       webgl: webgl,
-      rgbam_image: p2,
+      rgbam_image: aSentinel1,
       rgbam_multiplier: [1.5, 1.5, 1.5, 1.0]
     });
-    var pp1 = con.rgbFiltering({
+    var enhancedSentinel2 = con.rgbaManipulation({
       webgl: webgl,
-      rgbf_image: p1,
-      rgbf_filter: [0.58, 0.58, 0.58],
-      rgbf_removed: [0.0, 0.0, 0.0, 1.0],
-      rgbfd1_remove: "<"
+      rgbam_image: aSentinel2,
+      rgbam_multiplier: [1.5, 1.5, 1.5, 1.0]
     });
-    var pp2 = con.greyscale({
+    var ndwiSentinel1 = con.calculateNDWI({
       webgl: webgl,
-      gs_image: pp1
+      cndwi_image: enhancedSentinel1
     });
-    var pp3 = con.sobelEdgeDetection({
+    var ndwiSentinel2 = con.calculateNDWI({
       webgl: webgl,
-      sed_image: pp2
-    });
-    var pp4 = con.rgbaManipulation({
-      webgl: webgl,
-      rgbam_image: pp3,
-      rgbam_multiplier: [1.0, 0.0, 1.0, 1.0]
-    });
-    var pp5 = con.rgbFiltering({
-      webgl: webgl,
-      rgbf_image: pp4,
-      rgbf_filter: [1.0, 0.0, 1.0],
-      rgbf_removed: [0.0, 0.0, 0.0, 1.0],
-      rgbfd1_remove: "<"
-    });
-    var pp6 = con.stackLayers({
-      webgl: webgl,
-      sl1_image: ep2,
-      sl2_image: pp5,
-      sl1_weight: 0,
-      sl2_weight: 1.0,
-      sl_divisor: 1.0
-    });
-    ui.addUiLayer(p1);
-    ui.addUiLayer(ep2);
-    ui.addUiLayer(pp1);
-    ui.addUiLayer(pp2);
-    ui.addUiLayer(pp3);
-    ui.addUiLayer(pp4);
-    ui.addUiLayer(pp5);
-    ui.addUiLayer(pp6);
-    var layerToActivate = ui.getUiLayerFromPseudolayer(pp6);
+      cndwi_image: enhancedSentinel2
+    }); // const sobelSentinel1 = con.sobelEdgeDetection({
+    //     webgl: webgl,
+    //     sed_image: ndwiSentinel1,
+    // })
+    // const sobelSentinel2 = con.sobelEdgeDetection({
+    //     webgl: webgl,
+    //     sed_image: ndwiSentinel2,
+    // })
+
+    ui.addUiLayer(enhancedSentinel1);
+    ui.addUiLayer(enhancedSentinel2);
+    ui.addUiLayer(ndwiSentinel1);
+    ui.addUiLayer(ndwiSentinel2);
+    var layerToActivate = ui.getUiLayerFromPseudolayer(enhancedSentinel1);
     ui.activateUiLayer(layerToActivate); // UI EVENTS
     // select layer
 

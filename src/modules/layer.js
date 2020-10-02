@@ -1,4 +1,7 @@
 import {Map, View} from 'ol';
+import MousePosition from 'ol/control/MousePosition';
+import {createStringXY} from 'ol/coordinate';
+import {defaults as defaultControls} from 'ol/control';
 import * as twgl from 'twgl.js';
 
 // "layers" are different to those in native openlayers. each "layer" needs to have it's own
@@ -38,12 +41,20 @@ export class LayerObject{
     }
 
     _createMap = () => {
+        // add mouse location 
+        const mousePositionControl = new MousePosition({
+            coordinateFormat: createStringXY(4),
+            projection: 'EPSG:3857',
+            undefinedHTML: '&nbsp;',
+        });
+
         const map = new Map({
+            controls: defaultControls().extend([mousePositionControl]),
             target: this.container,
             layers: [this.olLayer],
             view: this.olView,
         });
-        map.getView().setZoom(12);
+        map.getView().setZoom(15);
         // render the map without animation - prevents artifacts and reduces gpu overhead
         this.olLayer.getSource().tileOptions.transition = 0;
         // layers are not requested until they are used -> saves requests

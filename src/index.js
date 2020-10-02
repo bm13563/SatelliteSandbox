@@ -38,73 +38,60 @@ for (var z = 0; z < 14; ++z) {
 
 // set a map view
 const testMapView = new View({
-    center: [27288.019098, 6575113.173091],
-    zoom: 12,
+    center: [-348342.647153, 6658410.424665],
+    zoom: 15,
     projection: projection,
 })
 
-const trueColour = new XYZ({
-    url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
-    params: {
-        'TILED': true, 
-        'FORMAT': 'image/png',
-        attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community',
-    },
-    attribution: "test",
-    crossOrigin: "anonymous",
-});
-
-// var trueColour = new TileWMS({
-//     url: 'https://gibs-{a-c}.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
+// const trueColour = new XYZ({
+//     url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
 //     params: {
-//         LAYERS: 'MODIS_Terra_CorrectedReflectance_TrueColor',
-//         FORMAT: 'image/jpeg',
-//         CRS: 'EPSG:3857',
-//         TIME: '2020-01-01',
-//         TILED: true,
+//         'TILED': true, 
+//         'FORMAT': 'image/png',
+//         attributions: 'Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community',
 //     },
-//     projection: projection,
+//     attribution: "test",
 //     crossOrigin: "anonymous",
 // });
 
-const testWMS = new TileWMS({
+const sentinelSource1 = new TileWMS({
     url: "https://services.sentinel-hub.com/ogc/wms/e28a9327-dd59-4020-9bad-ee8e5087fca4",
     params: {
         'LAYERS': "FALSE_COLOR", 
         'TILED': true, 
-        'FORMAT': 'image/png',
+        'FORMAT': 'image/jpeg',
         'showLogo': false,
         'CRS': "EPSG:3857",
-        'TIME': "2020-06-26/2020-07-26",
+        'TIME': "2020-09-28",
     },
     attribution: "test",
     crossOrigin: "anonymous",
 });
 
-const testWMS2 = new TileWMS({
+const sentinelSource2 = new TileWMS({
     url: "https://services.sentinel-hub.com/ogc/wms/e28a9327-dd59-4020-9bad-ee8e5087fca4",
     params: {
-        'LAYERS': "TRUE_COLOR", 
+        'LAYERS': "FALSE_COLOR", 
         'TILED': true, 
-        'FORMAT': 'image/png',
+        'FORMAT': 'image/jpeg',
         'showLogo': false,
         'CRS': "EPSG:3857",
-        'TIME': "2020-06-26/2020-07-26",
+        'TIME': "2020-08-14",
     },
     attribution: "test",
     crossOrigin: "anonymous",
 });
 
-const testMapLayer1 = new TileLayer({
-    source: testWMS,
+const sentinelLayer1 = new TileLayer({
+    source: sentinelSource1,
     visible: true,
     title: "Sentinel testing",
     opacity: 1,
     minZoom: 1,
 });
 
-const testMapLayer2 = new TileLayer({
-    source: testWMS2,
+const sentinelLayer2 = new TileLayer({
+    source: sentinelSource2,
     visible: true,
     title: "Sentinel testing",
     opacity: 1,
@@ -114,69 +101,46 @@ const testMapLayer2 = new TileLayer({
 var webgl = new WebGLCanvas("canvas_map");
 var con = new Constructor();
 var ui = new Ui(webgl, con);
-var l1 = new LayerObject(testMapLayer1, testMapView);
-var l2 = new LayerObject(testMapLayer2, testMapView);
+var aSentinel1 = new LayerObject(sentinelLayer1, testMapView);
+var aSentinel2 = new LayerObject(sentinelLayer2, testMapView);
 
-const p1 = webgl.generatePseudoLayer(l1);
-const p2 = webgl.generatePseudoLayer(l2);
-
-const ep2 = con.rgbaManipulation({
+const enhancedSentinel1 = con.rgbaManipulation({
     webgl: webgl,
-    rgbam_image: p2,
+    rgbam_image: aSentinel1,
     rgbam_multiplier: [1.5, 1.5, 1.5, 1.0],
 })
 
-const pp1 = con.rgbFiltering({
+const enhancedSentinel2 = con.rgbaManipulation({
     webgl: webgl,
-    rgbf_image: p1,
-    rgbf_filter: [0.58, 0.58, 0.58],
-    rgbf_removed: [0.0, 0.0, 0.0, 1.0],
-    rgbfd1_remove: "<",
+    rgbam_image: aSentinel2,
+    rgbam_multiplier: [1.5, 1.5, 1.5, 1.0],
 })
 
-const pp2 = con.greyscale({
+const ndwiSentinel1 = con.calculateNDWI({
     webgl: webgl,
-    gs_image: pp1,
+    cndwi_image: enhancedSentinel1,
 })
 
-const pp3 = con.sobelEdgeDetection({
+const ndwiSentinel2 = con.calculateNDWI({
     webgl: webgl,
-    sed_image: pp2,
+    cndwi_image: enhancedSentinel2,
 })
 
-const pp4 = con.rgbaManipulation({
-    webgl: webgl,
-    rgbam_image: pp3,
-    rgbam_multiplier: [1.0, 0.0, 1.0, 1.0],
-})
+// const sobelSentinel1 = con.sobelEdgeDetection({
+//     webgl: webgl,
+//     sed_image: ndwiSentinel1,
+// })
 
-const pp5 = con.rgbFiltering({
-    webgl: webgl,
-    rgbf_image: pp4,
-    rgbf_filter: [1.0, 0.0, 1.0],
-    rgbf_removed: [0.0, 0.0, 0.0, 1.0],
-    rgbfd1_remove: "<",
-})
+// const sobelSentinel2 = con.sobelEdgeDetection({
+//     webgl: webgl,
+//     sed_image: ndwiSentinel2,
+// })
 
-const pp6 = con.stackLayers({
-    webgl: webgl,
-    sl1_image: ep2,
-    sl2_image: pp5, 
-    sl1_weight: 0,
-    sl2_weight: 1.0,
-    sl_divisor: 1.0,
-})
-
-ui.addUiLayer(p1);
-ui.addUiLayer(ep2);
-ui.addUiLayer(pp1);
-ui.addUiLayer(pp2);
-ui.addUiLayer(pp3);
-ui.addUiLayer(pp4);
-ui.addUiLayer(pp5);
-ui.addUiLayer(pp6);
-
-const layerToActivate = ui.getUiLayerFromPseudolayer(pp6);
+ui.addUiLayer(enhancedSentinel1);
+ui.addUiLayer(enhancedSentinel2);
+ui.addUiLayer(ndwiSentinel1);
+ui.addUiLayer(ndwiSentinel2);
+const layerToActivate = ui.getUiLayerFromPseudolayer(enhancedSentinel1);
 ui.activateUiLayer(layerToActivate);
 
 
