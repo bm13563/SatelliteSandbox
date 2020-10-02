@@ -18,6 +18,10 @@ export class UiLayer{
         this.html = document.createElement("div");
         this.html.innerHTML = html;
     }
+
+    getPseudolayer = () => {
+        return this.pseudolayer;
+    }
 }
 
 export class Ui {
@@ -592,7 +596,9 @@ export class Ui {
         var layerOptions = "";
         for (let key of Object.keys(this._uiLayers)) {
             let uiLayer = this._uiLayers[key];
-            layerOptions += `<option id=${uiLayer.id}>${uiLayer.name}</option>`
+            if (uiLayer.id !== this.activeUiLayer.id) {
+                layerOptions += `<option id=${uiLayer.id}>${uiLayer.name}</option>`;
+            }
         }
 
         // generate gui -> can be unstyled, as will resize to fit generic gui container, or can be styled in guis.css
@@ -629,7 +635,6 @@ export class Ui {
                 let targetPseudolayer = this.activeUiLayer._processingTracker.compareLayers;
                 targetPseudolayer.updateInput("cl_image2", targetPseudolayer2);
                 targetPseudolayer.updateVariable("cl_width", widthValue);
-                console.log(targetPseudolayer.variables)
                 this._renderActiveUiLayer();
             }
         }
@@ -643,5 +648,28 @@ export class Ui {
         document.getElementById("comparison_swipe").onmouseup = () => {
             document.getElementById("gui_container").style.opacity = 1;
         }
+
+        // hide gui when user moves
+        this.activeUiLayer.pseudolayer.getFirstMap().on("movestart", () => {
+            console.log("moving")
+            document.getElementById("gui_container").style.opacity = 0;
+        })
+
+        // show gui when user stops moving
+        this.activeUiLayer.pseudolayer.getFirstMap().on("moveend", () => {
+            document.getElementById("gui_container").style.opacity = 1;
+        })
+
+        
+        // close processing gui -> hide gui container and remove gui. additional
+        document.addEventListener('click', (e) => {
+            const closeButton = e.target;
+            if (closeButton && closeButton.id === "close_gui"){
+                // revert the layer on close
+                this.updateUiLayer(this.activeUiLayer, this.activeUiLayer.originalPseudolayer);
+                // remove state information
+                delete this.activeUiLayer._processingTracker.compareLayers;
+            }
+        });
     }
 }

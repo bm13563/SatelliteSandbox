@@ -40,4 +40,5 @@
 36. bug when layers are switched while tiles are loading. because number of shader passes is being updated while shaders arent ready DONE
 37. finish side-by-side visualisation
 38. replace stackLayers shader with mix(image1, image2, interpolation)
+39. add reset layer button next to delete layer button
 

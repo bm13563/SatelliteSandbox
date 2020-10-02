@@ -67,4 +67,10 @@ export class PseudoLayer{
     updateShader = (shader) => {
         this.shader = shader;
     }
+
+    // for applying event listeners - generally returning the first map and applying the event to that object is fine
+    // as a pseudolayers maps are mirrors of each other
+    getFirstMap = () => {
+        return this.maps[0];
+    }
 }

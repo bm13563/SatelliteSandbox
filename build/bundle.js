@@ -27636,6 +27636,10 @@
         _this.shader = shader;
       };
 
+      this.getFirstMap = function () {
+        return _this.maps[0];
+      };
+
       this.type = 'pseudolayer';
       this.id = Date.now() + Math.floor(Math.random() * 1000000);
       this.shaderName = shaderName;
@@ -28169,7 +28173,13 @@
     ;
 
     var UiLayer = function UiLayer(pseudolayer, layerNumber) {
+      var _this = this;
+
       _classCallCheck(this, UiLayer);
+
+      this.getPseudolayer = function () {
+        return _this.pseudolayer;
+      };
 
       // same id as the pseudolayer, can be used to get the DOM element, the pseudolayer or the uiLayer by id. 
       this.id = pseudolayer.id; // the name of the pseudolayer on the ui;
@@ -28187,77 +28197,77 @@
       this.html.innerHTML = html;
     };
     var Ui = function Ui(webgl, constructor) {
-      var _this = this;
+      var _this2 = this;
 
       _classCallCheck(this, Ui);
 
       this.addUiLayer = function (pseudolayer) {
         // the number of the uiLayer -> for naming
-        var layerNumber = _this._uiLayersOrder.length + 1; // creates a new uiLayer
+        var layerNumber = _this2._uiLayersOrder.length + 1; // creates a new uiLayer
 
         var uiLayer = new UiLayer(pseudolayer, layerNumber); // adds the uiLayer to the layer tracker, where the uiLayer can directly be called via the id of the layer
 
-        _this._uiLayers[uiLayer.id] = uiLayer; // update the uiLayersOrder -> adds to the end by default, therefore this layer is rendered last
+        _this2._uiLayers[uiLayer.id] = uiLayer; // update the uiLayersOrder -> adds to the end by default, therefore this layer is rendered last
 
-        _this._uiLayersOrder.push(uiLayer.id); // adds the html from the uiLayer to update the map
+        _this2._uiLayersOrder.push(uiLayer.id); // adds the html from the uiLayer to update the map
 
 
         document.getElementById("layers_holder").appendChild(uiLayer.html); // determines which of the current uiLayers should be rendered
 
-        _this._renderActiveUiLayer();
+        _this2._renderActiveUiLayer();
       };
 
       this.removeUiLayer = function (uiLayer) {
         // gets the id of the uiLayer to be removed
         var uiLayerDeleteId = uiLayer.dataset.id; // removes the uiLayer from the uiLayers object
 
-        delete _this._uiLayers[uiLayerDeleteId]; // removes the uiLayer from uiLayersOrder array
+        delete _this2._uiLayers[uiLayerDeleteId]; // removes the uiLayer from uiLayersOrder array
 
-        _this._uiLayersOrder = _this._uiLayersOrder.filter(function (item) {
+        _this2._uiLayersOrder = _this2._uiLayersOrder.filter(function (item) {
           return item !== parseInt(uiLayerDeleteId);
         }); // updates the active uiLayer with the first element in the uiLayersOrder array if a uiLayer exists
 
-        if (_this._uiLayersOrder.length > 0) {
-          var newActiveUiLayerId = _this._uiLayersOrder[0];
-          var newActiveUiLayer = _this._uiLayers[newActiveUiLayerId]; // sets the active layer
+        if (_this2._uiLayersOrder.length > 0) {
+          var newActiveUiLayerId = _this2._uiLayersOrder[0];
+          var newActiveUiLayer = _this2._uiLayers[newActiveUiLayerId]; // sets the active layer
 
-          _this.activeUiLayer = newActiveUiLayer; // update the css
+          _this2.activeUiLayer = newActiveUiLayer; // update the css
 
           document.getElementById(newActiveUiLayerId).classList.add("selected");
         } else {
-          _this.activeUiLayer = false;
+          _this2.activeUiLayer = false;
 
-          _this._webgl.clearCanvas();
+          _this2._webgl.clearCanvas();
         } // deletes the uiLayer from the DOM
 
 
         document.getElementById(uiLayerDeleteId).remove(); // determines which of the current uiLayers should be rendered
 
-        _this._renderActiveUiLayer();
+        _this2._renderActiveUiLayer();
       };
 
       this.updateUiLayer = function (uiLayer, pseudolayer) {
         uiLayer.pseudolayer = pseudolayer; // determines which of the current uiLayers should be rendered
 
-        _this._renderActiveUiLayer();
+        _this2._renderActiveUiLayer();
       };
 
       this.resetUiLayer = function () {
         // gets the DOM element id of the currently active gui
-        var activeGuiId = _this.activeGui.id; // gets the method required to build that gui
+        var activeGuiId = _this2.activeGui.id; // gets the method required to build that gui
 
-        var buildGui = _this.guis[activeGuiId]; // sets the pseudolayer of the uiLayer to the original pseudolayer
+        var buildGui = _this2.guis[activeGuiId]; // sets the pseudolayer of the uiLayer to the original pseudolayer
 
-        _this.activeUiLayer.pseudolayer = _this.activeUiLayer.originalPseudolayer; // remove all pseudolayers from the processing tracker
+        _this2.activeUiLayer.pseudolayer = _this2.activeUiLayer.originalPseudolayer; // remove all pseudolayers from the processing tracker
 
-        _this.activeUiLayer._processingTracker = {}; // removes the current gui
+        _this2.activeUiLayer._processingTracker = {}; // removes the current gui
 
-        _this.removeGui(); // rebuilds the current gui, with reset values
+        _this2.removeGui(); // rebuilds the current gui, with reset values
 
 
         buildGui(); // determines which of the current layers should be rendered
 
-        _this._renderActiveUiLayer();
+        _this2._renderActiveUiLayer();
       };
 
       this.activateUiLayer = function (uiLayerToActivate) {
@@ -28269,54 +28279,54 @@
         } // set the layer as the active uiLayer
 
 
-        _this.activeUiLayer = uiLayerToActivate; // applies the selected class for css
+        _this2.activeUiLayer = uiLayerToActivate; // applies the selected class for css
 
         var uiLayerId = uiLayerToActivate.id;
         var uiLayerDiv = document.getElementById(uiLayerId);
         uiLayerDiv.classList.add("selected"); // updates the uiLayer array, to move the active uiLayer to the front of the array
 
-        _this._uiLayersOrder = _this._uiLayersOrder.filter(function (item) {
+        _this2._uiLayersOrder = _this2._uiLayersOrder.filter(function (item) {
           return item !== parseInt(uiLayerId);
         });
 
-        _this._uiLayersOrder.unshift(parseInt(uiLayerId)); // determines which of the current layers should be rendered (which should be this one)
+        _this2._uiLayersOrder.unshift(parseInt(uiLayerId)); // determines which of the current layers should be rendered (which should be this one)
 
 
-        _this._renderActiveUiLayer();
+        _this2._renderActiveUiLayer();
       };
 
       this._renderActiveUiLayer = function () {
         // if there is currently a uiLayer
-        if (_this.activeUiLayer) {
+        if (_this2.activeUiLayer) {
           // render the pseudolayer of the active uiLayer
-          var pseudoLayerToRender = _this.activeUiLayer.pseudolayer;
+          var pseudoLayerToRender = _this2.activeUiLayer.pseudolayer;
 
-          _this._webgl.activatePseudolayer(pseudoLayerToRender);
-        } else if (_this._uiLayersOrder.length > 0) {
+          _this2._webgl.activatePseudolayer(pseudoLayerToRender);
+        } else if (_this2._uiLayersOrder.length > 0) {
           // if it's the first layer to be added, render and set as active
-          var uiLayerIdToActivate = _this._uiLayersOrder[0];
-          var uiLayerToActivate = _this._uiLayers[uiLayerIdToActivate];
+          var uiLayerIdToActivate = _this2._uiLayersOrder[0];
+          var uiLayerToActivate = _this2._uiLayers[uiLayerIdToActivate];
           var _pseudoLayerToRender = uiLayerToActivate.pseudolayer;
           document.getElementById(uiLayerIdToActivate).classList.add("selected");
-          _this.activeUiLayer = uiLayerToActivate;
+          _this2.activeUiLayer = uiLayerToActivate;
 
-          _this._webgl.activatePseudolayer(_pseudoLayerToRender);
+          _this2._webgl.activatePseudolayer(_pseudoLayerToRender);
         } else {
           // otherwise stop rendering
-          _this._webgl.activatePseudolayer();
+          _this2._webgl.activatePseudolayer();
         }
       };
 
       this.activateUiLayerFromDOM = function (targetLayer) {
         // get id of the layer that was clicked
         var uiLayerId = targetLayer.dataset.id;
-        var uiLayer = _this._uiLayers[uiLayerId];
+        var uiLayer = _this2._uiLayers[uiLayerId];
 
-        _this.activateUiLayer(uiLayer);
+        _this2.activateUiLayer(uiLayer);
       };
 
       this.getUiLayerFromPseudolayer = function (pseudolayer) {
-        return _this._uiLayers[pseudolayer.id];
+        return _this2._uiLayers[pseudolayer.id];
       };
 
       this._addGuiToDOM = function (string) {
@@ -28337,7 +28347,7 @@
         var processingGui = document.getElementById("gui");
         processingGui.style.visibility = "hidden"; // remove the gui
 
-        processingGui.removeChild(_this.activeGui); // event listeners *should* be garbage collected
+        processingGui.removeChild(_this2.activeGui); // event listeners *should* be garbage collected
         // hide any elements necessary -> for extras associated with the gui
 
         var toHide = document.getElementsByClassName("gui_close_hide");
@@ -28356,20 +28366,20 @@
 
       this.rgbaManipulationGui = function () {
         // check if a pseudolayer has been created for this gui yet
-        if (!("rgbaManipulationGui" in _this.activeUiLayer._processingTracker)) {
+        if (!("rgbaManipulationGui" in _this2.activeUiLayer._processingTracker)) {
           // set default values of the pseudolayer
           var rgbam_multiplier = [1.0, 1.0, 1.0, 1.0];
         } else {
           // get the named input for the pseuodlayer associated with this gui
-          var rgbam_multiplier = _this.activeUiLayer._processingTracker.rgbaManipulationGui.variables.rgbam_multiplier;
+          var rgbam_multiplier = _this2.activeUiLayer._processingTracker.rgbaManipulationGui.variables.rgbam_multiplier;
         } // generate gui -> can be unstyled, as will resize to fit generic gui container, or can be styled in guis.css
 
 
         var html = "<div id=\"rgbaManipulation\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Multiply RGBA</p>\n                          <p class=\"gui_text\">Red: <span id=\"red_value\">".concat(rgbam_multiplier[0], "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"300\" value=\"").concat(rgbam_multiplier[0] * 100, "\" class=\"gui_slider\" id=\"red_slider\">\n                          <p class=\"gui_text\">Green: <span id=\"green_value\">").concat(rgbam_multiplier[1], "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"300\" value=\"").concat(rgbam_multiplier[1] * 100, "\" class=\"gui_slider\" id=\"green_slider\">\n                          <p class=\"gui_text\">Blue: <span id=\"blue_value\">").concat(rgbam_multiplier[2], "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"300\" value=\"").concat(rgbam_multiplier[2] * 100, "\" class=\"gui_slider\" id=\"blue_slider\">\n                      </div>");
 
-        var gui = _this._addGuiToDOM(html);
+        var gui = _this2._addGuiToDOM(html);
 
-        _this.activeGui = gui; // add event handlers -> these should be garbage collected when the gui is removed
+        _this2.activeGui = gui; // add event handlers -> these should be garbage collected when the gui is removed
 
         function addSliderEvent(sliderId, valueId, ui) {
           document.getElementById(sliderId).oninput = function () {
@@ -28400,27 +28410,27 @@
           };
         }
 
-        addSliderEvent("red_slider", "red_value", _this);
-        addSliderEvent("green_slider", "green_value", _this);
-        addSliderEvent("blue_slider", "blue_value", _this);
+        addSliderEvent("red_slider", "red_value", _this2);
+        addSliderEvent("green_slider", "green_value", _this2);
+        addSliderEvent("blue_slider", "blue_value", _this2);
       };
 
       this.rgbFilteringGui = function () {
-        if (!("rgbFilteringGui" in _this.activeUiLayer._processingTracker)) {
+        if (!("rgbFilteringGui" in _this2.activeUiLayer._processingTracker)) {
           var rgbf_filter = [1.0, 1.0, 1.0];
           var rgbf_removed = [0.0, 0.0, 0.0, 1.0];
           var rgbfd1_remove = ">";
         } else {
-          var rgbf_filter = _this.activeUiLayer._processingTracker.rgbFilteringGui.variables.rgbf_filter;
-          var rgbf_removed = _this.activeUiLayer._processingTracker.rgbFilteringGui.variables.rgbf_removed;
-          var rgbfd1_remove = _this.activeUiLayer._processingTracker.rgbFilteringGui.variables.rgbfd1_remove;
+          var rgbf_filter = _this2.activeUiLayer._processingTracker.rgbFilteringGui.variables.rgbf_filter;
+          var rgbf_removed = _this2.activeUiLayer._processingTracker.rgbFilteringGui.variables.rgbf_removed;
+          var rgbfd1_remove = _this2.activeUiLayer._processingTracker.rgbFilteringGui.variables.rgbfd1_remove;
         }
 
         var html = "<div id=\"rgbFiltering\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Filter RGB</p>\n                          <p class=\"gui_text\">Value to filter:</p>\n                          <p class=\"gui_text\">Red: <span id=\"red_value\">".concat(rgbf_filter[0] * 255, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"255\" value=\"").concat(rgbf_filter[0] * 255, "\" class=\"gui_slider\" id=\"red_slider\">\n                          <p class=\"gui_text\">Green: <span id=\"green_value\">").concat(rgbf_filter[1] * 255, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"255\" value=\"").concat(rgbf_filter[1] * 255, "\" class=\"gui_slider\" id=\"green_slider\">\n                          <p class=\"gui_text\">Blue: <span id=\"blue_value\">").concat(rgbf_filter[2] * 255, "</span></p>\n                          <input type=\"range\" min=\"0\" max=\"255\" value=\"").concat(rgbf_filter[2] * 255, "\" class=\"gui_slider\" id=\"blue_slider\">\n                          <p class=\"gui_text\">Operator:</p>\n                          <select name=\"operator\" id=\"operator\">\n                            <option value=\"&gt\" selected>&gt</option>\n                            <option value=\"&lt\">&lt</option>\n                          </select><br><br>\n                      </div>");
 
-        var gui = _this._addGuiToDOM(html);
+        var gui = _this2._addGuiToDOM(html);
 
-        _this.activeGui = gui;
+        _this2.activeGui = gui;
 
         function addSliderEvent(sliderId, valueId, ui) {
           document.getElementById(sliderId).oninput = function () {
@@ -28450,9 +28460,9 @@
           };
         }
 
-        addSliderEvent("red_slider", "red_value", _this);
-        addSliderEvent("green_slider", "green_value", _this);
-        addSliderEvent("blue_slider", "blue_value", _this);
+        addSliderEvent("red_slider", "red_value", _this2);
+        addSliderEvent("green_slider", "green_value", _this2);
+        addSliderEvent("blue_slider", "blue_value", _this2);
 
         document.getElementById("operator").onchange = function () {
           var red = document.getElementById("red_slider").value / 255;
@@ -28460,44 +28470,44 @@
           var blue = document.getElementById("blue_slider").value / 255;
           var operator = document.getElementById("operator").value;
 
-          if (!("rgbFilteringGui" in _this.activeUiLayer._processingTracker)) {
-            var pseudolayer = _this._constructor.rgbFiltering({
-              webgl: _this._webgl,
-              rgbf_image: _this.activeUiLayer.pseudolayer,
+          if (!("rgbFilteringGui" in _this2.activeUiLayer._processingTracker)) {
+            var pseudolayer = _this2._constructor.rgbFiltering({
+              webgl: _this2._webgl,
+              rgbf_image: _this2.activeUiLayer.pseudolayer,
               rgbf_filter: [red, green, blue],
               rgbf_removed: rgbf_removed,
               rgbfd1_remove: operator
             });
 
-            _this.activeUiLayer._processingTracker["rgbFilteringGui"] = pseudolayer;
+            _this2.activeUiLayer._processingTracker["rgbFilteringGui"] = pseudolayer;
 
-            _this.updateUiLayer(_this.activeUiLayer, pseudolayer);
+            _this2.updateUiLayer(_this2.activeUiLayer, pseudolayer);
           } else {
-            _this._webgl.updateDynamics({
+            _this2._webgl.updateDynamics({
               "rgbfd1_remove": operator
-            }, _this.activeUiLayer._processingTracker.rgbFilteringGui);
+            }, _this2.activeUiLayer._processingTracker.rgbFilteringGui);
 
-            _this._renderActiveUiLayer();
+            _this2._renderActiveUiLayer();
           }
         };
       };
 
       this.rgbPercentageFilteringGui = function () {
-        if (!("rgbPercentageFiltering" in _this.activeUiLayer._processingTracker)) {
+        if (!("rgbPercentageFiltering" in _this2.activeUiLayer._processingTracker)) {
           var rgbfp_filter = [1.0, 1.0, 1.0];
           var rgbfp_removed = [0.0, 0.0, 0.0, 1.0];
           var rgbfpd1_remove = ">";
         } else {
-          var rgbfp_filter = _this.activeUiLayer._processingTracker.rgbPercentageFiltering.variables.rgbfp_filter;
-          var rgbfp_removed = _this.activeUiLayer._processingTracker.rgbPercentageFiltering.variables.rgbfp_removed;
-          var rgbfpd1_remove = _this.activeUiLayer._processingTracker.rgbPercentageFiltering.variables.rgbfpd1_remove;
+          var rgbfp_filter = _this2.activeUiLayer._processingTracker.rgbPercentageFiltering.variables.rgbfp_filter;
+          var rgbfp_removed = _this2.activeUiLayer._processingTracker.rgbPercentageFiltering.variables.rgbfp_removed;
+          var rgbfpd1_remove = _this2.activeUiLayer._processingTracker.rgbPercentageFiltering.variables.rgbfpd1_remove;
         }
 
         var html = "<div id=\"rgbPercentageFiltering\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Filter RGB by %</p>\n                          <p class=\"gui_text\">Value to filter:</p>\n                          <p class=\"gui_text\">Red: <span id=\"red_value\">".concat(rgbfp_filter[0] * 100, "%</span></p>\n                          <input type=\"range\" min=\"0\" max=\"100\" value=\"").concat(rgbfp_filter[0] * 100, "\" class=\"gui_slider\" id=\"red_slider\">\n                          <p class=\"gui_text\">Green: <span id=\"green_value\">").concat(rgbfp_filter[1] * 100, "%</span></p>\n                          <input type=\"range\" min=\"0\" max=\"100\" value=\"").concat(rgbfp_filter[1] * 100, "\" class=\"gui_slider\" id=\"green_slider\">\n                          <p class=\"gui_text\">Blue: <span id=\"blue_value\">").concat(rgbfp_filter[2] * 100, "%</span></p>\n                          <input type=\"range\" min=\"0\" max=\"100\" value=\"").concat(rgbfp_filter[2] * 100, "\" class=\"gui_slider\" id=\"blue_slider\">\n                          <p class=\"gui_text\">Operator:</p>\n                          <select name=\"operator\" id=\"operator\">\n                            <option value=\"&gt\" selected>&gt</option>\n                            <option value=\"&lt\">&lt</option>\n                          </select><br><br>\n                      </div>");
 
-        var gui = _this._addGuiToDOM(html);
+        var gui = _this2._addGuiToDOM(html);
 
-        _this.activeGui = gui;
+        _this2.activeGui = gui;
 
         function addSliderEvent(sliderId, valueId, ui) {
           document.getElementById(sliderId).oninput = function () {
@@ -28527,9 +28537,9 @@
           };
         }
 
-        addSliderEvent("red_slider", "red_value", _this);
-        addSliderEvent("green_slider", "green_value", _this);
-        addSliderEvent("blue_slider", "blue_value", _this);
+        addSliderEvent("red_slider", "red_value", _this2);
+        addSliderEvent("green_slider", "green_value", _this2);
+        addSliderEvent("blue_slider", "blue_value", _this2);
 
         document.getElementById("operator").onchange = function () {
           var red = document.getElementById("red_slider").value / 100;
@@ -28537,42 +28547,42 @@
           var blue = document.getElementById("blue_slider").value / 100;
           var operator = document.getElementById("operator").value;
 
-          if (!("rgbPercentageFiltering" in _this.activeUiLayer._processingTracker)) {
-            var pseudolayer = _this._constructor.rgbPercentageFiltering({
-              webgl: _this._webgl,
-              rgbfp_image: _this.activeUiLayer.pseudolayer,
+          if (!("rgbPercentageFiltering" in _this2.activeUiLayer._processingTracker)) {
+            var pseudolayer = _this2._constructor.rgbPercentageFiltering({
+              webgl: _this2._webgl,
+              rgbfp_image: _this2.activeUiLayer.pseudolayer,
               rgbfp_filter: [red, green, blue],
               rgbfp_removed: rgbfp_removed,
               rgbfpd1_remove: operator
             });
 
-            _this.activeUiLayer._processingTracker["rgbPercentageFiltering"] = pseudolayer;
+            _this2.activeUiLayer._processingTracker["rgbPercentageFiltering"] = pseudolayer;
 
-            _this.updateUiLayer(_this.activeUiLayer, pseudolayer);
+            _this2.updateUiLayer(_this2.activeUiLayer, pseudolayer);
           } else {
-            _this._webgl.updateDynamics({
+            _this2._webgl.updateDynamics({
               "rgbfpd1_remove": operator
-            }, _this.activeUiLayer._processingTracker.rgbPercentageFiltering);
+            }, _this2.activeUiLayer._processingTracker.rgbPercentageFiltering);
 
-            _this._renderActiveUiLayer();
+            _this2._renderActiveUiLayer();
           }
         };
       };
 
       this.apply3x3KernelGui = function () {
-        if (!("apply3x3Kernel" in _this.activeUiLayer._processingTracker)) {
+        if (!("apply3x3Kernel" in _this2.activeUiLayer._processingTracker)) {
           var a3k_kernel = [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0];
           var a3k_kernelWeight = 1.0;
         } else {
-          var a3k_kernel = _this.activeUiLayer._processingTracker.apply3x3Kernel.variables.a3k_kernel;
-          var a3k_kernelWeight = _this.activeUiLayer._processingTracker.apply3x3Kernel.variables.a3k_kernelWeight;
+          var a3k_kernel = _this2.activeUiLayer._processingTracker.apply3x3Kernel.variables.a3k_kernel;
+          var a3k_kernelWeight = _this2.activeUiLayer._processingTracker.apply3x3Kernel.variables.a3k_kernelWeight;
         }
 
         var html = "<div id=\"apply3x3Kernel\" class=\"inner_gui\">\n                        <p class=\"gui_title\">Apply 3x3 kernel</p>\n                        <table id=\"kernel_table\">\n                            <tr>\n                                <td><div class=\"kernel_input\" data-index=\"0\" contenteditable>".concat(a3k_kernel[0], "</div></td>\n                                <td><div class=\"kernel_input\" data-index=\"1\" contenteditable>").concat(a3k_kernel[1], "</div></td>\n                                <td><div class=\"kernel_input\" data-index=\"2\" contenteditable>").concat(a3k_kernel[2], "</div></td>\n                            </tr>\n                            <tr>\n                                <td><div class=\"kernel_input\" data-index=\"3\" contenteditable>").concat(a3k_kernel[3], "</div></td>\n                                <td><div class=\"kernel_input\" data-index=\"4\" contenteditable>").concat(a3k_kernel[4], "</div></td>\n                                <td><div class=\"kernel_input\" data-index=\"5\" contenteditable>").concat(a3k_kernel[5], "</div></td>\n                            </tr>\n                            <tr>\n                                <td><div class=\"kernel_input\" data-index=\"6\" contenteditable>").concat(a3k_kernel[6], "</div></td>\n                                <td><div class=\"kernel_input\" data-index=\"7\" contenteditable>").concat(a3k_kernel[7], "</div></td>\n                                <td><div class=\"kernel_input\" data-index=\"8\" contenteditable>").concat(a3k_kernel[8], "</div></td>\n                            </tr>\n                        </table>\n                        <p class=\"gui_text\">Multiplier</p>\n                        <input id=\"kernel_multiplier\" type=\"number\" min=\"1\" max=\"16\" value=\"").concat(a3k_kernelWeight, "\">\n                        <br><br>\n                        <input id=\"apply_kernel\" type=\"button\" value=\"Apply\">\n                        <br><br>\n                    </div>");
 
-        var gui = _this._addGuiToDOM(html);
+        var gui = _this2._addGuiToDOM(html);
 
-        _this.activeGui = gui;
+        _this2.activeGui = gui;
 
         document.getElementById("apply_kernel").onclick = function () {
           var kernelInputs = document.getElementsByClassName("kernel_input");
@@ -28586,93 +28596,93 @@
 
           var updateKernelWeight = parseInt(document.getElementById("kernel_multiplier").value);
 
-          if (!("apply3x3Kernel" in _this.activeUiLayer._processingTracker)) {
-            var pseudolayer = _this._constructor.apply3x3Kernel({
-              webgl: _this._webgl,
-              a3k_image: _this.activeUiLayer.pseudolayer,
+          if (!("apply3x3Kernel" in _this2.activeUiLayer._processingTracker)) {
+            var pseudolayer = _this2._constructor.apply3x3Kernel({
+              webgl: _this2._webgl,
+              a3k_image: _this2.activeUiLayer.pseudolayer,
               a3k_kernel: updatedKernel,
               a3k_kernelWeight: updateKernelWeight
             });
 
-            _this.activeUiLayer._processingTracker["apply3x3Kernel"] = pseudolayer;
+            _this2.activeUiLayer._processingTracker["apply3x3Kernel"] = pseudolayer;
 
-            _this.updateUiLayer(_this.activeUiLayer, pseudolayer);
+            _this2.updateUiLayer(_this2.activeUiLayer, pseudolayer);
           } else {
-            var targetPseudolayer = _this.activeUiLayer._processingTracker.apply3x3Kernel;
+            var targetPseudolayer = _this2.activeUiLayer._processingTracker.apply3x3Kernel;
             targetPseudolayer.updateVariable("a3k_kernel", updatedKernel);
             targetPseudolayer.updateVariable("a3k_kernelWeight", updateKernelWeight);
 
-            _this._renderActiveUiLayer();
+            _this2._renderActiveUiLayer();
           }
         };
       };
 
       this.sobelEdgeDetection = function () {
-        if (!("sobelEdgeDetection" in _this.activeUiLayer._processingTracker)) {
-          var pseudolayer = _this._constructor.sobelEdgeDetection({
-            webgl: _this._webgl,
-            sed_image: _this.activeUiLayer.pseudolayer
+        if (!("sobelEdgeDetection" in _this2.activeUiLayer._processingTracker)) {
+          var pseudolayer = _this2._constructor.sobelEdgeDetection({
+            webgl: _this2._webgl,
+            sed_image: _this2.activeUiLayer.pseudolayer
           });
 
-          _this.activeUiLayer._processingTracker["sobelEdgeDetection"] = pseudolayer;
+          _this2.activeUiLayer._processingTracker["sobelEdgeDetection"] = pseudolayer;
 
-          _this.updateUiLayer(_this.activeUiLayer, pseudolayer);
+          _this2.updateUiLayer(_this2.activeUiLayer, pseudolayer);
         }
       };
 
       this.greyscale = function () {
-        if (!("greyscale" in _this.activeUiLayer._processingTracker)) {
-          var pseudolayer = _this._constructor.greyscale({
-            webgl: _this._webgl,
-            gs_image: _this.activeUiLayer.pseudolayer
+        if (!("greyscale" in _this2.activeUiLayer._processingTracker)) {
+          var pseudolayer = _this2._constructor.greyscale({
+            webgl: _this2._webgl,
+            gs_image: _this2.activeUiLayer.pseudolayer
           });
 
-          _this.activeUiLayer._processingTracker["greyscale"] = pseudolayer;
+          _this2.activeUiLayer._processingTracker["greyscale"] = pseudolayer;
 
-          _this.updateUiLayer(_this.activeUiLayer, pseudolayer);
+          _this2.updateUiLayer(_this2.activeUiLayer, pseudolayer);
         }
       };
 
       this.stackLayers = function () {
-        if (!("stackLayers" in _this.activeUiLayer._processingTracker)) {
+        if (!("stackLayers" in _this2.activeUiLayer._processingTracker)) {
           var sl1_weight = 1.0;
           var sl2_weight = 1.0;
           var sl_divisor = 2.0;
         } else {
-          var sl1_weight = _this.activeUiLayer._processingTracker.stackLayers.variables.sl1_weight;
-          var sl2_weight = _this.activeUiLayer._processingTracker.stackLayers.variables.sl2_weight;
-          var sl_divisor = _this.activeUiLayer._processingTracker.stackLayers.variables.sl_divisor;
+          var sl1_weight = _this2.activeUiLayer._processingTracker.stackLayers.variables.sl1_weight;
+          var sl2_weight = _this2.activeUiLayer._processingTracker.stackLayers.variables.sl2_weight;
+          var sl_divisor = _this2.activeUiLayer._processingTracker.stackLayers.variables.sl_divisor;
         } // get all of the available layers for the second layer dropdown
 
 
         var layerOptions = "";
 
-        for (var _i = 0, _Object$keys = Object.keys(_this._uiLayers); _i < _Object$keys.length; _i++) {
+        for (var _i = 0, _Object$keys = Object.keys(_this2._uiLayers); _i < _Object$keys.length; _i++) {
           var key = _Object$keys[_i];
-          var uiLayer = _this._uiLayers[key];
+          var uiLayer = _this2._uiLayers[key];
           layerOptions += "<option id=".concat(uiLayer.id, ">").concat(uiLayer.name, "</option>");
         }
 
         var html = "<div id=\"stackLayers\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Stack layers</p>\n                          <p class=\"gui_text\">This layer weight:</p>\n                          <input id=\"layer1_weight\" type=\"number\" min=\"1\" max=\"5\" value=\"".concat(sl1_weight, "\">\n                          <p class=\"gui_text\">Layer 2 input:</p>\n                          <select id=\"sl_layer2_dropdown\">\n                              ").concat(layerOptions, "\n                          </select>\n                          <p class=\"gui_text\">Layer 2 weight:</p>\n                          <input id=\"layer2_weight\" type=\"number\" min=\"1\" max=\"5\" value=\"").concat(sl2_weight, "\">\n                          <p class=\"gui_text\">Divisor:</p>\n                          <input id=\"stack_layers_divisor\" type=\"number\" min=\"1\" max=\"5\" value=\"").concat(sl_divisor, "\">\n                          <br><br>\n                          <input id=\"apply_stack_layers\" type=\"button\" value=\"Apply\">\n                          <br><br>\n                      </div>");
 
-        var gui = _this._addGuiToDOM(html);
+        var gui = _this2._addGuiToDOM(html);
 
-        _this.activeGui = gui;
+        _this2.activeGui = gui;
 
         document.getElementById("apply_stack_layers").onclick = function () {
           // first we need to reconstruct the selected ui layer
           var selectElement = document.getElementById("sl_layer2_dropdown");
           var selectedElementId = selectElement[selectElement.selectedIndex].id;
-          var targetPseudolayer2 = _this._uiLayers[selectedElementId].pseudolayer; // then get input values
+          var targetPseudolayer2 = _this2._uiLayers[selectedElementId].pseudolayer; // then get input values
 
           var layer1_weight = parseInt(document.getElementById("layer1_weight").value);
           var layer2_weight = parseInt(document.getElementById("layer2_weight").value);
           var overall_divisor = parseInt(document.getElementById("stack_layers_divisor").value);
 
-          if (!("stackLayers" in _this.activeUiLayer._processingTracker)) {
-            var pseudolayer = _this._constructor.stackLayers({
-              webgl: _this._webgl,
-              sl1_image: _this.activeUiLayer.pseudolayer,
+          if (!("stackLayers" in _this2.activeUiLayer._processingTracker)) {
+            var pseudolayer = _this2._constructor.stackLayers({
+              webgl: _this2._webgl,
+              sl1_image: _this2.activeUiLayer.pseudolayer,
               sl2_image: targetPseudolayer2,
               sl1_weight: layer1_weight,
               sl2_weight: layer2_weight,
@@ -28681,17 +28691,17 @@
               sld1_operator: '=='
             });
 
-            _this.activeUiLayer._processingTracker["stackLayers"] = pseudolayer;
+            _this2.activeUiLayer._processingTracker["stackLayers"] = pseudolayer;
 
-            _this.updateUiLayer(_this.activeUiLayer, pseudolayer);
+            _this2.updateUiLayer(_this2.activeUiLayer, pseudolayer);
           } else {
-            var targetPseudolayer = _this.activeUiLayer._processingTracker.stackLayers;
+            var targetPseudolayer = _this2.activeUiLayer._processingTracker.stackLayers;
             targetPseudolayer.updateVariable("sl1_weight", layer1_weight);
             targetPseudolayer.updateVariable("sl2_weight", layer2_weight);
             targetPseudolayer.updateVariable("sl_divisor", overall_divisor);
             targetPseudolayer.updateInput("sl2_image", targetPseudolayer2);
 
-            _this._renderActiveUiLayer();
+            _this2._renderActiveUiLayer();
           }
         };
       };
@@ -28699,18 +28709,21 @@
       this.compareLayers = function () {
         var layerOptions = "";
 
-        for (var _i2 = 0, _Object$keys2 = Object.keys(_this._uiLayers); _i2 < _Object$keys2.length; _i2++) {
+        for (var _i2 = 0, _Object$keys2 = Object.keys(_this2._uiLayers); _i2 < _Object$keys2.length; _i2++) {
           var key = _Object$keys2[_i2];
-          var uiLayer = _this._uiLayers[key];
-          layerOptions += "<option id=".concat(uiLayer.id, ">").concat(uiLayer.name, "</option>");
+          var uiLayer = _this2._uiLayers[key];
+
+          if (uiLayer.id !== _this2.activeUiLayer.id) {
+            layerOptions += "<option id=".concat(uiLayer.id, ">").concat(uiLayer.name, "</option>");
+          }
         } // generate gui -> can be unstyled, as will resize to fit generic gui container, or can be styled in guis.css
 
 
         var html = "<div id=\"compareLayers\" class=\"inner_gui\">\n                          <p class=\"gui_title\">Compare layers</p>\n                          <p class=\"gui_text\">Comparison layer:</p>\n                          <select id=\"cl_layer2_dropdown\">\n                              ".concat(layerOptions, "\n                          </select>\n                          <br><br>\n                      </div>");
 
-        var gui = _this._addGuiToDOM(html);
+        var gui = _this2._addGuiToDOM(html);
 
-        _this.activeGui = gui; // set the swipe container as visible at the bottom of the screen
+        _this2.activeGui = gui; // set the swipe container as visible at the bottom of the screen
 
         var swipeContainer = document.getElementById("comparison_swipe_container");
         swipeContainer.style.visibility = "visible"; // event handler
@@ -28719,26 +28732,25 @@
           var widthValue = document.getElementById("comparison_swipe").value / 100;
           var selectElement = document.getElementById("cl_layer2_dropdown");
           var selectedElementId = selectElement[selectElement.selectedIndex].id;
-          var targetPseudolayer2 = _this._uiLayers[selectedElementId].pseudolayer;
+          var targetPseudolayer2 = _this2._uiLayers[selectedElementId].pseudolayer;
 
-          if (!("compareLayers" in _this.activeUiLayer._processingTracker)) {
-            var pseudolayer = _this._constructor.compareLayers({
-              webgl: _this._webgl,
-              cl_image1: _this.activeUiLayer.pseudolayer,
+          if (!("compareLayers" in _this2.activeUiLayer._processingTracker)) {
+            var pseudolayer = _this2._constructor.compareLayers({
+              webgl: _this2._webgl,
+              cl_image1: _this2.activeUiLayer.pseudolayer,
               cl_image2: targetPseudolayer2,
               cl_width: widthValue
             });
 
-            _this.activeUiLayer._processingTracker["compareLayers"] = pseudolayer;
+            _this2.activeUiLayer._processingTracker["compareLayers"] = pseudolayer;
 
-            _this.updateUiLayer(_this.activeUiLayer, pseudolayer);
+            _this2.updateUiLayer(_this2.activeUiLayer, pseudolayer);
           } else {
-            var targetPseudolayer = _this.activeUiLayer._processingTracker.compareLayers;
+            var targetPseudolayer = _this2.activeUiLayer._processingTracker.compareLayers;
             targetPseudolayer.updateInput("cl_image2", targetPseudolayer2);
             targetPseudolayer.updateVariable("cl_width", widthValue);
-            console.log(targetPseudolayer.variables);
 
-            _this._renderActiveUiLayer();
+            _this2._renderActiveUiLayer();
           }
         }; // hide gui when slider starts
 
@@ -28750,7 +28762,31 @@
 
         document.getElementById("comparison_swipe").onmouseup = function () {
           document.getElementById("gui_container").style.opacity = 1;
-        };
+        }; // hide gui when user moves
+
+
+        _this2.activeUiLayer.pseudolayer.getFirstMap().on("movestart", function () {
+          console.log("moving");
+          document.getElementById("gui_container").style.opacity = 0;
+        }); // show gui when user stops moving
+
+
+        _this2.activeUiLayer.pseudolayer.getFirstMap().on("moveend", function () {
+          document.getElementById("gui_container").style.opacity = 1;
+        }); // close processing gui -> hide gui container and remove gui. additional
+
+
+        document.addEventListener('click', function (e) {
+          var closeButton = e.target;
+
+          if (closeButton && closeButton.id === "close_gui") {
+            // revert the layer on close
+            _this2.updateUiLayer(_this2.activeUiLayer, _this2.activeUiLayer.originalPseudolayer); // remove state information
+
+
+            delete _this2.activeUiLayer._processingTracker.compareLayers;
+          }
+        });
       };
 
       // the WebGLCanvas object
@@ -28791,7 +28827,7 @@
 
     var rgbPercentageFilteringShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform float rgbfp_filter[3];\r\nuniform vec4 rgbfp_removed;\r\nuniform sampler2D rgbfp_image;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 raw_colour = texture(rgbfp_image, o_texCoord);\r\n    float sum_colours = raw_colour.r + raw_colour.g + raw_colour.b;\r\n    float remove = 0.0;\r\n\r\n    if(raw_colour.r / sum_colours {rgbfpd1_remove} rgbfp_filter[0]){\r\n        remove = 1.0;\r\n    }\r\n\r\n    if(raw_colour.g / sum_colours {rgbfpd1_remove} rgbfp_filter[1]){\r\n        remove = 1.0;\r\n    }\r\n\r\n    if(raw_colour.b / sum_colours {rgbfpd1_remove} rgbfp_filter[2]){\r\n        remove = 1.0;\r\n    }\r\n\r\n    vec4 final_colour;\r\n    if(remove == 1.0){\r\n        final_colour = rgbfp_removed;\r\n    } else {\r\n        final_colour = raw_colour;\r\n    }\r\n\r\n    o_colour = final_colour;\r\n}";
 
-    var stackLayers = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D sl1_image;\r\nuniform sampler2D sl2_image;\r\nuniform float sl1_weight;\r\nuniform float sl2_weight;\r\nuniform float sl_ignore;\r\nuniform float sl_divisor;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 sl1_texture = texture(sl1_image, o_texCoord);\r\n    vec4 sl2_texture = texture(sl2_image, o_texCoord);\r\n    if (sl2_texture {sld1_operator} sl_ignore) {\r\n        o_colour = sl1_texture;\r\n    } else {\r\n        vec4 sl1_weighted = sl1_texture * sl1_weight;\r\n        vec4 sl2_weighted = sl2_texture * sl2_weight;\r\n        vec4 sum_texture = sl1_weighted + sl2_weighted;\r\n        o_colour = vec4((sum_texture / sl_divisor).rgb, 1);\r\n    }\r\n}";
+    var stackLayers = "#version 300 es\r\nprecision mediump float;\r\n\r\nin vec2 o_texCoord;\r\n\r\nuniform sampler2D sl1_image;\r\nuniform sampler2D sl2_image;\r\nuniform float sl1_weight;\r\nuniform float sl2_weight;\r\nuniform float sl_ignore;\r\nuniform float sl_divisor;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n    vec4 sl1_texture = texture(sl1_image, o_texCoord);\r\n    vec4 sl2_texture = texture(sl2_image, o_texCoord);\r\n    if (sl2_texture == vec4(0.0, 0.0, 0.0, 1.0)) {\r\n        o_colour = sl1_texture;\r\n    } else {\r\n        vec4 sl1_weighted = sl1_texture * sl1_weight;\r\n        vec4 sl2_weighted = sl2_texture * sl2_weight;\r\n        vec4 sum_texture = sl1_weighted + sl2_weighted;\r\n        o_colour = vec4((sum_texture / sl_divisor).rgb, 1);\r\n    }\r\n}";
 
     var apply3x3KernelShader = "#version 300 es\r\nprecision mediump float;\r\n\r\nuniform sampler2D a3k_image;\r\nuniform float a3k_textureWidth;\r\nuniform float a3k_textureHeight;\r\nuniform float a3k_kernel[9];\r\nuniform float a3k_kernelWeight;\r\n\r\nin vec2 o_texCoord;\r\n\r\nout vec4 o_colour;\r\n\r\nvoid main() {\r\n   vec2 onePixel = vec2(1.0 / a3k_textureWidth, 1.0 / a3k_textureHeight);\r\n   vec4 colorSum =\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1, -1)) * a3k_kernel[0] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0, -1)) * a3k_kernel[1] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1, -1)) * a3k_kernel[2] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  0)) * a3k_kernel[3] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  0)) * a3k_kernel[4] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  0)) * a3k_kernel[5] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2(-1,  1)) * a3k_kernel[6] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 0,  1)) * a3k_kernel[7] +\r\n       texture(a3k_image, o_texCoord + onePixel * vec2( 1,  1)) * a3k_kernel[8] ;\r\n   o_colour = vec4((colorSum / a3k_kernelWeight).rgb, 1);\r\n}";
 
