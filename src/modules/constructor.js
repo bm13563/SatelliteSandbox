@@ -100,7 +100,7 @@ export class Constructor{
         return pseudolayer;
     }
 
-    stackLayers = ({webgl, sl1_image, sl2_image, sl1_weight, sl2_weight, sl_divisor, sld1_operator}={}) => {
+    stackLayers = ({webgl, sl1_image, sl2_image, sl1_weight, sl2_weight, sl_divisor}={}) => {
         const pseudolayer = webgl.processPseudoLayer({
             shaderName: "stackLayers",
             inputs: {
@@ -114,7 +114,7 @@ export class Constructor{
                 sl_divisor: sl_divisor,
             },
             dynamics: {
-                sld1_operator: sld1_operator,
+                sld1_operator: {},
             }
         })
         return pseudolayer;

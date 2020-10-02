@@ -38,8 +38,8 @@ for (var z = 0; z < 14; ++z) {
 
 // set a map view
 const testMapView = new View({
-    center: [-4441908.587708, -831634.867743],
-    zoom: 6,
+    center: [27288.019098, 6575113.173091],
+    zoom: 12,
     projection: projection,
 })
 
@@ -67,50 +67,44 @@ const trueColour = new XYZ({
 //     crossOrigin: "anonymous",
 // });
 
-var brEVI2001 = new TileWMS({
-    url: 'https://gibs-{a-c}.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
+const testWMS = new TileWMS({
+    url: "https://services.sentinel-hub.com/ogc/wms/e28a9327-dd59-4020-9bad-ee8e5087fca4",
     params: {
-        LAYERS: 'MODIS_Terra_L3_EVI_16Day',
-        FORMAT: 'image/jpeg',
-        CRS: 'EPSG:3857',
-        TIME: '2001-01-01',
-        TILED: true,
+        'LAYERS': "FALSE_COLOR", 
+        'TILED': true, 
+        'FORMAT': 'image/png',
+        'showLogo': false,
+        'CRS': "EPSG:3857",
+        'TIME': "2020-06-26/2020-07-26",
     },
-    projection: projection,
+    attribution: "test",
     crossOrigin: "anonymous",
 });
 
-var brEVI2020 = new TileWMS({
-    url: 'https://gibs-{a-c}.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
+const testWMS2 = new TileWMS({
+    url: "https://services.sentinel-hub.com/ogc/wms/e28a9327-dd59-4020-9bad-ee8e5087fca4",
     params: {
-        LAYERS: 'MODIS_Terra_L3_EVI_16Day',
-        FORMAT: 'image/jpeg',
-        CRS: 'EPSG:3857',
-        TIME: '2020-01-01',
-        TILED: true,
+        'LAYERS': "TRUE_COLOR", 
+        'TILED': true, 
+        'FORMAT': 'image/png',
+        'showLogo': false,
+        'CRS': "EPSG:3857",
+        'TIME': "2020-06-26/2020-07-26",
     },
-    projection: projection,
+    attribution: "test",
     crossOrigin: "anonymous",
 });
 
-var trueColourLayer = new TileLayer({
-    source: trueColour,
+const testMapLayer1 = new TileLayer({
+    source: testWMS,
     visible: true,
     title: "Sentinel testing",
     opacity: 1,
     minZoom: 1,
 });
 
-var brEVI2001Layer = new TileLayer({
-    source: brEVI2001,
-    visible: true,
-    title: "Sentinel testing",
-    opacity: 1,
-    minZoom: 1,
-});
-
-var brEVI2020Layer = new TileLayer({
-    source: brEVI2020,
+const testMapLayer2 = new TileLayer({
+    source: testWMS2,
     visible: true,
     title: "Sentinel testing",
     opacity: 1,
@@ -120,32 +114,70 @@ var brEVI2020Layer = new TileLayer({
 var webgl = new WebGLCanvas("canvas_map");
 var con = new Constructor();
 var ui = new Ui(webgl, con);
-var l1 = new LayerObject(trueColourLayer, testMapView);
-var l2 = new LayerObject(brEVI2001Layer, testMapView);
-var l3 = new LayerObject(brEVI2020Layer, testMapView);
+var l1 = new LayerObject(testMapLayer1, testMapView);
+var l2 = new LayerObject(testMapLayer2, testMapView);
 
 const p1 = webgl.generatePseudoLayer(l1);
 const p2 = webgl.generatePseudoLayer(l2);
-const p3 = webgl.generatePseudoLayer(l3);
 
-const pp1 = con.calculateDifference({
+const ep2 = con.rgbaManipulation({
     webgl: webgl,
-    cd_image1: p2,
-    cd_image2: p3,
+    rgbam_image: p2,
+    rgbam_multiplier: [1.5, 1.5, 1.5, 1.0],
 })
 
-const pp2 = con.compareLayers({
+const pp1 = con.rgbFiltering({
     webgl: webgl,
-    cl_image1: p2,
-    cl_image2: p3,
-    cl_width: 0.5,
+    rgbf_image: p1,
+    rgbf_filter: [0.58, 0.58, 0.58],
+    rgbf_removed: [0.0, 0.0, 0.0, 1.0],
+    rgbfd1_remove: "<",
+})
+
+const pp2 = con.greyscale({
+    webgl: webgl,
+    gs_image: pp1,
+})
+
+const pp3 = con.sobelEdgeDetection({
+    webgl: webgl,
+    sed_image: pp2,
+})
+
+const pp4 = con.rgbaManipulation({
+    webgl: webgl,
+    rgbam_image: pp3,
+    rgbam_multiplier: [1.0, 0.0, 1.0, 1.0],
+})
+
+const pp5 = con.rgbFiltering({
+    webgl: webgl,
+    rgbf_image: pp4,
+    rgbf_filter: [1.0, 0.0, 1.0],
+    rgbf_removed: [0.0, 0.0, 0.0, 1.0],
+    rgbfd1_remove: "<",
+})
+
+const pp6 = con.stackLayers({
+    webgl: webgl,
+    sl1_image: ep2,
+    sl2_image: pp5, 
+    sl1_weight: 0,
+    sl2_weight: 1.0,
+    sl_divisor: 1.0,
 })
 
 ui.addUiLayer(p1);
-ui.addUiLayer(p2);
-ui.addUiLayer(p3);
+ui.addUiLayer(ep2);
 ui.addUiLayer(pp1);
 ui.addUiLayer(pp2);
+ui.addUiLayer(pp3);
+ui.addUiLayer(pp4);
+ui.addUiLayer(pp5);
+ui.addUiLayer(pp6);
+
+const layerToActivate = ui.getUiLayerFromPseudolayer(pp6);
+ui.activateUiLayer(layerToActivate);
 
 
 
