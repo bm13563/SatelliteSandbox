@@ -38,8 +38,8 @@ for (var z = 0; z < 14; ++z) {
 
 // set a map view
 const testMapView = new View({
-    center: [-348342.647153, 6658410.424665],
-    zoom: 15,
+    center: [8523607.762006, 1311367.658152],
+    zoom: 13,
     projection: projection,
 })
 
@@ -62,7 +62,7 @@ const sentinelSource1 = new TileWMS({
         'FORMAT': 'image/jpeg',
         'showLogo': false,
         'CRS': "EPSG:3857",
-        'TIME': "2020-09-28",
+        'TIME': "2019-02-18",
     },
     attribution: "test",
     crossOrigin: "anonymous",
@@ -76,7 +76,7 @@ const sentinelSource2 = new TileWMS({
         'FORMAT': 'image/jpeg',
         'showLogo': false,
         'CRS': "EPSG:3857",
-        'TIME': "2020-08-14",
+        'TIME': "2019-02-28",
     },
     attribution: "test",
     crossOrigin: "anonymous",

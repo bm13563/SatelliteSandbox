@@ -27755,7 +27755,7 @@
           layers: [_this.olLayer],
           view: _this.olView
         });
-        map.getView().setZoom(15); // render the map without animation - prevents artifacts and reduces gpu overhead
+        map.getView().setZoom(_this.olView.getZoom()); // render the map without animation - prevents artifacts and reduces gpu overhead
 
         _this.olLayer.getSource().tileOptions.transition = 0; // layers are not requested until they are used -> saves requests
 
@@ -29307,8 +29307,8 @@
 
 
     var testMapView = new View({
-      center: [-348342.647153, 6658410.424665],
-      zoom: 15,
+      center: [8523607.762006, 1311367.658152],
+      zoom: 13,
       projection: projection
     }); // const trueColour = new XYZ({
     //     url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png",
@@ -29329,7 +29329,7 @@
         'FORMAT': 'image/jpeg',
         'showLogo': false,
         'CRS': "EPSG:3857",
-        'TIME': "2020-09-28"
+        'TIME': "2019-02-18"
       },
       attribution: "test",
       crossOrigin: "anonymous"
@@ -29342,7 +29342,7 @@
         'FORMAT': 'image/jpeg',
         'showLogo': false,
         'CRS': "EPSG:3857",
-        'TIME': "2020-08-14"
+        'TIME': "2019-02-28"
       },
       attribution: "test",
       crossOrigin: "anonymous"
