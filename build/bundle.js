@@ -29127,7 +29127,7 @@
     // });
 
     var testWMS = new TileWMS({
-      url: "https://services.sentinel-hub.com/ogc/wms/e28a9327-dd59-4020-9bad-ee8e5087fca4",
+      url: "https://services.sentinel-hub.com/ogc/wms/d036adf2-9d6f-4a55-becf-2c999049b788",
       params: {
         'LAYERS': "FALSE_COLOR",
         'TILED': true,
@@ -29140,7 +29140,7 @@
       crossOrigin: "anonymous"
     });
     var testWMS2 = new TileWMS({
-      url: "https://services.sentinel-hub.com/ogc/wms/e28a9327-dd59-4020-9bad-ee8e5087fca4",
+      url: "https://services.sentinel-hub.com/ogc/wms/d036adf2-9d6f-4a55-becf-2c999049b788",
       params: {
         'LAYERS': "TRUE_COLOR",
         'TILED': true,
