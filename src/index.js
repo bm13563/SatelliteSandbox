@@ -68,7 +68,7 @@ const trueColour = new XYZ({
 // });
 
 const testWMS = new TileWMS({
-    url: "https://services.sentinel-hub.com/ogc/wms/d036adf2-9d6f-4a55-becf-2c999049b788",
+    url: "https://services.sentinel-hub.com/ogc/wms/bce43836-7052-4246-b710-494a81012fbe",
     params: {
         'LAYERS': "FALSE_COLOR", 
         'TILED': true, 
@@ -82,7 +82,7 @@ const testWMS = new TileWMS({
 });
 
 const testWMS2 = new TileWMS({
-    url: "https://services.sentinel-hub.com/ogc/wms/d036adf2-9d6f-4a55-becf-2c999049b788",
+    url: "https://services.sentinel-hub.com/ogc/wms/bce43836-7052-4246-b710-494a81012fbe",
     params: {
         'LAYERS': "TRUE_COLOR", 
         'TILED': true, 
